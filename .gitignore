@@ -8,6 +8,9 @@
 local.properties
 .DS_Store
 Thumbs.db
+*.log
+hs_err_pid*
+replay_pid*
 
 # IDE
 .idea/
