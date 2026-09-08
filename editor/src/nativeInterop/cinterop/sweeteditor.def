@@ -1,0 +1,4 @@
+headers = sweeteditor/c_api.h
+headerFilter = sweeteditor/**
+package = sweeteditor.cinterop
+compilerOpts = -DSWEETEDITOR_STATIC

@@ -1,0 +1,39 @@
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+**/build/
+!src/**/build/
+
+# Local machine
+local.properties
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Android
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.jks
+*.keystore
+
+# Xcode
+xcuserdata
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# JS (kotlin-js-store/yarn.lock must stay tracked)
+node_modules/
+
+# Generated JNI staging; canonical binaries live in editor/natives/
+editor/src/androidMain/jniLibs/
