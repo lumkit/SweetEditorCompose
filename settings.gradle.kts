@@ -34,5 +34,6 @@ plugins {
 include(":androidApp")
 include(":desktopApp")
 include(":editor")
+include(":editor-android-jni")
 include(":shared")
 include(":webApp")
