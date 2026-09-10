@@ -11,6 +11,8 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.GestureType
+import io.github.lumkit.sweeteditor.core.protocol.HitTargetType
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommand
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
 import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
@@ -43,7 +45,8 @@ internal class RememberedEditorSession(
     private var viewportWidth = 0
     private var viewportHeight = 0
     private var imeAdapter: EditorImeAdapter? = null
-    internal var imePressHandler: (() -> Unit)? = null
+    internal var onTap: (() -> Unit)? = null
+    internal var imeTapHandler: (() -> Unit)? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -125,10 +128,6 @@ internal class RememberedEditorSession(
 
     fun documentUtf8(): String? = document?.utf8Text()
 
-    fun notifyEditorPressed() {
-        imePressHandler?.invoke()
-    }
-
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
     }
@@ -174,6 +173,12 @@ internal class RememberedEditorSession(
     private fun dispatchActionResult(result: EditorActionResult?) {
         if (disposed || result == null) return
         imeAdapter?.onEditorActionResult(result)
+        if (result.gestureType == GestureType.TAP) {
+            onTap?.invoke()
+            if (result.hitTarget.type == HitTargetType.NONE) {
+                imeTapHandler?.invoke()
+            }
+        }
         wantsAnimation = result.animationFlags != AnimationFlag.NONE
         if (result.pointerCursorChanged) {
             pointerCursor = result.pointerCursorAfter

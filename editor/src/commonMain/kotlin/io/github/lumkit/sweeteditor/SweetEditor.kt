@@ -6,6 +6,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
@@ -87,8 +88,9 @@ fun SweetEditor(
         PointerCursorType.DEFAULT -> PointerIcon.Default
     }
 
-    LaunchedEffect(session) {
-        runCatching { focusRequester.requestFocus() }
+    DisposableEffect(session, focusRequester) {
+        session.onTap = { runCatching { focusRequester.requestFocus() } }
+        onDispose { session.onTap = null }
     }
 
     LaunchedEffect(session.wantsAnimation) {
@@ -134,8 +136,6 @@ fun SweetEditor(
                         val change = event.changes.firstOrNull() ?: continue
                         val modifiers = pointerModifiers(event)
                         if (event.type == PointerEventType.Press) {
-                            runCatching { focusRequester.requestFocus() }
-                            session.notifyEditorPressed()
                             change.consume()
                         }
                         if (event.type == PointerEventType.Scroll) {
