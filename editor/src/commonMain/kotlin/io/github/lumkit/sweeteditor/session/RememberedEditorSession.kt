@@ -173,7 +173,7 @@ internal class RememberedEditorSession(
     private fun dispatchActionResult(result: EditorActionResult?) {
         if (disposed || result == null) return
         imeAdapter?.onEditorActionResult(result)
-        if (result.gestureType == GestureType.TAP) {
+        if (result.gestureType == GestureType.TAP || result.gestureType == GestureType.DOUBLE_TAP) {
             onTap?.invoke()
             if (result.hitTarget.type == HitTargetType.NONE) {
                 imeTapHandler?.invoke()

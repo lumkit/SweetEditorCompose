@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -130,12 +131,18 @@ fun SweetEditor(
                 true
             }
             .pointerInput(session) {
+                var pointerDown = false
+                var lastPoint = PointF(0f, 0f)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull() ?: continue
                         val modifiers = pointerModifiers(event)
+                        val isMouse = change.type == PointerType.Mouse || change.type == PointerType.Stylus
+                        lastPoint = PointF(change.position.x, change.position.y)
                         if (event.type == PointerEventType.Press) {
+                            pointerDown = true
+                            runCatching { focusRequester.requestFocus() }
                             change.consume()
                         }
                         if (event.type == PointerEventType.Scroll) {
@@ -160,20 +167,34 @@ fun SweetEditor(
                             continue
                         }
                         if (event.type == PointerEventType.Exit) {
-                            session.handleGesture(
-                                encodeGesture(
-                                    EventType.MOUSE_MOVE,
-                                    listOf(PointF(-1f, -1f)),
-                                    modifiers,
-                                ),
-                            )
+                            if (pointerDown) {
+                                pointerDown = false
+                                session.handleGesture(
+                                    encodeGesture(
+                                        if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP,
+                                        listOf(lastPoint),
+                                        modifiers,
+                                    ),
+                                )
+                            } else if (isMouse) {
+                                session.handleGesture(
+                                    encodeGesture(
+                                        EventType.MOUSE_MOVE,
+                                        listOf(PointF(-1f, -1f)),
+                                        modifiers,
+                                    ),
+                                )
+                            }
                             continue
                         }
                         val type = mapPointerEventType(event, change.type) ?: continue
+                        if (type == EventType.MOUSE_UP || type == EventType.TOUCH_UP) {
+                            pointerDown = false
+                        }
                         session.handleGesture(
                             encodeGesture(
                                 type = type,
-                                points = listOf(PointF(change.position.x, change.position.y)),
+                                points = listOf(lastPoint),
                                 modifiers = modifiers,
                             ),
                         )
