@@ -1,7 +1,7 @@
 package io.github.lumkit.editor
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.safeContentPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -25,7 +25,7 @@ fun App() {
         SweetEditor(
             modifier = Modifier
                 .fillMaxSize()
-                .safeContentPadding(),
+                .systemBarsPadding(),
             controller = controller,
         )
     }
