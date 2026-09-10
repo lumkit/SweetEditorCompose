@@ -33,6 +33,7 @@ import io.github.lumkit.sweeteditor.core.protocol.EventType
 import io.github.lumkit.sweeteditor.core.protocol.PointF
 import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.coreWheelDelta
+import io.github.lumkit.sweeteditor.input.editorIme
 import io.github.lumkit.sweeteditor.input.encodeGesture
 import io.github.lumkit.sweeteditor.input.mapKeyEvent
 import io.github.lumkit.sweeteditor.input.mapPointerEventType
@@ -120,6 +121,7 @@ fun SweetEditor(
             .pointerHoverIcon(pointerIcon)
             .focusRequester(focusRequester)
             .focusable()
+            .editorIme(session)
             .onPreviewKeyEvent { event ->
                 val mapped = mapKeyEvent(event) ?: return@onPreviewKeyEvent false
                 session.handleKey(mapped.keyCode, mapped.text, mapped.modifiers)

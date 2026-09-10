@@ -11,8 +11,14 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
-import io.github.lumkit.sweeteditor.core.protocol.ImeHostAction
+import io.github.lumkit.sweeteditor.core.protocol.ImeCommand
+import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
+import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
+import io.github.lumkit.sweeteditor.core.protocol.ImeState
+import io.github.lumkit.sweeteditor.core.protocol.ImeTextContext
+import io.github.lumkit.sweeteditor.core.protocol.ImeTextSource
 import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
+import io.github.lumkit.sweeteditor.input.EditorImeAdapter
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 
 internal class RememberedEditorSession(
@@ -36,6 +42,7 @@ internal class RememberedEditorSession(
     private var disposed = false
     private var viewportWidth = 0
     private var viewportHeight = 0
+    private var imeAdapter: EditorImeAdapter? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -117,10 +124,41 @@ internal class RememberedEditorSession(
 
     fun documentUtf8(): String? = document?.utf8Text()
 
+    fun bindImeAdapter(adapter: EditorImeAdapter?) {
+        imeAdapter = adapter
+    }
+
+    fun isCurrentImeAdapter(adapter: EditorImeAdapter): Boolean = imeAdapter === adapter
+
+    fun beginImeSession(): ImeState? = editor?.beginImeSession(ImeMutationModel.COMMAND)
+
+    fun endImeSession(sessionId: Long): EditorActionResult? {
+        val result = editor?.endImeSession(sessionId)
+        dispatchActionResult(result)
+        return result
+    }
+
+    fun applyImeCommands(sessionId: Long, commands: List<ImeCommand>): EditorActionResult? {
+        val result = editor?.applyImeCommands(ImeCommandBatch(sessionId, commands))
+        dispatchActionResult(result)
+        return result
+    }
+
+    fun getImeState(sessionId: Long): ImeState? = editor?.getImeState(sessionId)
+
+    fun getImeContext(
+        sessionId: Long,
+        source: ImeTextSource,
+        startUtf16: Long,
+        lengthUtf16: Long,
+    ): ImeTextContext? = editor?.getImeContext(sessionId, source, startUtf16, lengthUtf16)
+
     private fun disposeSession() {
         if (disposed) return
         disposed = true
         wantsAnimation = false
+        imeAdapter?.closeOwnedSession()
+        imeAdapter = null
         controller.detach(this)
         editor?.close()
         editor = null
@@ -130,10 +168,7 @@ internal class RememberedEditorSession(
 
     private fun dispatchActionResult(result: EditorActionResult?) {
         if (disposed || result == null) return
-        when (result.imeHostAction) {
-            ImeHostAction.CLOSE_SESSION, ImeHostAction.RESTART_SESSION -> Unit
-            else -> Unit
-        }
+        imeAdapter?.onEditorActionResult(result)
         wantsAnimation = result.animationFlags != AnimationFlag.NONE
         if (result.pointerCursorChanged) {
             pointerCursor = result.pointerCursorAfter

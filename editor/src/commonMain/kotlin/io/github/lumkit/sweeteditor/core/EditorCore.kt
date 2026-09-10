@@ -4,6 +4,11 @@ import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorOptions
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
+import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
+import io.github.lumkit.sweeteditor.core.protocol.ImeState
+import io.github.lumkit.sweeteditor.core.protocol.ImeTextContext
+import io.github.lumkit.sweeteditor.core.protocol.ImeTextSource
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 
 internal class Document(
@@ -80,6 +85,38 @@ internal class EditorCore(
 
     fun setGutterSticky(sticky: Boolean): EditorActionResult? =
         decodeAction(NativeBridge.editorSetGutterSticky(editorHandle, sticky))
+
+    fun beginImeSession(model: ImeMutationModel = ImeMutationModel.COMMAND): ImeState? {
+        val bytes = NativeBridge.editorImeBeginSession(editorHandle, model.value) ?: return null
+        return CoreProtocol.decodeImeState(bytes)
+    }
+
+    fun endImeSession(sessionId: Long): EditorActionResult? =
+        decodeAction(NativeBridge.editorImeEndSession(editorHandle, sessionId))
+
+    fun applyImeCommands(batch: ImeCommandBatch): EditorActionResult? =
+        decodeAction(NativeBridge.editorImeApplyCommands(editorHandle, CoreProtocol.encodeImeCommandBatch(batch)))
+
+    fun getImeState(sessionId: Long): ImeState? {
+        val bytes = NativeBridge.editorImeGetState(editorHandle, sessionId) ?: return null
+        return CoreProtocol.decodeImeState(bytes)
+    }
+
+    fun getImeContext(
+        sessionId: Long,
+        source: ImeTextSource,
+        startUtf16: Long,
+        lengthUtf16: Long,
+    ): ImeTextContext? {
+        val bytes = NativeBridge.editorImeGetContext(
+            editorHandle,
+            sessionId,
+            source.value,
+            startUtf16,
+            lengthUtf16,
+        ) ?: return null
+        return CoreProtocol.decodeImeTextContext(bytes)
+    }
 
     fun close() {
         if (editorHandle != 0L) {
