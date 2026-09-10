@@ -1,5 +1,6 @@
 package io.github.lumkit.sweeteditor.input
 
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
@@ -38,7 +39,11 @@ private class EditorImeNode(
         private set
     private var focused = false
     private var inputJob: Job? = null
-    private val onPressed: () -> Unit = { startInput() }
+    private var stopJob: Job? = null
+    private val onPressed: () -> Unit = {
+        startInput()
+        currentValueOf(LocalSoftwareKeyboardController)?.show()
+    }
 
     fun bindSession(next: RememberedEditorSession) {
         if (session === next) return
@@ -60,9 +65,18 @@ private class EditorImeNode(
         if (nowFocused == focused) return
         focused = nowFocused
         if (nowFocused) {
-            startInput()
-        } else {
-            stopInput()
+            stopJob?.cancel()
+            stopJob = null
+            return
+        }
+        // IME insets / restartInput can report a one-frame unfocus. Only tear
+        // down if focus stays lost.
+        stopJob?.cancel()
+        stopJob = coroutineScope.launch {
+            withFrameNanos { }
+            if (!focused && isAttached) {
+                stopInput()
+            }
         }
     }
 
@@ -70,25 +84,32 @@ private class EditorImeNode(
         if (session.imePressHandler === onPressed) {
             session.imePressHandler = null
         }
+        stopJob?.cancel()
+        stopJob = null
         stopInput()
         super.onDetach()
     }
 
     private fun startInput() {
         if (!isAttached) return
-        inputJob?.cancel()
+        if (inputJob?.isActive == true) return
         inputJob = coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            establishTextInputSession {
-                startInputMethod(
-                    PlatformTextInputMethodRequest { outAttrs ->
-                        val connection = ComposeEditorInputConnection(session, view)
-                        connection.configureEditorInfo(outAttrs)
-                        connection
-                    },
-                )
+            try {
+                establishTextInputSession {
+                    startInputMethod(
+                        PlatformTextInputMethodRequest { outAttrs ->
+                            val connection = ComposeEditorInputConnection(session, view)
+                            connection.configureEditorInfo(outAttrs)
+                            connection
+                        },
+                    )
+                }
+            } finally {
+                if (inputJob?.isActive != true) {
+                    inputJob = null
+                }
             }
         }
-        currentValueOf(LocalSoftwareKeyboardController)?.show()
     }
 
     private fun stopInput() {
