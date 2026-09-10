@@ -40,7 +40,7 @@ private class EditorImeNode(
     private var focused = false
     private var inputJob: Job? = null
     private var stopJob: Job? = null
-    private val onPressed: () -> Unit = {
+    private val onTap: () -> Unit = {
         startInput()
         currentValueOf(LocalSoftwareKeyboardController)?.show()
     }
@@ -48,16 +48,16 @@ private class EditorImeNode(
     fun bindSession(next: RememberedEditorSession) {
         if (session === next) return
         if (isAttached) {
-            session.imePressHandler = null
+            session.imeTapHandler = null
         }
         session = next
         if (isAttached) {
-            session.imePressHandler = onPressed
+            session.imeTapHandler = onTap
         }
     }
 
     override fun onAttach() {
-        session.imePressHandler = onPressed
+        session.imeTapHandler = onTap
     }
 
     override fun onFocusEvent(focusState: FocusState) {
@@ -81,8 +81,8 @@ private class EditorImeNode(
     }
 
     override fun onDetach() {
-        if (session.imePressHandler === onPressed) {
-            session.imePressHandler = null
+        if (session.imeTapHandler === onTap) {
+            session.imeTapHandler = null
         }
         stopJob?.cancel()
         stopJob = null
