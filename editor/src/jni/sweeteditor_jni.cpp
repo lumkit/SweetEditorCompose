@@ -36,7 +36,11 @@ JNIEnv* env_or_attach(bool* attached) {
     return env;
   }
   if (rc == JNI_EDETACHED) {
+#ifdef __ANDROID__
+    if (g_vm->AttachCurrentThread(&env, nullptr) != 0) {
+#else
     if (g_vm->AttachCurrentThread(reinterpret_cast<void**>(&env), nullptr) != 0) {
+#endif
       return nullptr;
     }
     *attached = true;

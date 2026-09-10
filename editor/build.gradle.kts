@@ -88,6 +88,7 @@ kotlin {
         androidMain {
             dependsOn(jniMain)
             dependencies {
+                implementation(project(":editor-android-jni"))
                 implementation(libs.compose.uiToolingPreview)
             }
         }
@@ -300,13 +301,6 @@ prepareJvmNativeResources {
 }
 
 tasks.configureEach {
-    if (name != prepareAndroidJniLibs.name) {
-        val isAndroidNativeConsume = name.contains("Android") &&
-            (name.contains("Jni", ignoreCase = true) || name.startsWith("compile") || name.contains("jniLibs", ignoreCase = true))
-        if (isAndroidNativeConsume) {
-            dependsOn(prepareAndroidJniLibs)
-        }
-    }
     if (name.contains("ProcessResources")) {
         if (name.contains("jvm", ignoreCase = true)) {
             dependsOn(prepareJvmNativeResources)
