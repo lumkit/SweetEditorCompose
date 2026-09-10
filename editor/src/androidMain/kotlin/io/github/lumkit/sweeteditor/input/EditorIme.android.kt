@@ -1,6 +1,5 @@
 package io.github.lumkit.sweeteditor.input
 
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
@@ -37,9 +36,7 @@ private class EditorImeNode(
     CompositionLocalConsumerModifierNode {
     var session: RememberedEditorSession = session
         private set
-    private var focused = false
     private var inputJob: Job? = null
-    private var stopJob: Job? = null
     private val onTap: () -> Unit = {
         startInput()
         currentValueOf(LocalSoftwareKeyboardController)?.show()
@@ -60,32 +57,12 @@ private class EditorImeNode(
         session.imeTapHandler = onTap
     }
 
-    override fun onFocusEvent(focusState: FocusState) {
-        val nowFocused = focusState.isFocused
-        if (nowFocused == focused) return
-        focused = nowFocused
-        if (nowFocused) {
-            stopJob?.cancel()
-            stopJob = null
-            return
-        }
-        // IME insets / restartInput can report a one-frame unfocus. Only tear
-        // down if focus stays lost.
-        stopJob?.cancel()
-        stopJob = coroutineScope.launch {
-            withFrameNanos { }
-            if (!focused && isAttached) {
-                stopInput()
-            }
-        }
-    }
+    override fun onFocusEvent(focusState: FocusState) = Unit
 
     override fun onDetach() {
         if (session.imeTapHandler === onTap) {
             session.imeTapHandler = null
         }
-        stopJob?.cancel()
-        stopJob = null
         stopInput()
         super.onDetach()
     }
