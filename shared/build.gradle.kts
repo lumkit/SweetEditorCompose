@@ -16,6 +16,9 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
+            val archDir = if (iosTarget.name == "iosSimulatorArm64") "simulator-arm64" else "arm64"
+            val libraryDir = rootProject.file("editor/natives/ios/$archDir")
+            linkerOpts("-L${libraryDir.absolutePath}", "-lsweeteditor")
         }
     }
 

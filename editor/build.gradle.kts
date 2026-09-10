@@ -98,7 +98,6 @@ kotlin {
         }
         val iosMain by creating {
             dependsOn(commonMain)
-            dependsOn(stubNativeMain)
         }
         named("iosArm64Main") {
             dependsOn(iosMain)
