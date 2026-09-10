@@ -11,6 +11,7 @@ package io.github.lumkit.sweeteditor.internal
  */
 internal object NativeBundle {
     const val LIBRARY_NAME: String = "sweeteditor"
+    const val COMPOSE_JNI_LIBRARY_NAME: String = "sweeteditor_compose"
     const val RESOURCE_ROOT: String = "native"
     const val WASM_C_ABI_JS: String = "native/web/sweeteditor_c_abi.js"
     const val WASM_C_ABI_WASM: String = "native/web/sweeteditor_c_abi.wasm"

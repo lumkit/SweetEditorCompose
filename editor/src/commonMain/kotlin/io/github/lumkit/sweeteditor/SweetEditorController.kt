@@ -1,13 +1,59 @@
 package io.github.lumkit.sweeteditor
 
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 
 @Stable
 class SweetEditorController(
-    initialText: String = "",
+    internal val initialText: String = "",
 ) {
-    var text by mutableStateOf(initialText)
+    private var session: RememberedEditorSession? = null
+    private val readyCallbacks = mutableListOf<() -> Unit>()
+
+    val isReady: Boolean get() = session?.isReady == true
+
+    fun whenReady(block: () -> Unit) {
+        val current = session
+        if (current != null && current.isReady) {
+            block()
+        } else {
+            readyCallbacks += block
+        }
+    }
+
+    fun insertText(text: String) {
+        session?.insertText(text)
+    }
+
+    fun undo() {
+        session?.undo()
+    }
+
+    fun redo() {
+        session?.redo()
+    }
+
+    fun backspace() {
+        session?.backspace()
+    }
+
+    fun dispose() {
+        readyCallbacks.clear()
+    }
+
+    internal fun attach(next: RememberedEditorSession) {
+        check(session == null || session === next) {
+            "SweetEditorController is already attached to another SweetEditor"
+        }
+        session = next
+        val pending = readyCallbacks.toList()
+        readyCallbacks.clear()
+        pending.forEach { it() }
+    }
+
+    internal fun detach(current: RememberedEditorSession) {
+        if (session === current) {
+            session = null
+        }
+    }
 }

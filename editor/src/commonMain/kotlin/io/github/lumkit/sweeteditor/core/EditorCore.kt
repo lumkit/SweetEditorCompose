@@ -1,0 +1,114 @@
+package io.github.lumkit.sweeteditor.core
+
+import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
+import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
+import io.github.lumkit.sweeteditor.core.protocol.EditorOptions
+import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
+
+internal class Document(
+    internal val handle: Long,
+    private val ownsHandle: Boolean,
+) {
+    fun utf8(): ByteArray = NativeBridge.getDocumentUtf8(handle)
+
+    fun utf8Text(): String = utf8().decodeToString()
+
+    fun close() {
+        if (ownsHandle && handle != 0L) {
+            NativeBridge.freeDocument(handle)
+        }
+    }
+
+    companion object {
+        fun fromUtf8(text: String): Document {
+            val handle = NativeBridge.createDocumentFromUtf8(text.encodeToByteArray())
+            check(handle != 0L) { "create_document_from_utf8 failed" }
+            return Document(handle, ownsHandle = true)
+        }
+    }
+}
+
+internal class EditorCore(
+    private val editorHandle: Long,
+) {
+    val handle: Long get() = editorHandle
+
+    fun setDocument(document: Document): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetDocument(editorHandle, document.handle))
+
+    fun setViewport(width: Int, height: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetViewport(editorHandle, width, height))
+
+    fun onFontMetricsChanged(): EditorActionResult? =
+        decodeAction(NativeBridge.editorOnFontMetricsChanged(editorHandle))
+
+    fun buildRenderModel(): EditorRenderModel? {
+        val bytes = NativeBridge.editorBuildRenderModel(editorHandle) ?: return null
+        return try {
+            CoreProtocol.decodeEditorRenderModel(bytes)
+        } catch (error: Throwable) {
+            val head = bytes.take(96).joinToString(" ") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+            throw IllegalStateException(
+                "Failed to decode EditorRenderModel (${bytes.size} bytes, head=$head)",
+                error,
+            )
+        }
+    }
+
+    fun handleGestureEvent(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorHandleGestureEvent(editorHandle, payload))
+
+    fun handleKeyEvent(keyCode: Int, text: ByteArray?, modifiers: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorHandleKeyEvent(editorHandle, keyCode, text, modifiers))
+
+    fun tickAnimations(): EditorActionResult? =
+        decodeAction(NativeBridge.editorTickAnimations(editorHandle))
+
+    fun insertText(text: String): EditorActionResult? =
+        decodeAction(NativeBridge.editorInsertText(editorHandle, text.encodeToByteArray()))
+
+    fun backspace(): EditorActionResult? = decodeAction(NativeBridge.editorBackspace(editorHandle))
+
+    fun undo(): EditorActionResult? = decodeAction(NativeBridge.editorUndo(editorHandle))
+
+    fun redo(): EditorActionResult? = decodeAction(NativeBridge.editorRedo(editorHandle))
+
+    fun canUndo(): Boolean = NativeBridge.editorCanUndo(editorHandle)
+
+    fun canRedo(): Boolean = NativeBridge.editorCanRedo(editorHandle)
+
+    fun setGutterSticky(sticky: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetGutterSticky(editorHandle, sticky))
+
+    fun close() {
+        if (editorHandle != 0L) {
+            NativeBridge.freeEditor(editorHandle)
+        }
+    }
+
+    companion object {
+        fun create(measurer: HostTextMeasurer, options: EditorOptions = defaultEditorOptions()): EditorCore {
+            val handle = NativeBridge.createEditor(measurer, CoreProtocol.encodeEditorOptions(options))
+            check(handle != 0L) { "create_editor failed" }
+            return EditorCore(handle)
+        }
+    }
+}
+
+internal fun defaultEditorOptions(): EditorOptions = EditorOptions(
+    touchSlop = 10f,
+    doubleTapTimeout = 300L,
+    longPressMs = 500L,
+    flingFriction = 3.5f,
+    flingMinVelocity = 50f,
+    flingMaxVelocity = 8000f,
+    maxUndoStackSize = 512L,
+    keyChordTimeoutMs = 2000L,
+    revealSelectionEndOnSelectAll = false,
+)
+
+private fun decodeAction(bytes: ByteArray?): EditorActionResult? {
+    if (bytes == null) return null
+    return CoreProtocol.decodeEditorActionResult(bytes)
+}

@@ -9,11 +9,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.rememberSweetEditorController
 
-private val SampleSource = """
-    fun main() {
-        println("Hello, SweetEditor!")
+private val SampleSource = buildString {
+    appendLine("fun main() {")
+    repeat(80) { index ->
+        appendLine("    println(\"Hello, SweetEditor! #$index\")")
     }
-""".trimIndent()
+    appendLine("}")
+}
 
 @Composable
 @Preview

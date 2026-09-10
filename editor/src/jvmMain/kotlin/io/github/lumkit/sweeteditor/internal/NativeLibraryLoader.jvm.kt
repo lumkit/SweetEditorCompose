@@ -5,7 +5,69 @@ import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 internal actual object NativeLibraryLoader {
+    @Volatile
+    private var loaded = false
+
     actual fun bundledLibraryResourcePath(): String? {
+        return "${NativeBundle.RESOURCE_ROOT}/${platformDir()}/${System.mapLibraryName(NativeBundle.LIBRARY_NAME)}"
+    }
+
+    actual fun loadIfAvailable(): Boolean {
+        return try {
+            loadComposeJni()
+            true
+        } catch (_: UnsatisfiedLinkError) {
+            false
+        }
+    }
+
+    actual fun loadComposeJni() {
+        synchronized(this) {
+            if (loaded) return
+            val dir = resolveNativeDir()
+            System.load(dir.resolve(System.mapLibraryName(NativeBundle.LIBRARY_NAME)).toAbsolutePath().toString())
+            System.load(
+                dir.resolve(System.mapLibraryName(NativeBundle.COMPOSE_JNI_LIBRARY_NAME)).toAbsolutePath().toString(),
+            )
+            loaded = true
+        }
+    }
+
+    private fun resolveNativeDir(): Path {
+        val override = System.getProperty("sweeteditor.lib.path")
+        if (!override.isNullOrBlank()) {
+            val dir = Path.of(override)
+            requireCoreAndJni(dir)
+            return dir
+        }
+        val cache = nativeCacheDir()
+        Files.createDirectories(cache)
+        extractLibrary(cache, NativeBundle.LIBRARY_NAME)
+        extractLibrary(cache, NativeBundle.COMPOSE_JNI_LIBRARY_NAME)
+        return cache
+    }
+
+    private fun extractLibrary(targetDir: Path, libraryName: String) {
+        val resourcePath = "/${NativeBundle.RESOURCE_ROOT}/${platformDir()}/${System.mapLibraryName(libraryName)}"
+        val resource = NativeLibraryLoader::class.java.getResource(resourcePath)
+            ?: throw UnsatisfiedLinkError("Missing native resource $resourcePath")
+        val targetFile = targetDir.resolve(System.mapLibraryName(libraryName))
+        resource.openStream().use { input ->
+            Files.copy(input, targetFile, StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    private fun requireCoreAndJni(dir: Path) {
+        val core = dir.resolve(System.mapLibraryName(NativeBundle.LIBRARY_NAME))
+        val jni = dir.resolve(System.mapLibraryName(NativeBundle.COMPOSE_JNI_LIBRARY_NAME))
+        if (!Files.isRegularFile(core) || !Files.isRegularFile(jni)) {
+            throw UnsatisfiedLinkError(
+                "sweeteditor.lib.path=$dir must contain ${core.fileName} and ${jni.fileName}",
+            )
+        }
+    }
+
+    private fun platformDir(): String {
         val os = System.getProperty("os.name").orEmpty().lowercase()
         val arch = System.getProperty("os.arch").orEmpty().lowercase()
         val osName = when {
@@ -17,20 +79,7 @@ internal actual object NativeLibraryLoader {
             arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
             else -> "x86_64"
         }
-        return "${NativeBundle.RESOURCE_ROOT}/$osName-$archName/${System.mapLibraryName(NativeBundle.LIBRARY_NAME)}"
-    }
-
-    actual fun loadIfAvailable(): Boolean {
-        val resourcePath = "/${bundledLibraryResourcePath()}"
-        val resource = NativeLibraryLoader::class.java.getResource(resourcePath) ?: return false
-        val targetDir = nativeCacheDir()
-        val targetFile = targetDir.resolve(System.mapLibraryName(NativeBundle.LIBRARY_NAME))
-        Files.createDirectories(targetDir)
-        resource.openStream().use { input ->
-            Files.copy(input, targetFile, StandardCopyOption.REPLACE_EXISTING)
-        }
-        System.load(targetFile.toAbsolutePath().toString())
-        return true
+        return "$osName-$archName"
     }
 
     private fun nativeCacheDir(): Path {

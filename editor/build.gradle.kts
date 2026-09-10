@@ -69,25 +69,54 @@ kotlin {
     }
 
     sourceSets {
-        commonMain.dependencies {
-            api(libs.compose.runtime)
-            api(libs.compose.foundation)
-            api(libs.compose.ui)
+        val commonMain by getting {
+            dependencies {
+                api(libs.compose.runtime)
+                api(libs.compose.foundation)
+                api(libs.compose.ui)
+            }
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
-        androidMain.dependencies {
-            implementation(libs.compose.uiToolingPreview)
+        val jniMain by creating {
+            dependsOn(commonMain)
+        }
+        val stubNativeMain by creating {
+            dependsOn(commonMain)
+        }
+        androidMain {
+            dependsOn(jniMain)
+            dependencies {
+                implementation(libs.compose.uiToolingPreview)
+            }
         }
         named("jvmMain") {
+            dependsOn(jniMain)
             resources.srcDir(jvmNativeResourcesDir)
         }
+        val iosMain by creating {
+            dependsOn(commonMain)
+            dependsOn(stubNativeMain)
+        }
+        named("iosArm64Main") {
+            dependsOn(iosMain)
+        }
+        named("iosSimulatorArm64Main") {
+            dependsOn(iosMain)
+        }
         named("jsMain") {
+            dependsOn(stubNativeMain)
             resources.srcDir(webNativeResourcesDir)
         }
         named("wasmJsMain") {
+            dependsOn(stubNativeMain)
             resources.srcDir(webNativeResourcesDir)
+        }
+        named("jvmTest") {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
         }
     }
 }
@@ -95,7 +124,7 @@ kotlin {
 val syncSweetEditorNatives by tasks.registering(Sync::class) {
     group = "sweeteditor"
     description =
-        "Copy SweetEditor prebuilt natives and public headers into editor/natives for local use and later Maven packaging."
+        "Copy SweetEditor release prebuilts into editor/natives (packaging). Desktop run/test builds the host core with CMake instead."
 
     into(nativesRoot)
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
@@ -192,6 +221,84 @@ val prepareWebNativeResources by tasks.registering(Sync::class) {
     }
 }
 
+val generatedProtocolFile =
+    layout.projectDirectory.file("src/commonMain/kotlin/io/github/lumkit/sweeteditor/core/protocol/GeneratedProtocol.kt")
+
+val generateCoreProtocol by tasks.registering(Exec::class) {
+    group = "sweeteditor"
+    description = "Generate Kotlin CoreProtocol types from SE schema.snapshot.json"
+    val schema = File(sweetEditorHome, "tools/se_protocol_gen/schema.snapshot.json")
+    val generator = rootProject.file("tools/kotlin_protocol_gen/generate.py")
+    inputs.file(schema)
+    inputs.file(generator)
+    outputs.file(generatedProtocolFile)
+    commandLine(
+        "python3",
+        generator.absolutePath,
+        "--schema",
+        schema.absolutePath,
+        "--out",
+        generatedProtocolFile.asFile.absolutePath,
+    )
+    doFirst {
+        check(schema.isFile) {
+            "Missing protocol schema at ${schema.absolutePath}. Set sweetEditor.home."
+        }
+    }
+}
+
+val desktopJniBuildDir: Provider<Directory> = layout.buildDirectory.dir("jni/desktop")
+val hostDesktopFolder: String = currentDesktopResourceFolder()
+val jniBuildScript = layout.projectDirectory.file("scripts/build-desktop-jni.sh")
+val hostCoreBuildScript = layout.projectDirectory.file("scripts/build-host-core.sh")
+val hostCoreBuildDir = File(sweetEditorHome, "build/compose-host")
+
+val buildHostSweetEditorCore by tasks.registering(Exec::class) {
+    group = "sweeteditor"
+    description =
+        "CMake-build the SweetEditor C++ core for this desktop host (README local-compile flow) and install it into editor/natives/"
+    environment("SWEETEDITOR_HOME", sweetEditorHome.absolutePath)
+    inputs.dir(File(sweetEditorHome, "src"))
+    inputs.dir(File(sweetEditorHome, "include"))
+    inputs.file(File(sweetEditorHome, "CMakeLists.txt"))
+    inputs.file(hostCoreBuildScript)
+    outputs.dir(File(nativesRoot, "desktop/$hostDesktopFolder"))
+    outputs.dir(File(nativesRoot, "include/sweeteditor"))
+    outputs.dir(hostCoreBuildDir)
+    commandLine("bash", hostCoreBuildScript.asFile.absolutePath, "all")
+}
+
+val configureDesktopJni by tasks.registering(Exec::class) {
+    group = "sweeteditor"
+    description = "Configure CMake for libsweeteditor_compose on the current desktop host"
+    inputs.files(
+        file("src/jni/CMakeLists.txt"),
+        file("src/jni/sweeteditor_jni.cpp"),
+        file("src/jni/sweeteditor_jni.h"),
+        jniBuildScript,
+    )
+    outputs.dir(desktopJniBuildDir)
+    dependsOn(buildHostSweetEditorCore)
+    commandLine("bash", jniBuildScript.asFile.absolutePath, "configure")
+}
+
+val compileDesktopJni by tasks.registering(Exec::class) {
+    group = "sweeteditor"
+    description = "Build libsweeteditor_compose for the current desktop host"
+    dependsOn(buildHostSweetEditorCore, configureDesktopJni)
+    inputs.dir(desktopJniBuildDir)
+    commandLine("bash", jniBuildScript.asFile.absolutePath, "build")
+}
+
+prepareJvmNativeResources {
+    dependsOn(buildHostSweetEditorCore, compileDesktopJni)
+    from(desktopJniBuildDir) {
+        include("libsweeteditor_compose.dylib", "libsweeteditor_compose.so", "sweeteditor_compose.dll")
+        include("Release/sweeteditor_compose.dll")
+        into(hostDesktopFolder)
+    }
+}
+
 tasks.configureEach {
     if (name != prepareAndroidJniLibs.name) {
         val isAndroidNativeConsume = name.contains("Android") &&
@@ -239,20 +346,34 @@ private fun configureSweetEditorCinterop(target: KotlinNativeTarget) {
     val includeDir = sequenceOf(
         File(nativesRoot, "include"),
         File(sweetEditorHome, "include"),
-    ).firstOrNull { it.resolve("sweeteditor/c_api.h").isFile } ?: return
+    ).firstOrNull { it.resolve("sweeteditor/c_api.h").isFile }
+        ?: error("SweetEditor headers missing (expected natives/include/sweeteditor/c_api.h or \$sweetEditor.home/include)")
 
     val libraryDir = sequenceOf(
         File(nativesRoot, "ios/$archDir"),
         File(sweetEditorHome, "prebuilt/ios/$archDir"),
     ).firstOrNull { dir ->
         dir.resolve("libsweeteditor.a").isFile || dir.resolve("libsweeteditor.dylib").isFile
-    }
+    } ?: error("SweetEditor iOS library missing for $archDir")
 
     target.compilations.getByName("main").cinterops.create("sweeteditor") {
         defFile(file("src/nativeInterop/cinterop/sweeteditor.def"))
         includeDirs(includeDir)
-        if (libraryDir != null) {
-            linkerOpts("-L${libraryDir.absolutePath}", "-lsweeteditor")
-        }
+        linkerOpts("-L${libraryDir.absolutePath}", "-lsweeteditor")
     }
+}
+
+private fun currentDesktopResourceFolder(): String {
+    val os = System.getProperty("os.name").orEmpty().lowercase()
+    val arch = System.getProperty("os.arch").orEmpty().lowercase()
+    val osName = when {
+        os.contains("win") -> "windows"
+        os.contains("mac") || os.contains("darwin") -> "macos"
+        else -> "linux"
+    }
+    val archName = when {
+        arch.contains("aarch64") || arch.contains("arm64") -> "aarch64"
+        else -> "x86_64"
+    }
+    return "$osName-$archName"
 }

@@ -16,6 +16,6 @@
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+-keep class io.github.lumkit.sweeteditor.internal.jni.SweetEditorJni { *; }
+-keep class io.github.lumkit.sweeteditor.core.HostTextMeasurer { *; }
+-keepclasseswithmembernames class * { native <methods>; }

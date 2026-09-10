@@ -1,11 +1,26 @@
 package io.github.lumkit.sweeteditor.internal
 
 internal actual object NativeLibraryLoader {
+    @Volatile
+    private var loaded = false
+
     actual fun bundledLibraryResourcePath(): String? = null
 
     actual fun loadIfAvailable(): Boolean {
-        // Android loads `libsweeteditor.so` from the AAR jniLibs folder via System.loadLibrary
-        // once the JNI / C ABI bridge is wired.
-        return false
+        return try {
+            loadComposeJni()
+            true
+        } catch (_: UnsatisfiedLinkError) {
+            false
+        }
+    }
+
+    actual fun loadComposeJni() {
+        synchronized(this) {
+            if (loaded) return
+            System.loadLibrary(NativeBundle.LIBRARY_NAME)
+            System.loadLibrary(NativeBundle.COMPOSE_JNI_LIBRARY_NAME)
+            loaded = true
+        }
     }
 }
