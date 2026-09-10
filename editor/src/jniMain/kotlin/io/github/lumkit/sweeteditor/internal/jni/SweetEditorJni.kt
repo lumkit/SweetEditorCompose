@@ -32,6 +32,17 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorCanUndo(editor: Long): Boolean
     @JvmStatic external fun editorCanRedo(editor: Long): Boolean
     @JvmStatic external fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray?
+    @JvmStatic external fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
+    @JvmStatic external fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
+    @JvmStatic external fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorImeGetState(editor: Long, sessionId: Long): ByteArray?
+    @JvmStatic external fun editorImeGetContext(
+        editor: Long,
+        sessionId: Long,
+        source: Int,
+        startUtf16: Long,
+        lengthUtf16: Long,
+    ): ByteArray?
 }
 
 internal actual object NativeBridge {
@@ -64,4 +75,19 @@ internal actual object NativeBridge {
     actual fun editorCanRedo(editor: Long): Boolean = SweetEditorJni.editorCanRedo(editor)
     actual fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray? =
         SweetEditorJni.editorSetGutterSticky(editor, sticky)
+    actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =
+        SweetEditorJni.editorImeBeginSession(editor, mutationModel)
+    actual fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray? =
+        SweetEditorJni.editorImeEndSession(editor, sessionId)
+    actual fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorImeApplyCommands(editor, payload)
+    actual fun editorImeGetState(editor: Long, sessionId: Long): ByteArray? =
+        SweetEditorJni.editorImeGetState(editor, sessionId)
+    actual fun editorImeGetContext(
+        editor: Long,
+        sessionId: Long,
+        source: Int,
+        startUtf16: Long,
+        lengthUtf16: Long,
+    ): ByteArray? = SweetEditorJni.editorImeGetContext(editor, sessionId, source, startUtf16, lengthUtf16)
 }

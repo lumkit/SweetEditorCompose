@@ -355,6 +355,58 @@ jbyteArray set_gutter_sticky_jni(JNIEnv* env, jclass, jlong editor, jboolean sti
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray ime_begin_session_jni(JNIEnv* env, jclass, jlong editor, jint mutation_model) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_ime_begin_session(static_cast<intptr_t>(editor), mutation_model, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray ime_end_session_jni(JNIEnv* env, jclass, jlong editor, jlong session_id) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload =
+      editor_ime_end_session(static_cast<intptr_t>(editor), static_cast<uint64_t>(session_id), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray ime_apply_commands_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_ime_apply_commands(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray ime_get_state_jni(JNIEnv* env, jclass, jlong editor, jlong session_id) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload =
+      editor_ime_get_state(static_cast<intptr_t>(editor), static_cast<uint64_t>(session_id), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray ime_get_context_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jlong session_id,
+    jint source,
+    jlong start_utf16,
+    jlong length_utf16) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_ime_get_context(
+      static_cast<intptr_t>(editor),
+      static_cast<uint64_t>(session_id),
+      source,
+      static_cast<int64_t>(start_utf16),
+      static_cast<int64_t>(length_utf16),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -375,6 +427,11 @@ const JNINativeMethod kMethods[] = {
     {"editorCanUndo", "(J)Z", (void*)can_undo_jni},
     {"editorCanRedo", "(J)Z", (void*)can_redo_jni},
     {"editorSetGutterSticky", "(JZ)[B", (void*)set_gutter_sticky_jni},
+    {"editorImeBeginSession", "(JI)[B", (void*)ime_begin_session_jni},
+    {"editorImeEndSession", "(JJ)[B", (void*)ime_end_session_jni},
+    {"editorImeApplyCommands", "(J[B)[B", (void*)ime_apply_commands_jni},
+    {"editorImeGetState", "(JJ)[B", (void*)ime_get_state_jni},
+    {"editorImeGetContext", "(JJIJJ)[B", (void*)ime_get_context_jni},
 };
 
 }  // namespace

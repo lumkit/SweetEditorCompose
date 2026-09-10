@@ -62,6 +62,27 @@ internal actual object NativeBridge {
     actual fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray? {
         unsupported()
     }
+    actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorImeGetState(editor: Long, sessionId: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorImeGetContext(
+        editor: Long,
+        sessionId: Long,
+        source: Int,
+        startUtf16: Long,
+        lengthUtf16: Long,
+    ): ByteArray? {
+        unsupported()
+    }
 
     private fun unsupported(): Nothing {
         throw IllegalStateException("SweetEditor native core is not wired on this target yet")
