@@ -40,3 +40,5 @@ node_modules/
 
 # Generated JNI staging; canonical binaries live in editor/natives/
 editor/src/androidMain/jniLibs/
+
+/docs
