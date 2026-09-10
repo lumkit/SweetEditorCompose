@@ -119,9 +119,9 @@ fun SweetEditor(
             .background(Color(0xFF1E1E1E))
             .onSizeChanged { size -> session.setViewport(size.width, size.height) }
             .pointerHoverIcon(pointerIcon)
+            .editorIme(session)
             .focusRequester(focusRequester)
             .focusable()
-            .editorIme(session)
             .onPreviewKeyEvent { event ->
                 val mapped = mapKeyEvent(event) ?: return@onPreviewKeyEvent false
                 session.handleKey(mapped.keyCode, mapped.text, mapped.modifiers)
@@ -134,7 +134,8 @@ fun SweetEditor(
                         val change = event.changes.firstOrNull() ?: continue
                         val modifiers = pointerModifiers(event)
                         if (event.type == PointerEventType.Press) {
-                            focusRequester.requestFocus()
+                            runCatching { focusRequester.requestFocus() }
+                            session.notifyEditorPressed()
                             change.consume()
                         }
                         if (event.type == PointerEventType.Scroll) {

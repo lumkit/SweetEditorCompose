@@ -43,6 +43,7 @@ internal class RememberedEditorSession(
     private var viewportWidth = 0
     private var viewportHeight = 0
     private var imeAdapter: EditorImeAdapter? = null
+    internal var imePressHandler: (() -> Unit)? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -123,6 +124,10 @@ internal class RememberedEditorSession(
     }
 
     fun documentUtf8(): String? = document?.utf8Text()
+
+    fun notifyEditorPressed() {
+        imePressHandler?.invoke()
+    }
 
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
