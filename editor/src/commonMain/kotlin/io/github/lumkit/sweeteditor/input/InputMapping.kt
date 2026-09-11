@@ -65,9 +65,11 @@ internal fun mapPointerGesture(
     pressedPoints: List<PointF>,
     fallbackPoint: PointF,
     previousPressedCount: Int,
+    isSecondaryButton: Boolean = false,
 ): MappedPointerGesture? {
     return when (eventType) {
         PointerEventType.Press -> when {
+            isMouse && isSecondaryButton -> MappedPointerGesture(EventType.MOUSE_RIGHT_DOWN, listOf(fallbackPoint))
             isMouse -> MappedPointerGesture(EventType.MOUSE_DOWN, listOf(fallbackPoint))
             previousPressedCount == 0 -> MappedPointerGesture(EventType.TOUCH_DOWN, pressedPoints.ifEmpty { listOf(fallbackPoint) })
             else -> MappedPointerGesture(EventType.TOUCH_POINTER_DOWN, pressedPoints.ifEmpty { listOf(fallbackPoint) })

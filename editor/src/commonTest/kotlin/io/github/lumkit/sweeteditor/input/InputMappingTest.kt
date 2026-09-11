@@ -49,6 +49,20 @@ class InputMappingTest {
     }
 
     @Test
+    fun mouseSecondaryPressIsContextMenuDown() {
+        val point = PointF(8f, 16f)
+        val mapped = mapPointerGesture(
+            eventType = PointerEventType.Press,
+            isMouse = true,
+            pressedPoints = listOf(point),
+            fallbackPoint = point,
+            previousPressedCount = 0,
+            isSecondaryButton = true,
+        )
+        assertEquals(EventType.MOUSE_RIGHT_DOWN, mapped?.type)
+    }
+
+    @Test
     fun macosMagnificationDeltaBecomesCoreDirectScale() {
         assertEquals(1.1f, magnificationToDirectScale(0.1)!!)
         assertEquals(0.9f, magnificationToDirectScale(-0.1)!!)

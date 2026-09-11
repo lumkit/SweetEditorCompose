@@ -14,6 +14,8 @@ class SweetEditorController(
     private var iconProvider: EditorIconProvider? = null
     internal var selectionMenuItemProvider: SelectionMenuItemProvider? = null
         private set
+    internal var contextMenuItemProvider: ContextMenuItemProvider? = null
+        private set
     val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
@@ -101,6 +103,26 @@ class SweetEditorController(
     }
 
     fun onSelectionMenuItemClick(listener: (SelectionMenuItemClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun setContextMenuItemProvider(provider: ContextMenuItemProvider?) {
+        contextMenuItemProvider = provider
+        session?.applyContextMenuProvider(provider)
+    }
+
+    fun dismissContextMenu() {
+        session?.hideContextMenu()
+    }
+
+    val isContextMenuShowing: Boolean get() = session?.isContextMenuShowing == true
+
+    fun onContextMenu(listener: (ContextMenuEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onContextMenuItemClick(listener: (ContextMenuItemClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onLinkClick(listener: (LinkClickEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 
     fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0) {
@@ -447,6 +469,7 @@ class SweetEditorController(
         next.setMetadata(metadata)
         next.setEditorIconProvider(iconProvider)
         next.applySelectionMenuProvider(selectionMenuItemProvider)
+        next.applyContextMenuProvider(contextMenuItemProvider)
         val pending = readyCallbacks.toList()
         readyCallbacks.clear()
         pending.forEach { it() }

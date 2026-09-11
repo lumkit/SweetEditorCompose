@@ -6,6 +6,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import io.github.lumkit.sweeteditor.completion.EditorCompletionPopup
+import io.github.lumkit.sweeteditor.contextmenu.EditorContextMenuPopup
 import io.github.lumkit.sweeteditor.selection.EditorSelectionMenuPopup
 import io.github.lumkit.sweeteditor.selection.SelectionMenuController
 import androidx.compose.runtime.Composable
@@ -23,6 +24,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -245,6 +247,7 @@ fun SweetEditor(
                             pressedPoints = pressedPoints,
                             fallbackPoint = lastPoint,
                             previousPressedCount = previousPressedCount,
+                            isSecondaryButton = event.buttons.isSecondaryPressed,
                         )
                         previousPressedCount = pressedPoints.size
                         if (mapped == null) continue
@@ -280,6 +283,13 @@ fun SweetEditor(
         theme = theme,
         onItemClick = session::onSelectionMenuItemClick,
         onDismiss = session::hideSelectionMenu,
+    )
+    EditorContextMenuPopup(
+        sections = session.contextMenuSections,
+        location = session.contextMenuLocation,
+        theme = theme,
+        onItemClick = session::onContextMenuItemClick,
+        onDismiss = session::hideContextMenu,
     )
     }
 }
