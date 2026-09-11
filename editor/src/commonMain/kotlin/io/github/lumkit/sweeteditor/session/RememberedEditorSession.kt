@@ -89,6 +89,7 @@ import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.EditorImeAdapter
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import io.github.lumkit.sweeteditor.platformSelectionMenuEnabled
+import io.github.lumkit.sweeteditor.selection.SelectionMenuAnchor
 import io.github.lumkit.sweeteditor.selection.SelectionMenuController
 import io.github.lumkit.sweeteditor.selection.toSelectionMenuSignal
 import io.github.lumkit.sweeteditor.SelectionMenuContext
@@ -124,7 +125,7 @@ internal class RememberedEditorSession(
         private set
     var selectionMenuItems by mutableStateOf<List<SelectionMenuItem>>(emptyList())
         private set
-    var selectionMenuAnchor by mutableStateOf<EditorCursorRect?>(null)
+    var selectionMenuAnchor by mutableStateOf<SelectionMenuAnchor?>(null)
         private set
     var selectionMenuShowToken by mutableStateOf(0)
         private set
@@ -729,12 +730,29 @@ internal class RememberedEditorSession(
         selectionMenuShowToken = selectionMenu.showToken
     }
 
-    private fun selectionMenuAnchorRect(): EditorCursorRect? {
-        val range = lastSelectionRange
-        if (range != null) {
-            return getPositionRect(range.start.line, range.start.column) ?: getCursorRect()
+    private fun selectionMenuAnchorRect(): SelectionMenuAnchor? {
+        val model = renderModel
+        val start = model?.selectionStartHandle
+        if (start != null && start.visible) {
+            val end = model.selectionEndHandle
+            val startBottom = start.position.y + start.height
+            val endX = if (end.visible) end.position.x else start.position.x
+            val endY = if (end.visible) end.position.y else start.position.y
+            val endBottom = if (end.visible) endY + end.height else startBottom
+            return SelectionMenuAnchor(
+                left = minOf(start.position.x, endX),
+                top = minOf(start.position.y, endY),
+                right = maxOf(start.position.x, endX),
+                bottom = maxOf(startBottom, endBottom),
+            )
         }
-        return getCursorRect()
+        val cursor = getCursorRect() ?: return null
+        return SelectionMenuAnchor(
+            left = cursor.x,
+            top = cursor.y,
+            right = cursor.x,
+            bottom = cursor.y + cursor.height,
+        )
     }
 
     fun onSelectionMenuItemClick(item: SelectionMenuItem) {
@@ -875,8 +893,6 @@ internal class RememberedEditorSession(
             if (selectionMenu.lifecycle != SelectionMenuLifecycle.PENDING_SHOW) {
                 selectionMenuAnchor = null
             }
-        } else if (result.scrollChanged) {
-            selectionMenuAnchor = selectionMenuAnchorRect()
         }
         if (result.needsRedraw || renderModel == null) {
             try {
@@ -888,6 +904,9 @@ internal class RememberedEditorSession(
             } catch (error: Throwable) {
                 loadError = error.message ?: error.toString()
             }
+        }
+        if (selectionMenu.lifecycle == SelectionMenuLifecycle.VISIBLE) {
+            selectionMenuAnchor = selectionMenuAnchorRect()
         }
     }
 
