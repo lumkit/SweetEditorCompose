@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import io.github.lumkit.sweeteditor.completion.EditorCompletionPopup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -103,6 +104,7 @@ fun SweetEditor(
 
     val focusRequester = remember { FocusRequester() }
     val fontAscent = -hostMeasurer.fontAscent()
+    val fontDescent = hostMeasurer.fontDescent()
     val pointerIcon = when (session.pointerCursor) {
         PointerCursorType.HAND -> PointerIcon.Hand
         PointerCursorType.TEXT -> PointerIcon.Text
@@ -141,11 +143,15 @@ fun SweetEditor(
         return
     }
 
-    Canvas(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .clipToBounds()
-            .background(theme.backgroundColor.toComposeColor())
+            .background(theme.backgroundColor.toComposeColor()),
+    ) {
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
             .onSizeChanged { size -> session.setViewport(size.width, size.height) }
             .pointerHoverIcon(pointerIcon)
             .editorHostScale(session)
@@ -232,8 +238,18 @@ fun SweetEditor(
     ) {
         val model = session.renderModel
         if (model != null) {
-            drawEditor(model, textMeasurer, textStyle, fontAscent, theme)
+            drawEditor(model, textMeasurer, textStyle, fontAscent, fontDescent, theme, session.iconProvider)
         }
+    }
+    EditorCompletionPopup(
+        items = session.completionItems,
+        selectedIndex = session.completionSelectedIndex,
+        anchor = session.completionAnchor,
+        theme = theme,
+        onSelect = { session.selectCompletionIndex(it) },
+        onConfirm = session::applyCompletionItem,
+        onDismiss = session::dismissCompletion,
+    )
     }
 }
 
