@@ -86,6 +86,33 @@ internal class EditorCore(
     fun setGutterSticky(sticky: Boolean): EditorActionResult? =
         decodeAction(NativeBridge.editorSetGutterSticky(editorHandle, sticky))
 
+    fun setGutterVisible(visible: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetGutterVisible(editorHandle, visible))
+
+    fun setWrapMode(mode: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetWrapMode(editorHandle, mode))
+
+    fun setTabSize(tabSize: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetTabSize(editorHandle, tabSize))
+
+    fun setInsertSpaces(enabled: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetInsertSpaces(editorHandle, enabled))
+
+    fun setScale(scale: Float): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetScale(editorHandle, scale))
+
+    fun setLineSpacing(add: Float, mult: Float): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetLineSpacing(editorHandle, add, mult))
+
+    fun setReadOnly(readOnly: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetReadOnly(editorHandle, readOnly))
+
+    fun setCurrentLineRenderMode(mode: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetCurrentLineRenderMode(editorHandle, mode))
+
+    fun setEditorRenderColors(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetEditorRenderColors(editorHandle, payload))
+
     fun beginImeSession(model: ImeMutationModel = ImeMutationModel.COMMAND): ImeState? {
         val bytes = NativeBridge.editorImeBeginSession(editorHandle, model.value) ?: return null
         return CoreProtocol.decodeImeState(bytes)

@@ -36,9 +36,18 @@ import sweeteditor.cinterop.editor_ime_get_state
 import sweeteditor.cinterop.editor_insert_text
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_set_current_line_render_mode
 import sweeteditor.cinterop.editor_set_document
+import sweeteditor.cinterop.editor_set_editor_render_colors
 import sweeteditor.cinterop.editor_set_gutter_sticky
+import sweeteditor.cinterop.editor_set_gutter_visible
+import sweeteditor.cinterop.editor_set_insert_spaces
+import sweeteditor.cinterop.editor_set_line_spacing
+import sweeteditor.cinterop.editor_set_read_only
+import sweeteditor.cinterop.editor_set_scale
+import sweeteditor.cinterop.editor_set_tab_size
 import sweeteditor.cinterop.editor_set_viewport
+import sweeteditor.cinterop.editor_set_wrap_mode
 import sweeteditor.cinterop.editor_tick_animations
 import sweeteditor.cinterop.editor_undo
 import sweeteditor.cinterop.free_binary_data
@@ -200,6 +209,52 @@ internal actual object NativeBridge {
     actual fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray? =
         withActive(editor) {
             adoptBinary { size -> editor_set_gutter_sticky(editor, if (sticky) 1 else 0, size) }
+        }
+
+    actual fun editorSetGutterVisible(editor: Long, visible: Boolean): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_gutter_visible(editor, if (visible) 1 else 0, size) }
+        }
+
+    actual fun editorSetWrapMode(editor: Long, mode: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_wrap_mode(editor, mode, size) } }
+
+    actual fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_tab_size(editor, tabSize, size) } }
+
+    actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_insert_spaces(editor, if (enabled) 1 else 0, size) }
+        }
+
+    actual fun editorSetScale(editor: Long, scale: Float): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_scale(editor, scale, size) } }
+
+    actual fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_line_spacing(editor, add, mult, size) } }
+
+    actual fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_read_only(editor, if (readOnly) 1 else 0, size) }
+        }
+
+    actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_current_line_render_mode(editor, mode, size) }
+        }
+
+    actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_editor_render_colors(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
         }
 
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =

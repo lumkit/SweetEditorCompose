@@ -12,7 +12,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
-import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode
+import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.VisualRunType
@@ -23,15 +24,14 @@ internal fun DrawScope.drawEditor(
     textMeasurer: TextMeasurer,
     baseStyle: TextStyle,
     fontAscent: Float,
+    theme: EditorTheme,
 ) {
-    val background = Color(0xFF1E1E1E)
-    drawRect(background)
+    drawRect(theme.backgroundColor.toComposeColor())
 
-    val currentLineColor = Color(0xFF2A2A2A)
     val lineHeight = model.cursor.height.takeIf { it > 0f } ?: (fontAscent * 1.4f)
-    if (model.currentLineRenderMode != CurrentLineRenderMode.NONE) {
+    if (model.currentLineRenderMode != CoreCurrentLineRenderMode.NONE) {
         drawRect(
-            color = currentLineColor,
+            color = theme.currentLineColor.toComposeColor(),
             topLeft = Offset(0f, model.currentLine.y),
             size = Size(size.width, lineHeight),
         )
@@ -78,7 +78,7 @@ internal fun DrawScope.drawEditor(
     val cursor = model.cursor
     if (cursor.visible) {
         drawRect(
-            color = Color(0xFFCCCCCC),
+            color = theme.cursorColor.toComposeColor(),
             topLeft = Offset(cursor.position.x, cursor.position.y),
             size = Size(2f, cursor.height.coerceAtLeast(1f)),
         )

@@ -355,6 +355,71 @@ jbyteArray set_gutter_sticky_jni(JNIEnv* env, jclass, jlong editor, jboolean sti
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray set_gutter_visible_jni(JNIEnv* env, jclass, jlong editor, jboolean visible) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_gutter_visible(static_cast<intptr_t>(editor), visible ? 1 : 0, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_wrap_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_wrap_mode(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_tab_size_jni(JNIEnv* env, jclass, jlong editor, jint tab_size) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_tab_size(static_cast<intptr_t>(editor), tab_size, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_insert_spaces_jni(JNIEnv* env, jclass, jlong editor, jboolean enabled) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_insert_spaces(static_cast<intptr_t>(editor), enabled ? 1 : 0, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_scale_jni(JNIEnv* env, jclass, jlong editor, jfloat scale) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_scale(static_cast<intptr_t>(editor), scale, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_line_spacing_jni(JNIEnv* env, jclass, jlong editor, jfloat add, jfloat mult) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_line_spacing(static_cast<intptr_t>(editor), add, mult, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_read_only_jni(JNIEnv* env, jclass, jlong editor, jboolean read_only) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_read_only(static_cast<intptr_t>(editor), read_only ? 1 : 0, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_current_line_render_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_current_line_render_mode(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_editor_render_colors_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_editor_render_colors(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
 jbyteArray ime_begin_session_jni(JNIEnv* env, jclass, jlong editor, jint mutation_model) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -427,6 +492,15 @@ const JNINativeMethod kMethods[] = {
     {"editorCanUndo", "(J)Z", (void*)can_undo_jni},
     {"editorCanRedo", "(J)Z", (void*)can_redo_jni},
     {"editorSetGutterSticky", "(JZ)[B", (void*)set_gutter_sticky_jni},
+    {"editorSetGutterVisible", "(JZ)[B", (void*)set_gutter_visible_jni},
+    {"editorSetWrapMode", "(JI)[B", (void*)set_wrap_mode_jni},
+    {"editorSetTabSize", "(JI)[B", (void*)set_tab_size_jni},
+    {"editorSetInsertSpaces", "(JZ)[B", (void*)set_insert_spaces_jni},
+    {"editorSetScale", "(JF)[B", (void*)set_scale_jni},
+    {"editorSetLineSpacing", "(JFF)[B", (void*)set_line_spacing_jni},
+    {"editorSetReadOnly", "(JZ)[B", (void*)set_read_only_jni},
+    {"editorSetCurrentLineRenderMode", "(JI)[B", (void*)set_current_line_render_mode_jni},
+    {"editorSetEditorRenderColors", "(J[B)[B", (void*)set_editor_render_colors_jni},
     {"editorImeBeginSession", "(JI)[B", (void*)ime_begin_session_jni},
     {"editorImeEndSession", "(JJ)[B", (void*)ime_end_session_jni},
     {"editorImeApplyCommands", "(J[B)[B", (void*)ime_apply_commands_jni},

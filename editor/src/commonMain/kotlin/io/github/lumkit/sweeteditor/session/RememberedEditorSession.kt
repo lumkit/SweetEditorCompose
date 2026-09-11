@@ -4,7 +4,11 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.lumkit.sweeteditor.EditorSettings
+import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditorController
+import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
+import io.github.lumkit.sweeteditor.toRenderColors
 import io.github.lumkit.sweeteditor.core.Document
 import io.github.lumkit.sweeteditor.core.EditorCore
 import io.github.lumkit.sweeteditor.core.HostTextMeasurer
@@ -47,6 +51,8 @@ internal class RememberedEditorSession(
     private var imeAdapter: EditorImeAdapter? = null
     internal var onTap: (() -> Unit)? = null
     internal var imeTapHandler: (() -> Unit)? = null
+    private var appliedTheme: EditorTheme? = null
+    private var appliedSettings: EditorSettings? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -72,6 +78,26 @@ internal class RememberedEditorSession(
     override fun onForgotten() = disposeSession()
 
     override fun onAbandoned() = disposeSession()
+
+    fun applyAppearance(theme: EditorTheme, settings: EditorSettings) {
+        val core = editor ?: return
+        if (appliedTheme != theme) {
+            dispatchActionResult(core.setEditorRenderColors(CoreProtocol.encodeEditorRenderColors(theme.toRenderColors())))
+            appliedTheme = theme
+        }
+        if (appliedSettings != settings) {
+            dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
+            dispatchActionResult(core.setTabSize(settings.tabSize.coerceAtLeast(1)))
+            dispatchActionResult(core.setInsertSpaces(settings.insertSpaces))
+            dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
+            dispatchActionResult(core.setScale(settings.scale.coerceAtLeast(0.1f)))
+            dispatchActionResult(core.setReadOnly(settings.readOnly))
+            dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
+            dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
+            dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
+            appliedSettings = settings
+        }
+    }
 
     fun notifyFontMetricsChanged() {
         val core = editor ?: return
