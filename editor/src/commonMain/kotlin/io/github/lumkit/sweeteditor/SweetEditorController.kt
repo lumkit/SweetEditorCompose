@@ -74,6 +74,16 @@ class SweetEditorController(
 
     fun getScrollMetrics(): EditorScrollMetrics? = session?.getScrollMetrics()
 
+    fun getSelectedText(): String = session?.getSelectedText().orEmpty()
+
+    fun copy(): Boolean = session?.copyToClipboard() == true
+
+    fun cut(): Boolean = session?.cutToClipboard() == true
+
+    fun paste() {
+        session?.pasteFromClipboard()
+    }
+
     fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 

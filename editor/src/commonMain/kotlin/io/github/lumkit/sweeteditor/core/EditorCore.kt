@@ -137,6 +137,8 @@ internal class EditorCore(
         return VisibleLineRange(start, end)
     }
 
+    fun getSelectedText(): String = NativeBridge.editorGetSelectedText(editorHandle).decodeToString()
+
     fun getScrollMetrics(): EditorScrollMetrics? {
         val bytes = NativeBridge.editorGetScrollMetrics(editorHandle) ?: return null
         val metrics = CoreProtocol.decodeScrollMetrics(bytes)

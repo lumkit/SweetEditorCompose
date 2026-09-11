@@ -37,6 +37,7 @@ import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.coreWheelDelta
 import io.github.lumkit.sweeteditor.input.editorHostScale
 import io.github.lumkit.sweeteditor.input.editorIme
+import io.github.lumkit.sweeteditor.input.rememberEditorClipboard
 import io.github.lumkit.sweeteditor.input.encodeGesture
 import io.github.lumkit.sweeteditor.input.mapKeyEvent
 import io.github.lumkit.sweeteditor.input.mapPointerGesture
@@ -86,8 +87,10 @@ fun SweetEditor(
             fontSize = (settings.fontSizeSp * session.visualScale).sp,
         )
     }
+    val clipboard = rememberEditorClipboard()
     val fontMetricsChanged = hostMeasurer.bind(textMeasurer, textStyle, densityValue, fontScale)
     SideEffect {
+        session.bindClipboard(clipboard)
         session.applyAppearance(theme, settings)
         if (fontMetricsChanged) {
             session.notifyFontMetricsChanged()
