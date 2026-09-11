@@ -57,6 +57,7 @@ internal fun DrawScope.drawEditor(
     drawRect(theme.backgroundColor.toComposeColor())
 
     val lineHeight = model.cursor.height.takeIf { it > 0f } ?: (fontAscent * 1.4f)
+    drawDiffLineBackgrounds(model, 0f, size.width, lineHeight, fontAscent, fontDescent, gutter = false)
     drawCurrentLine(model, theme, 0f, size.width, lineHeight)
 
     val drawRangeBackgrounds = { drawRangeEffectBackgrounds(model, theme) }
@@ -96,7 +97,7 @@ internal fun DrawScope.drawEditor(
         drawContentDecorations()
     }
 
-    drawGutterOverlay(model, theme, lineHeight)
+    drawGutterOverlay(model, theme, lineHeight, fontAscent, fontDescent)
     drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
     drawGutterIcons(model, theme, iconProvider)
     drawFoldMarkers(model, theme)
@@ -219,6 +220,30 @@ private fun DrawScope.drawLineBreakMarkerRun(
     )
 }
 
+private fun DrawScope.drawDiffLineBackgrounds(
+    model: EditorRenderModel,
+    left: Float,
+    right: Float,
+    lineHeight: Float,
+    fontAscent: Float,
+    fontDescent: Float,
+    gutter: Boolean,
+) {
+    if (right <= left) return
+    val contentHeight = fontAscent + fontDescent
+    val topPadding = ((lineHeight - contentHeight) / 2f).coerceAtLeast(0f)
+    val width = right - left
+    for (line in model.lines) {
+        val color = if (gutter) line.gutterBackgroundColor else line.lineBackgroundColor
+        val compose = color.toComposeColor().takeUnless { it == Color.Unspecified || color == 0 } ?: continue
+        drawRect(
+            color = compose,
+            topLeft = Offset(left, line.lineNumberPosition.y - fontAscent - topPadding),
+            size = Size(width, lineHeight),
+        )
+    }
+}
+
 private fun DrawScope.drawCurrentLine(
     model: EditorRenderModel,
     theme: EditorTheme,
@@ -248,6 +273,8 @@ private fun DrawScope.drawGutterOverlay(
     model: EditorRenderModel,
     theme: EditorTheme,
     lineHeight: Float,
+    fontAscent: Float,
+    fontDescent: Float,
 ) {
     if (!model.gutterVisible || model.splitX <= 0f) return
     drawRect(
@@ -255,6 +282,7 @@ private fun DrawScope.drawGutterOverlay(
         topLeft = Offset.Zero,
         size = Size(model.splitX, size.height),
     )
+    drawDiffLineBackgrounds(model, 0f, model.splitX, lineHeight, fontAscent, fontDescent, gutter = true)
     drawCurrentLine(model, theme, 0f, model.splitX, lineHeight)
     if (model.splitLineVisible) {
         drawLine(

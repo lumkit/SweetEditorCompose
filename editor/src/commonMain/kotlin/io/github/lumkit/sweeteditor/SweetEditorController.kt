@@ -311,6 +311,22 @@ class SweetEditorController(
         session?.clearMatchedBrackets()
     }
 
+    fun setDiffChanges(changes: List<DiffChange>) {
+        session?.setDiffChanges(changes)
+    }
+
+    fun computeDiff(originalText: String) {
+        session?.computeDiff(originalText)
+    }
+
+    fun setBatchDiffLineSpans(layer: EditorSpanLayer, spansByOriginalLine: Map<Int, List<StyleSpan>>) {
+        session?.setBatchDiffLineSpans(layer, spansByOriginalLine)
+    }
+
+    fun clearDiff() {
+        session?.clearDiff()
+    }
+
     fun setLanguageConfiguration(config: LanguageConfiguration?) {
         languageConfiguration = config
         session?.applyLanguageConfiguration(config)

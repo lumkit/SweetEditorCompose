@@ -112,6 +112,13 @@ data class SeparatorGuide(
     val textEndColumn: Int = 0,
 )
 
+data class DiffChange(
+    val currentStartLine: Int,
+    val currentLineCount: Int,
+    val originalStartLine: Int,
+    val removedLines: List<String> = emptyList(),
+)
+
 data class DocumentHighlight(
     val column: Int,
     val length: Int,
