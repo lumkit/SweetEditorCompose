@@ -3,6 +3,7 @@ package io.github.lumkit.sweeteditor.core
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.Diagnostic
 import io.github.lumkit.sweeteditor.DiffChange
+import io.github.lumkit.sweeteditor.TabStopGroup
 import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
@@ -47,6 +48,7 @@ import io.github.lumkit.sweeteditor.core.protocol.encodeSetBracketGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetDiffChangesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetFlowGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetFoldRegionsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeStartLinkedEditingPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetIndentGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetSeparatorGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
@@ -203,6 +205,23 @@ internal class EditorCore(
         )
 
     fun clearDiff(): EditorActionResult? = decodeAction(NativeBridge.editorClearDiff(editorHandle))
+
+    fun insertSnippet(template: String): EditorActionResult? =
+        decodeAction(NativeBridge.editorInsertSnippet(editorHandle, template.encodeToByteArray()))
+
+    fun startLinkedEditing(groups: List<TabStopGroup>): EditorActionResult? =
+        decodeAction(NativeBridge.editorStartLinkedEditing(editorHandle, encodeStartLinkedEditingPayload(groups)))
+
+    fun isInLinkedEditing(): Boolean = NativeBridge.editorIsInLinkedEditing(editorHandle)
+
+    fun linkedEditingNext(): EditorActionResult? =
+        decodeAction(NativeBridge.editorLinkedEditingNext(editorHandle))
+
+    fun linkedEditingPrev(): EditorActionResult? =
+        decodeAction(NativeBridge.editorLinkedEditingPrev(editorHandle))
+
+    fun cancelLinkedEditing(): EditorActionResult? =
+        decodeAction(NativeBridge.editorCancelLinkedEditing(editorHandle))
 
     fun setAutoIndentMode(mode: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorSetAutoIndentMode(editorHandle, mode))

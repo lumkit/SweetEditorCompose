@@ -61,6 +61,12 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray?
     @JvmStatic external fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorClearDiff(editor: Long): ByteArray?
+    @JvmStatic external fun editorInsertSnippet(editor: Long, snippetUtf8: ByteArray): ByteArray?
+    @JvmStatic external fun editorStartLinkedEditing(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorIsInLinkedEditing(editor: Long): Boolean
+    @JvmStatic external fun editorLinkedEditingNext(editor: Long): ByteArray?
+    @JvmStatic external fun editorLinkedEditingPrev(editor: Long): ByteArray?
+    @JvmStatic external fun editorCancelLinkedEditing(editor: Long): ByteArray?
     @JvmStatic external fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorMoveLineUp(editor: Long): ByteArray?
@@ -213,6 +219,15 @@ internal actual object NativeBridge {
     actual fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray? =
         SweetEditorJni.editorSetBatchDiffLineSpans(editor, payload)
     actual fun editorClearDiff(editor: Long): ByteArray? = SweetEditorJni.editorClearDiff(editor)
+    actual fun editorInsertSnippet(editor: Long, snippetUtf8: ByteArray): ByteArray? =
+        SweetEditorJni.editorInsertSnippet(editor, snippetUtf8)
+    actual fun editorStartLinkedEditing(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorStartLinkedEditing(editor, payload)
+    actual fun editorIsInLinkedEditing(editor: Long): Boolean = SweetEditorJni.editorIsInLinkedEditing(editor)
+    actual fun editorLinkedEditingNext(editor: Long): ByteArray? = SweetEditorJni.editorLinkedEditingNext(editor)
+    actual fun editorLinkedEditingPrev(editor: Long): ByteArray? = SweetEditorJni.editorLinkedEditingPrev(editor)
+    actual fun editorCancelLinkedEditing(editor: Long): ByteArray? =
+        SweetEditorJni.editorCancelLinkedEditing(editor)
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         SweetEditorJni.editorSetAutoIndentMode(editor, mode)
     actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =

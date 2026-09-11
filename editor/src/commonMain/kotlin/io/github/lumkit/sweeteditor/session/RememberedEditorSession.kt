@@ -52,6 +52,7 @@ import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.BracketPair
 import io.github.lumkit.sweeteditor.DiffChange
+import io.github.lumkit.sweeteditor.TabStopGroup
 import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
@@ -541,6 +542,18 @@ internal class RememberedEditorSession(
         mutate { setBatchDiffLineSpans(layer, spansByOriginalLine) }
 
     fun clearDiff() = mutate { clearDiff() }
+
+    fun insertSnippet(template: String) = mutate { insertSnippet(template) }
+
+    fun startLinkedEditing(groups: List<TabStopGroup>) = mutate { startLinkedEditing(groups) }
+
+    fun isInLinkedEditing(): Boolean = editor?.isInLinkedEditing() == true
+
+    fun linkedEditingNext() = mutate { linkedEditingNext() }
+
+    fun linkedEditingPrev() = mutate { linkedEditingPrev() }
+
+    fun cancelLinkedEditing() = mutate { cancelLinkedEditing() }
 
     fun addDecorationProvider(provider: DecorationProvider) = decorations.addProvider(provider)
 

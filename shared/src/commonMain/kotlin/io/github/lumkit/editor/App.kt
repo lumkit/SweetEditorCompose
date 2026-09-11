@@ -296,6 +296,10 @@ private fun DemoEditor(onBack: () -> Unit) {
             onClearMatchedBrackets = controller::clearMatchedBrackets,
             onComputeDiff = { controller.computeDiff(SampleSource.replace("Hello", "Hi")) },
             onClearDiff = controller::clearDiff,
+            onInsertSnippet = { controller.insertSnippet("println(\"\${1:Hello}, \${2:World}!\")\$0") },
+            onLinkedEditingNext = controller::linkedEditingNext,
+            onLinkedEditingPrev = controller::linkedEditingPrev,
+            onCancelLinkedEditing = controller::cancelLinkedEditing,
         )
         Text(
             text = status,
@@ -364,6 +368,10 @@ private fun DemoToolbar(
     onClearMatchedBrackets: () -> Unit,
     onComputeDiff: () -> Unit,
     onClearDiff: () -> Unit,
+    onInsertSnippet: () -> Unit,
+    onLinkedEditingNext: () -> Unit,
+    onLinkedEditingPrev: () -> Unit,
+    onCancelLinkedEditing: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -420,6 +428,10 @@ private fun DemoToolbar(
             TextButton(onClick = onClearMatchedBrackets) { Text("Clear match") }
             TextButton(onClick = onComputeDiff) { Text("Diff") }
             TextButton(onClick = onClearDiff) { Text("Clear diff") }
+            TextButton(onClick = onInsertSnippet) { Text("Snippet") }
+            TextButton(onClick = onLinkedEditingNext) { Text("Link next") }
+            TextButton(onClick = onLinkedEditingPrev) { Text("Link prev") }
+            TextButton(onClick = onCancelLinkedEditing) { Text("Cancel link") }
         }
     }
 }

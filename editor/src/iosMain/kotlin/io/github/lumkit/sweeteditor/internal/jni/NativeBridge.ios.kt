@@ -90,7 +90,13 @@ import sweeteditor.cinterop.editor_move_line_down
 import sweeteditor.cinterop.editor_move_line_up
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_cancel_linked_editing
 import sweeteditor.cinterop.editor_clear_diff
+import sweeteditor.cinterop.editor_insert_snippet
+import sweeteditor.cinterop.editor_is_in_linked_editing
+import sweeteditor.cinterop.editor_linked_editing_next
+import sweeteditor.cinterop.editor_linked_editing_prev
+import sweeteditor.cinterop.editor_start_linked_editing
 import sweeteditor.cinterop.editor_clear_matched_brackets
 import sweeteditor.cinterop.editor_compute_diff
 import sweeteditor.cinterop.editor_set_batch_diff_line_spans
@@ -445,6 +451,42 @@ internal actual object NativeBridge {
 
     actual fun editorClearDiff(editor: Long): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_clear_diff(editor, size) } }
+
+    actual fun editorInsertSnippet(editor: Long, snippetUtf8: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                val terminated = snippetUtf8 + 0
+                terminated.usePinned { pinned ->
+                    editor_insert_snippet(editor, pinned.addressOf(0), size)
+                }
+            }
+        }
+
+    actual fun editorStartLinkedEditing(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_start_linked_editing(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorIsInLinkedEditing(editor: Long): Boolean =
+        withActive(editor) { editor_is_in_linked_editing(editor) != 0 }
+
+    actual fun editorLinkedEditingNext(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_linked_editing_next(editor, size) } }
+
+    actual fun editorLinkedEditingPrev(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_linked_editing_prev(editor, size) } }
+
+    actual fun editorCancelLinkedEditing(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_cancel_linked_editing(editor, size) } }
 
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_set_auto_indent_mode(editor, mode, size) } }

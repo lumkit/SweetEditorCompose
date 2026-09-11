@@ -52,6 +52,12 @@ internal expect object NativeBridge {
     fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray?
     fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray?
     fun editorClearDiff(editor: Long): ByteArray?
+    fun editorInsertSnippet(editor: Long, snippetUtf8: ByteArray): ByteArray?
+    fun editorStartLinkedEditing(editor: Long, payload: ByteArray): ByteArray?
+    fun editorIsInLinkedEditing(editor: Long): Boolean
+    fun editorLinkedEditingNext(editor: Long): ByteArray?
+    fun editorLinkedEditingPrev(editor: Long): ByteArray?
+    fun editorCancelLinkedEditing(editor: Long): ByteArray?
     fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     fun editorMoveLineUp(editor: Long): ByteArray?

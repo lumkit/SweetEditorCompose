@@ -123,6 +123,24 @@ internal actual object NativeBridge {
     actual fun editorClearDiff(editor: Long): ByteArray? {
         unsupported()
     }
+    actual fun editorInsertSnippet(editor: Long, snippetUtf8: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorStartLinkedEditing(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorIsInLinkedEditing(editor: Long): Boolean {
+        unsupported()
+    }
+    actual fun editorLinkedEditingNext(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorLinkedEditingPrev(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorCancelLinkedEditing(editor: Long): ByteArray? {
+        unsupported()
+    }
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? {
         unsupported()
     }
