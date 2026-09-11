@@ -75,7 +75,6 @@
 				25BE75DE85C5F7D2F87ADC81 /* Sources */,
 				DBDD984AA70010B981724B9F /* Frameworks */,
 				8A6FB9D3CD937FF9892BDC4A /* Resources */,
-				E1A7C0DE5A1B4E0F9C2D3E4F /* Embed SweetEditor Core */,
 			);
 			buildRules = (
 			);
@@ -155,25 +154,6 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode\n";
 		};
-		E1A7C0DE5A1B4E0F9C2D3E4F /* Embed SweetEditor Core */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Embed SweetEditor Core";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"$SRCROOT/scripts/embed-sweeteditor-core.sh\"\n";
-		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -209,15 +189,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../editor/natives/ios/simulator-arm64",
-					"$(SRCROOT)/../editor/natives/ios/arm64",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lsweeteditor",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.lumkit.editor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -314,15 +285,6 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../editor/natives/ios/simulator-arm64",
-					"$(SRCROOT)/../editor/natives/ios/arm64",
-				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-lsweeteditor",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = io.github.lumkit.editor;
 				PROVISIONING_PROFILE_SPECIFIER = "";
