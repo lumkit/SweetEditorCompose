@@ -99,12 +99,19 @@ if [[ "$MODE" == "configure" || "$MODE" == "all" ]]; then
 fi
 if [[ "$MODE" != "configure" ]]; then
   "$CMAKE" --build "$BUILD" --config Release
+  # MinGW adds a "lib" prefix; MSVC does not. Accept both, normalize to JNI_NAME.
+  MINGW_PREFIX=""
+  if [[ "$OS" == MINGW* || "$OS" == MSYS* || "$OS" == CYGWIN* ]]; then
+    MINGW_PREFIX="lib"
+  fi
   BUILT=""
   for candidate in \
     "$BUILD/$JNI_NAME" \
     "$BUILD/Release/$JNI_NAME" \
     "$BUILD/lib/$JNI_NAME" \
-    "$BUILD/lib/Release/$JNI_NAME"
+    "$BUILD/lib/Release/$JNI_NAME" \
+    "$BUILD/${MINGW_PREFIX}$JNI_NAME" \
+    "$BUILD/lib/${MINGW_PREFIX}$JNI_NAME"
   do
     if [[ -f "$candidate" ]]; then
       BUILT="$candidate"
@@ -112,7 +119,7 @@ if [[ "$MODE" != "configure" ]]; then
     fi
   done
   if [[ -z "$BUILT" ]]; then
-    BUILT="$(find "$BUILD" -type f -name "$JNI_NAME" | head -n 1 || true)"
+    BUILT="$(find "$BUILD" -type f \( -name "$JNI_NAME" -o -name "${MINGW_PREFIX}$JNI_NAME" \) 2>/dev/null | head -n 1 || true)"
   fi
   if [[ -z "$BUILT" || ! -f "$BUILT" ]]; then
     echo "Compose JNI $JNI_NAME not found under $BUILD" >&2
