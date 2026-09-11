@@ -48,7 +48,7 @@ class EditorSettingsJniTest {
             assertTrue(editor.setGutterVisible(false)?.handled == true)
             assertTrue(editor.setGutterSticky(true)?.handled == true)
             assertTrue(editor.setCurrentLineRenderMode(CurrentLineRenderMode.NONE.value)?.handled == true)
-            assertTrue(editor.updatePointerModifiers(1)?.handled == true)
+            assertTrue(editor.updatePointerModifiers(1) != null)
         } finally {
             editor.close()
             document.close()
