@@ -112,6 +112,11 @@ fun SweetEditor(
         session.onTap = { runCatching { focusRequester.requestFocus() } }
         onDispose { session.onTap = null }
     }
+    LaunchedEffect(settings.readOnly) {
+        if (!settings.readOnly) {
+            runCatching { focusRequester.requestFocus() }
+        }
+    }
 
     LaunchedEffect(session.wantsAnimation) {
         while (session.wantsAnimation) {
@@ -142,7 +147,7 @@ fun SweetEditor(
             .onSizeChanged { size -> session.setViewport(size.width, size.height) }
             .pointerHoverIcon(pointerIcon)
             .editorHostScale(session)
-            .editorIme(session)
+            .editorIme(session, settings.readOnly)
             .focusRequester(focusRequester)
             .focusable()
             .onPreviewKeyEvent { event ->

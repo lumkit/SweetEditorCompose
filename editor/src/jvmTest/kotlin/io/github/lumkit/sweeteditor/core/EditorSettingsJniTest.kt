@@ -4,7 +4,31 @@ import io.github.lumkit.sweeteditor.CurrentLineRenderMode
 import io.github.lumkit.sweeteditor.WrapMode
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
+class EditorReadOnlyToggleJniTest {
+    @Test
+    fun insertWorksAgainAfterClearingReadOnly() {
+        assertTrue(NativeBridge.isAvailable)
+        val host = HostTextMeasurer(charWidth = 8f, ascent = 12f, descent = 4f)
+        val document = Document.fromUtf8("ab")
+        val editor = EditorCore.create(host)
+        try {
+            assertTrue(editor.setDocument(document)?.handled == true)
+            assertTrue(editor.setViewport(400, 300)?.handled == true)
+            assertTrue(editor.setReadOnly(true)?.handled == true)
+            editor.insertText("X")
+            assertEquals("ab", document.utf8Text())
+            assertTrue(editor.setReadOnly(false)?.handled == true)
+            assertTrue(editor.insertText("X")?.handled == true)
+            assertEquals("Xab", document.utf8Text())
+        } finally {
+            editor.close()
+            document.close()
+        }
+    }
+}
 
 class EditorSettingsJniTest {
     @Test

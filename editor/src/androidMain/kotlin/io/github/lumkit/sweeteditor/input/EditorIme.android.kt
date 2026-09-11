@@ -17,21 +17,24 @@ import kotlinx.coroutines.launch
 
 internal actual fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier = this
 
-internal actual fun Modifier.editorIme(session: RememberedEditorSession): Modifier =
-    this.then(EditorImeElement(session))
+internal actual fun Modifier.editorIme(session: RememberedEditorSession, readOnly: Boolean): Modifier =
+    this.then(EditorImeElement(session, readOnly))
 
 private data class EditorImeElement(
     val session: RememberedEditorSession,
+    val readOnly: Boolean,
 ) : ModifierNodeElement<EditorImeNode>() {
-    override fun create(): EditorImeNode = EditorImeNode(session)
+    override fun create(): EditorImeNode = EditorImeNode(session, readOnly)
 
     override fun update(node: EditorImeNode) {
         node.bindSession(session)
+        node.setReadOnly(readOnly)
     }
 }
 
 private class EditorImeNode(
     session: RememberedEditorSession,
+    private var readOnly: Boolean,
 ) : Modifier.Node(),
     PlatformTextInputModifierNode,
     FocusEventModifierNode,
@@ -42,6 +45,14 @@ private class EditorImeNode(
     private val onTap: () -> Unit = {
         startInput()
         currentValueOf(LocalSoftwareKeyboardController)?.show()
+    }
+
+    fun setReadOnly(value: Boolean) {
+        if (readOnly == value) return
+        readOnly = value
+        if (value) {
+            stopInput()
+        }
     }
 
     fun bindSession(next: RememberedEditorSession) {
@@ -70,7 +81,7 @@ private class EditorImeNode(
     }
 
     private fun startInput() {
-        if (!isAttached) return
+        if (!isAttached || readOnly) return
         if (inputJob?.isActive == true) return
         inputJob = coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
             try {

@@ -124,22 +124,48 @@ internal class RememberedEditorSession(
             dispatchActionResult(core.setEditorRenderColors(CoreProtocol.encodeEditorRenderColors(theme.toRenderColors())))
             appliedTheme = theme
         }
-        if (appliedSettings != settings) {
-            dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
-            dispatchActionResult(core.setTabSize(settings.tabSize.coerceAtLeast(1)))
-            dispatchActionResult(core.setInsertSpaces(settings.insertSpaces))
-            dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
-            val nextScale = settings.scale.coerceAtLeast(0.1f)
-            dispatchActionResult(core.setScale(nextScale))
-            if (visualScale != nextScale) {
-                visualScale = nextScale
+        val previous = appliedSettings
+        if (previous != settings) {
+            if (previous == null || previous.wrapMode != settings.wrapMode) {
+                dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
             }
-            dispatchActionResult(core.setReadOnly(settings.readOnly))
-            dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
-            dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
-            dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
-            dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
-            dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
+            if (previous == null || previous.tabSize != settings.tabSize) {
+                dispatchActionResult(core.setTabSize(settings.tabSize.coerceAtLeast(1)))
+            }
+            if (previous == null || previous.insertSpaces != settings.insertSpaces) {
+                dispatchActionResult(core.setInsertSpaces(settings.insertSpaces))
+            }
+            if (previous == null ||
+                previous.lineSpacingAdd != settings.lineSpacingAdd ||
+                previous.lineSpacingMult != settings.lineSpacingMult
+            ) {
+                dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
+            }
+            val nextScale = settings.scale.coerceAtLeast(0.1f)
+            if (previous == null || previous.scale != settings.scale || visualScale != nextScale) {
+                dispatchActionResult(core.setScale(nextScale))
+                if (visualScale != nextScale) {
+                    visualScale = nextScale
+                }
+            }
+            if (previous == null || previous.readOnly != settings.readOnly) {
+                dispatchActionResult(core.setReadOnly(settings.readOnly))
+            }
+            if (previous == null || previous.gutterVisible != settings.gutterVisible) {
+                dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
+            }
+            if (previous == null || previous.gutterSticky != settings.gutterSticky) {
+                dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
+            }
+            if (previous == null || previous.currentLineRenderMode != settings.currentLineRenderMode) {
+                dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
+            }
+            if (previous == null || previous.autoIndentMode != settings.autoIndentMode) {
+                dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
+            }
+            if (previous == null || previous.backspaceUnindent != settings.backspaceUnindent) {
+                dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
+            }
             appliedSettings = settings
         }
     }

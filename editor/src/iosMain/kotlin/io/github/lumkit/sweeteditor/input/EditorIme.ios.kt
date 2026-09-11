@@ -11,27 +11,38 @@ import platform.UIKit.UIWindow
 
 internal actual fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier = this
 
-internal actual fun Modifier.editorIme(session: RememberedEditorSession): Modifier =
-    this.then(EditorImeElement(session))
+internal actual fun Modifier.editorIme(session: RememberedEditorSession, readOnly: Boolean): Modifier =
+    this.then(EditorImeElement(session, readOnly))
 
 private data class EditorImeElement(
     val session: RememberedEditorSession,
+    val readOnly: Boolean,
 ) : ModifierNodeElement<EditorImeNode>() {
-    override fun create(): EditorImeNode = EditorImeNode(session)
+    override fun create(): EditorImeNode = EditorImeNode(session, readOnly)
 
     override fun update(node: EditorImeNode) {
         node.bindSession(session)
+        node.setReadOnly(readOnly)
     }
 }
 
 @OptIn(ExperimentalForeignApi::class)
 private class EditorImeNode(
     session: RememberedEditorSession,
+    private var readOnly: Boolean,
 ) : Modifier.Node() {
     var session: RememberedEditorSession = session
         private set
     private var inputView: ComposeIosTextInputView? = null
     private val onTap: () -> Unit = { showKeyboard() }
+
+    fun setReadOnly(value: Boolean) {
+        if (readOnly == value) return
+        readOnly = value
+        if (value) {
+            hideKeyboard()
+        }
+    }
 
     fun bindSession(next: RememberedEditorSession) {
         if (session === next) return
@@ -58,6 +69,7 @@ private class EditorImeNode(
     }
 
     private fun showKeyboard() {
+        if (readOnly) return
         val host = keyWindow() ?: return
         val view = inputView ?: ComposeIosTextInputView(session).also { inputView = it }
         view.session = session
