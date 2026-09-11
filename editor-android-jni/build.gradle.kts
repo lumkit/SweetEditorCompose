@@ -1,10 +1,12 @@
 plugins {
     alias(libs.plugins.androidLibrary)
     `maven-publish`
+    signing
+    alias(libs.plugins.nmcp)
 }
 
-group = "io.github.lumkit"
-version = "0.1.0-SNAPSHOT"
+group = rootProject.group
+version = rootProject.version
 description = "Android JNI + SweetEditor core native libraries for sweeteditor-compose"
 
 val editorDir = rootProject.layout.projectDirectory.dir("editor")
@@ -47,7 +49,10 @@ android {
     }
 
     publishing {
-        singleVariant("release")
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
     }
 }
 
@@ -61,26 +66,13 @@ publishing {
             pom {
                 name.set("SweetEditor Compose Android JNI")
                 description.set(project.description)
-                url.set("https://github.com/lumkit/SweetEditorCompose")
-                licenses {
-                    license {
-                        name.set("GNU Affero General Public License v3.0")
-                        url.set("https://www.gnu.org/licenses/agpl-3.0.html")
-                        distribution.set("repo")
-                    }
-                }
-                scm {
-                    url.set("https://github.com/lumkit/SweetEditorCompose")
-                    connection.set("scm:git:https://github.com/lumkit/SweetEditorCompose.git")
-                    developerConnection.set("scm:git:ssh://git@github.com/lumkit/SweetEditorCompose.git")
-                }
             }
         }
     }
-    repositories {
-        maven {
-            name = "BuildDir"
-            url = uri(rootProject.layout.buildDirectory.dir("maven"))
-        }
-    }
+}
+
+apply(from = rootProject.file("gradle/maven-publishing.gradle.kts"))
+
+tasks.matching { it.name.startsWith("publish") }.configureEach {
+    dependsOn(":editor:verifyReleaseNatives")
 }

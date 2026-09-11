@@ -2,7 +2,7 @@
 
 Kotlin Multiplatform project targeting Android, iOS, Web, and Desktop (JVM). The `editor` module wraps the SweetEditor C++ core for Compose Multiplatform.
 
-Host API coverage versus the SweetEditor integration standard is listed in [COMPLIANCE.md](./COMPLIANCE.md). Maven coordinates and packaging rules are in [PUBLISHING.md](./PUBLISHING.md).
+Host API coverage versus the SweetEditor integration standard is listed in [COMPLIANCE.md](./COMPLIANCE.md). Maven coordinates, native packaging, and Maven Central are in [PUBLISHING.md](./PUBLISHING.md).
 
 * [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
   you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.

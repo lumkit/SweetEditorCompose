@@ -18,7 +18,7 @@ LIB_NAME=""
 case "$OS" in
   Darwin)
     LIB_NAME="libsweeteditor.dylib"
-    if [[ "$ARCH" == "x86_64" ]]; then
+    if [[ "${SWEETEDITOR_OSX_ARCH:-}" == "x86_64" || "$ARCH" == "x86_64" ]]; then
       DEST_DIR="$ROOT/natives/desktop/macos-x86_64"
     else
       DEST_DIR="$ROOT/natives/desktop/macos-aarch64"
@@ -43,6 +43,9 @@ case "$OS" in
 esac
 
 BUILD="$SE/build/compose-host"
+if [[ -n "${SWEETEDITOR_OSX_ARCH:-}" ]]; then
+  BUILD="$SE/build/compose-host-$SWEETEDITOR_OSX_ARCH"
+fi
 INCLUDE_SRC="$SE/include/sweeteditor"
 INCLUDE_DST="$ROOT/natives/include/sweeteditor"
 
@@ -75,6 +78,9 @@ GEN_ARGS=(
   -DSWEETEDITOR_BUILD_WASM_EMBIND=OFF
   -DSWEETEDITOR_BUILD_ANDROID_JNI=OFF
 )
+if [[ -n "${SWEETEDITOR_OSX_ARCH:-}" ]]; then
+  GEN_ARGS+=("-DCMAKE_OSX_ARCHITECTURES=$SWEETEDITOR_OSX_ARCH")
+fi
 if [[ -x "${NINJA:-}" ]]; then
   GEN_ARGS+=(-G Ninja "-DCMAKE_MAKE_PROGRAM=$NINJA")
 fi
