@@ -7,8 +7,18 @@ import androidx.compose.runtime.setValue
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
 import io.github.lumkit.sweeteditor.CodeLensItem
+import io.github.lumkit.sweeteditor.DecorationProvider
 import io.github.lumkit.sweeteditor.Diagnostic
+import io.github.lumkit.sweeteditor.EditorSearchOptions
+import io.github.lumkit.sweeteditor.EditorSearchState
+import io.github.lumkit.sweeteditor.encodeSearchReplacement
+import io.github.lumkit.sweeteditor.encodeSearchRequest
+import io.github.lumkit.sweeteditor.toPublic
 import io.github.lumkit.sweeteditor.DocumentHighlight
+import io.github.lumkit.sweeteditor.ScrollChangedEvent
+import io.github.lumkit.sweeteditor.TextChangedEvent
+import io.github.lumkit.sweeteditor.decoration.DecorationHost
+import io.github.lumkit.sweeteditor.decoration.DecorationProviderManager
 import io.github.lumkit.sweeteditor.EditorKeyBinding
 import io.github.lumkit.sweeteditor.EditorKeyChord
 import io.github.lumkit.sweeteditor.EditorKeyMap
@@ -85,6 +95,7 @@ internal class RememberedEditorSession(
     private var appliedSettings: EditorSettings? = null
     private var appliedKeyMap: EditorKeyMap? = null
     private var appliedKeyMapRevision = -1
+    private val decorations = DecorationProviderManager(SessionDecorationHost())
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -102,6 +113,7 @@ internal class RememberedEditorSession(
                 dispatchActionResult(createdEditor.setViewport(viewportWidth, viewportHeight))
             }
             controller.attach(this)
+            decorations.requestRefresh()
         } catch (error: Throwable) {
             loadError = error.message ?: error.toString()
         }
@@ -369,6 +381,32 @@ internal class RememberedEditorSession(
 
     fun clearAllDecorations() = mutate { clearAllDecorations() }
 
+    fun addDecorationProvider(provider: DecorationProvider) = decorations.addProvider(provider)
+
+    fun removeDecorationProvider(provider: DecorationProvider) = decorations.removeProvider(provider)
+
+    fun requestDecorationRefresh() = decorations.requestRefresh()
+
+    fun search(pattern: String, options: EditorSearchOptions) =
+        mutate { search(encodeSearchRequest(pattern, options)) }
+
+    fun findNextSearchMatch() = mutate { findNextSearchMatch() }
+
+    fun findPreviousSearchMatch() = mutate { findPreviousSearchMatch() }
+
+    fun replaceCurrentSearchMatch(replacement: String) =
+        mutate { replaceCurrentSearchMatch(encodeSearchReplacement(replacement)) }
+
+    fun replaceAllSearchMatches(replacement: String) =
+        mutate { replaceAllSearchMatches(encodeSearchReplacement(replacement)) }
+
+    fun clearSearch() = mutate { clearSearch() }
+
+    fun getSearchState(): EditorSearchState? {
+        val bytes = editor?.getSearchState() ?: return null
+        return CoreProtocol.decodeSearchState(bytes).toPublic()
+    }
+
     private fun mutate(block: EditorCore.() -> EditorActionResult?) {
         val core = editor ?: return
         dispatchActionResult(core.block())
@@ -448,6 +486,7 @@ internal class RememberedEditorSession(
         wantsAnimation = false
         imeAdapter?.closeOwnedSession()
         imeAdapter = null
+        decorations.close()
         controller.detach(this)
         editor?.close()
         editor = null
@@ -489,7 +528,14 @@ internal class RememberedEditorSession(
         if (result.pointerCursorChanged) {
             pointerCursor = result.pointerCursorAfter
         }
-        collectStateEvents(result).forEach { controller.events.publish(it) }
+        collectStateEvents(result).forEach { event ->
+            controller.events.publish(event)
+            when (event) {
+                is TextChangedEvent -> decorations.onTextChanged(event.changes)
+                is ScrollChangedEvent -> decorations.onScrollChanged()
+                else -> Unit
+            }
+        }
         if (!dispatchKeyMapCommand(result.command)) {
             when (result.command) {
                 EditorBuiltinCommand.COPY.value -> copyToClipboard()
@@ -508,5 +554,70 @@ internal class RememberedEditorSession(
                 loadError = error.message ?: error.toString()
             }
         }
+    }
+
+    private inner class SessionDecorationHost : DecorationHost {
+        override fun isDisposed(): Boolean = disposed || editor == null
+        override fun visibleLineRange(): VisibleLineRange =
+            editor?.getVisibleLineRange() ?: VisibleLineRange(0, -1)
+        override fun totalLineCount(): Int = documentLineCount()
+        override fun overscanMultiplier(): Float =
+            appliedSettings?.decorationOverscanViewportMultiplier ?: 1f
+        override fun scrollRefreshMinIntervalMs(): Int =
+            appliedSettings?.decorationScrollRefreshMinIntervalMs ?: 50
+        override fun clearHighlights(layer: EditorSpanLayer) {
+            mutate { clearHighlights(layer) }
+        }
+        override fun setBatchLineSpans(layer: EditorSpanLayer, spansByLine: Map<Int, List<StyleSpan>>) {
+            mutate { setBatchLineSpans(layer, spansByLine) }
+        }
+        override fun clearInlayHints() {
+            mutate { clearInlayHints() }
+        }
+        override fun setBatchLineInlayHints(hintsByLine: Map<Int, List<InlayHint>>) {
+            mutate { setBatchLineInlayHints(hintsByLine) }
+        }
+        override fun clearDiagnostics() {
+            mutate { clearDiagnostics() }
+        }
+        override fun setBatchLineDiagnostics(itemsByLine: Map<Int, List<Diagnostic>>) {
+            mutate { setBatchLineDiagnostics(itemsByLine) }
+        }
+        override fun clearDocumentHighlights() {
+            mutate { clearDocumentHighlights() }
+        }
+        override fun setBatchLineDocumentHighlights(itemsByLine: Map<Int, List<DocumentHighlight>>) {
+            mutate { setBatchLineDocumentHighlights(itemsByLine) }
+        }
+        override fun clearGutterIcons() {
+            mutate { clearGutterIcons() }
+        }
+        override fun setBatchLineGutterIcons(iconsByLine: Map<Int, List<GutterIcon>>) {
+            mutate { setBatchLineGutterIcons(iconsByLine) }
+        }
+        override fun clearPhantomTexts() {
+            mutate { clearPhantomTexts() }
+        }
+        override fun setBatchLinePhantomTexts(phantomsByLine: Map<Int, List<PhantomText>>) {
+            mutate { setBatchLinePhantomTexts(phantomsByLine) }
+        }
+        override fun clearCodeLens() {
+            mutate { clearCodeLens() }
+        }
+        override fun setBatchLineCodeLens(itemsByLine: Map<Int, List<CodeLensItem>>) {
+            mutate { setBatchLineCodeLens(itemsByLine) }
+        }
+        override fun clearLinks() {
+            mutate { clearLinks() }
+        }
+        override fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>) {
+            mutate { setBatchLineLinks(linksByLine) }
+        }
+    }
+
+    private fun documentLineCount(): Int {
+        val text = document?.utf8Text().orEmpty()
+        if (text.isEmpty()) return 1
+        return text.count { it == '\n' } + 1
     }
 }

@@ -44,6 +44,13 @@ internal expect object NativeBridge {
     fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
     fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
+    fun editorSearch(editor: Long, payload: ByteArray): ByteArray?
+    fun editorFindNextSearchMatch(editor: Long): ByteArray?
+    fun editorFindPreviousSearchMatch(editor: Long): ByteArray?
+    fun editorReplaceCurrentSearchMatch(editor: Long, payload: ByteArray): ByteArray?
+    fun editorReplaceAllSearchMatches(editor: Long, payload: ByteArray): ByteArray?
+    fun editorClearSearch(editor: Long): ByteArray?
+    fun editorGetSearchState(editor: Long): ByteArray?
     fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?

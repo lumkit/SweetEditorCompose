@@ -310,6 +310,25 @@ internal class EditorCore(
     fun setEditorRangeEffectStyles(payload: ByteArray): EditorActionResult? =
         decodeAction(NativeBridge.editorSetEditorRangeEffectStyles(editorHandle, payload))
 
+    fun search(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSearch(editorHandle, payload))
+
+    fun findNextSearchMatch(): EditorActionResult? =
+        decodeAction(NativeBridge.editorFindNextSearchMatch(editorHandle))
+
+    fun findPreviousSearchMatch(): EditorActionResult? =
+        decodeAction(NativeBridge.editorFindPreviousSearchMatch(editorHandle))
+
+    fun replaceCurrentSearchMatch(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorReplaceCurrentSearchMatch(editorHandle, payload))
+
+    fun replaceAllSearchMatches(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorReplaceAllSearchMatches(editorHandle, payload))
+
+    fun clearSearch(): EditorActionResult? = decodeAction(NativeBridge.editorClearSearch(editorHandle))
+
+    fun getSearchState(): ByteArray? = NativeBridge.editorGetSearchState(editorHandle)
+
     fun beginImeSession(model: ImeMutationModel = ImeMutationModel.COMMAND): ImeState? {
         val bytes = NativeBridge.editorImeBeginSession(editorHandle, model.value) ?: return null
         return CoreProtocol.decodeImeState(bytes)

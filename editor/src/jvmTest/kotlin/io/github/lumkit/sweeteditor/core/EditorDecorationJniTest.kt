@@ -9,12 +9,17 @@ import io.github.lumkit.sweeteditor.EditorFontStyle
 import io.github.lumkit.sweeteditor.EditorInlayType
 import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
+import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.GutterIcon
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
 import io.github.lumkit.sweeteditor.StyleSpan
+import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectUnderlineStyle
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
+import io.github.lumkit.sweeteditor.toRangeEffectStyles
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -73,9 +78,25 @@ class EditorDecorationJniTest {
                 )?.handled == true,
             )
 
+            val theme = EditorTheme()
+            assertTrue(
+                editor.setEditorRangeEffectStyles(
+                    CoreProtocol.encodeEditorRangeEffectStyles(theme.toRangeEffectStyles()),
+                )?.handled == true,
+            )
             val model = editor.buildRenderModel()
             assertTrue(model != null)
-            assertTrue(model.gutterIcons.any { it.iconId == 7 })
+            assertTrue(model.gutterIcons.any { it.iconId == 7 && it.rect.width > 0f && it.rect.height > 0f })
+            val diagnostics = model.rangeEffects.filter { it.kind == RangeEffectKind.DIAGNOSTIC_ERROR }
+            assertTrue(diagnostics.isNotEmpty())
+            assertTrue(diagnostics.any { it.style.underlineColor == theme.diagnosticErrorColor })
+            assertTrue(diagnostics.any { it.style.underlineStyle == RangeEffectUnderlineStyle.WAVY })
+            assertTrue(
+                model.rangeEffects.any {
+                    it.kind == RangeEffectKind.DOCUMENT_HIGHLIGHT_READ &&
+                        it.style.backgroundColor == theme.documentHighlightReadBgColor
+                },
+            )
 
             assertTrue(editor.clearAllDecorations()?.handled == true)
             assertEquals("", editor.getLinkTargetAt(0, 7))

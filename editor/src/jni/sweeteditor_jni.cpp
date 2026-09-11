@@ -500,6 +500,61 @@ jbyteArray set_editor_render_colors_jni(JNIEnv* env, jclass, jlong editor, jbyte
   return adopt_binary(env, result, size);
 }
 
+jbyteArray search_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result =
+      editor_search(static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray find_next_search_match_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* result = editor_find_next_search_match(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray find_previous_search_match_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* result = editor_find_previous_search_match(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray replace_current_search_match_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_replace_current_search_match(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray replace_all_search_matches_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_replace_all_search_matches(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray clear_search_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* result = editor_clear_search(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray get_search_state_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_get_search_state(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray set_editor_range_effect_styles_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   BytesView view(env, payload);
@@ -798,6 +853,13 @@ const JNINativeMethod kMethods[] = {
     {"editorSetCurrentLineRenderMode", "(JI)[B", (void*)set_current_line_render_mode_jni},
     {"editorSetEditorRenderColors", "(J[B)[B", (void*)set_editor_render_colors_jni},
     {"editorSetEditorRangeEffectStyles", "(J[B)[B", (void*)set_editor_range_effect_styles_jni},
+    {"editorSearch", "(J[B)[B", (void*)search_jni},
+    {"editorFindNextSearchMatch", "(J)[B", (void*)find_next_search_match_jni},
+    {"editorFindPreviousSearchMatch", "(J)[B", (void*)find_previous_search_match_jni},
+    {"editorReplaceCurrentSearchMatch", "(J[B)[B", (void*)replace_current_search_match_jni},
+    {"editorReplaceAllSearchMatches", "(J[B)[B", (void*)replace_all_search_matches_jni},
+    {"editorClearSearch", "(J)[B", (void*)clear_search_jni},
+    {"editorGetSearchState", "(J)[B", (void*)get_search_state_jni},
     {"editorImeBeginSession", "(JI)[B", (void*)ime_begin_session_jni},
     {"editorImeEndSession", "(JJ)[B", (void*)ime_end_session_jni},
     {"editorImeApplyCommands", "(J[B)[B", (void*)ime_apply_commands_jni},

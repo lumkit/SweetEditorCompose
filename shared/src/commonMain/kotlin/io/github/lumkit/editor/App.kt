@@ -29,6 +29,12 @@ import androidx.compose.ui.unit.dp
 import io.github.lumkit.sweeteditor.AutoIndentMode
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.CurrentLineRenderMode
+import io.github.lumkit.sweeteditor.DecorationApplyMode
+import io.github.lumkit.sweeteditor.DecorationContext
+import io.github.lumkit.sweeteditor.DecorationProvider
+import io.github.lumkit.sweeteditor.DecorationReceiver
+import io.github.lumkit.sweeteditor.DecorationResult
+import io.github.lumkit.sweeteditor.DecorationType
 import io.github.lumkit.sweeteditor.Diagnostic
 import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorDiagnosticSeverity
@@ -36,8 +42,8 @@ import io.github.lumkit.sweeteditor.EditorDocumentHighlightKind
 import io.github.lumkit.sweeteditor.EditorFontStyle
 import io.github.lumkit.sweeteditor.EditorInlayType
 import io.github.lumkit.sweeteditor.EditorKeyMap
+import io.github.lumkit.sweeteditor.EditorSearchStatus
 import io.github.lumkit.sweeteditor.EditorSettings
-import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.GutterIcon
@@ -128,6 +134,7 @@ private fun DemoEditor(onBack: () -> Unit) {
     var scale by remember { mutableStateOf(1f) }
     var keyMapPreset by remember { mutableStateOf(KeyMapPreset.Vscode) }
     var status by remember { mutableStateOf("waiting for editor…") }
+    val decorationProvider = remember { DemoDecorationProvider() }
 
     val theme = if (darkTheme) EditorTheme() else LightEditorTheme
     val settings = EditorSettings(
@@ -149,7 +156,8 @@ private fun DemoEditor(onBack: () -> Unit) {
     DisposableEffect(controller) {
         val unsubs = mutableListOf<() -> Unit>()
         controller.whenReady {
-            applySampleDecorations(controller)
+            registerSampleStyles(controller)
+            controller.addDecorationProvider(decorationProvider)
             refreshStatus(controller) { status = it }
             unsubs += controller.onTextChanged { refreshStatus(controller) { status = it } }
             unsubs += controller.onCursorChanged { refreshStatus(controller) { status = it } }
@@ -210,8 +218,39 @@ private fun DemoEditor(onBack: () -> Unit) {
             onDeleteLine = controller::deleteLine,
             onInsertAbove = controller::insertLineAbove,
             onInsertBelow = controller::insertLineBelow,
-            onApplyDecorations = { applySampleDecorations(controller) },
-            onClearDecorations = controller::clearAllDecorations,
+            onFindHello = {
+                controller.search("Hello")
+                refreshStatus(controller) { status = it }
+            },
+            onFindNext = {
+                controller.findNextSearchMatch()
+                refreshStatus(controller) { status = it }
+            },
+            onFindPrev = {
+                controller.findPreviousSearchMatch()
+                refreshStatus(controller) { status = it }
+            },
+            onReplaceHi = {
+                controller.replaceCurrentSearchMatch("Hi")
+                refreshStatus(controller) { status = it }
+            },
+            onReplaceAllHi = {
+                controller.replaceAllSearchMatches("Hi")
+                refreshStatus(controller) { status = it }
+            },
+            onClearSearch = {
+                controller.clearSearch()
+                refreshStatus(controller) { status = it }
+            },
+            onApplyDecorations = {
+                registerSampleStyles(controller)
+                controller.addDecorationProvider(decorationProvider)
+                controller.requestDecorationRefresh()
+            },
+            onClearDecorations = {
+                controller.removeDecorationProvider(decorationProvider)
+                controller.clearAllDecorations()
+            },
         )
         Text(
             text = status,
@@ -260,6 +299,12 @@ private fun DemoToolbar(
     onDeleteLine: () -> Unit,
     onInsertAbove: () -> Unit,
     onInsertBelow: () -> Unit,
+    onFindHello: () -> Unit,
+    onFindNext: () -> Unit,
+    onFindPrev: () -> Unit,
+    onReplaceHi: () -> Unit,
+    onReplaceAllHi: () -> Unit,
+    onClearSearch: () -> Unit,
     onApplyDecorations: () -> Unit,
     onClearDecorations: () -> Unit,
 ) {
@@ -298,6 +343,12 @@ private fun DemoToolbar(
             TextButton(onClick = onInsertBelow) { Text("+below") }
             TextButton(onClick = onApplyDecorations) { Text("Decorate") }
             TextButton(onClick = onClearDecorations) { Text("Clear dec") }
+            TextButton(onClick = onFindHello) { Text("Find Hello") }
+            TextButton(onClick = onFindPrev) { Text("Find↑") }
+            TextButton(onClick = onFindNext) { Text("Find↓") }
+            TextButton(onClick = onReplaceHi) { Text("Replace Hi") }
+            TextButton(onClick = onReplaceAllHi) { Text("Replace all Hi") }
+            TextButton(onClick = onClearSearch) { Text("Clear find") }
         }
     }
 }
@@ -315,44 +366,60 @@ private fun DemoChipRow(content: @Composable () -> Unit) {
     }
 }
 
-private fun applySampleDecorations(controller: SweetEditorController) {
+private fun registerSampleStyles(controller: SweetEditorController) {
     controller.registerBatchTextStyles(
         mapOf(
             1 to EditorTextStyle(color = 0xFF569CD6.toInt(), fontStyle = EditorFontStyle.BOLD),
             2 to EditorTextStyle(color = 0xFFCE9178.toInt()),
         ),
     )
-    controller.setLineSpans(
-        line = 0,
-        layer = EditorSpanLayer.SYNTAX,
-        spans = listOf(StyleSpan(column = 0, length = 3, styleId = 1)),
-    )
-    controller.setBatchLineSpans(
-        layer = EditorSpanLayer.SYNTAX,
-        spansByLine = mapOf(
-            1 to listOf(
-                StyleSpan(column = 4, length = 7, styleId = 1),
-                StyleSpan(column = 12, length = 26, styleId = 2),
-            ),
-        ),
-    )
-    controller.setLineInlayHints(
-        0,
-        listOf(InlayHint(type = EditorInlayType.TEXT, column = 11, text = ": Unit")),
-    )
-    controller.setLinePhantomTexts(0, listOf(PhantomText(column = 13, text = " // entry")))
     controller.setMaxGutterIcons(1)
-    controller.setLineGutterIcons(0, listOf(GutterIcon(1)))
-    controller.setLineCodeLens(0, listOf(CodeLensItem(column = 0, commandId = 1, text = "run")))
-    controller.setLineLinks(1, listOf(LinkSpan(column = 12, length = 26, target = "https://github.com/lumkit/SweetEditorCompose")))
-    controller.setLineDiagnostics(
-        1,
-        listOf(Diagnostic(column = 4, length = 7, severity = EditorDiagnosticSeverity.WARNING)),
+}
+
+private class DemoDecorationProvider : DecorationProvider {
+    override fun capabilities(): Set<DecorationType> = setOf(
+        DecorationType.SYNTAX_HIGHLIGHT,
+        DecorationType.INLAY_HINT,
+        DecorationType.PHANTOM_TEXT,
+        DecorationType.GUTTER_ICON,
+        DecorationType.CODELENS,
+        DecorationType.LINK,
+        DecorationType.DIAGNOSTIC,
+        DecorationType.DOCUMENT_HIGHLIGHT,
     )
-    controller.setLineDocumentHighlights(
-        1,
-        listOf(DocumentHighlight(column = 4, length = 7, kind = EditorDocumentHighlightKind.READ)),
-    )
+
+    override fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver) {
+        receiver.accept(
+            DecorationResult(
+                syntaxSpans = mapOf(
+                    0 to listOf(StyleSpan(column = 0, length = 3, styleId = 1)),
+                    1 to listOf(
+                        StyleSpan(column = 4, length = 7, styleId = 1),
+                        StyleSpan(column = 12, length = 26, styleId = 2),
+                    ),
+                ),
+                syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
+                inlayHints = mapOf(0 to listOf(InlayHint(type = EditorInlayType.TEXT, column = 11, text = ": Unit"))),
+                inlayHintsMode = DecorationApplyMode.REPLACE_RANGE,
+                phantomTexts = mapOf(0 to listOf(PhantomText(column = 13, text = " // entry"))),
+                phantomTextsMode = DecorationApplyMode.REPLACE_RANGE,
+                gutterIcons = mapOf(0 to listOf(GutterIcon(1))),
+                gutterIconsMode = DecorationApplyMode.REPLACE_RANGE,
+                codeLensItems = mapOf(0 to listOf(CodeLensItem(column = 0, commandId = 1, text = "run"))),
+                codeLensItemsMode = DecorationApplyMode.REPLACE_RANGE,
+                links = mapOf(1 to listOf(LinkSpan(column = 12, length = 26, target = "https://github.com/lumkit/SweetEditorCompose"))),
+                linksMode = DecorationApplyMode.REPLACE_RANGE,
+                diagnostics = mapOf(
+                    1 to listOf(Diagnostic(column = 4, length = 7, severity = EditorDiagnosticSeverity.WARNING)),
+                ),
+                diagnosticsMode = DecorationApplyMode.REPLACE_RANGE,
+                documentHighlights = mapOf(
+                    1 to listOf(DocumentHighlight(column = 4, length = 7, kind = EditorDocumentHighlightKind.READ)),
+                ),
+                documentHighlightsMode = DecorationApplyMode.REPLACE_RANGE,
+            ),
+        )
+    }
 }
 
 private fun refreshStatus(controller: SweetEditorController, publish: (String) -> Unit) {
@@ -375,6 +442,10 @@ private fun refreshStatus(controller: SweetEditorController, publish: (String) -
             val link = controller.getLinkTargetAt(1, 14)
             if (link.isNotEmpty()) {
                 append(" link")
+            }
+            val search = controller.getSearchState()
+            if (search != null && search.status != EditorSearchStatus.INACTIVE) {
+                append(" find=${search.pattern} ${search.currentIndex + 1}/${search.matchCount}")
             }
         },
     )
