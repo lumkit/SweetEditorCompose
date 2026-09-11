@@ -1,9 +1,11 @@
 package io.github.lumkit.sweeteditor.render
 
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -16,6 +18,8 @@ import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
+import io.github.lumkit.sweeteditor.core.protocol.Rect
+import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
 import io.github.lumkit.sweeteditor.core.protocol.VisualRunType
 import io.github.lumkit.sweeteditor.core.protocol.TextStyle as RunTextStyle
 
@@ -29,13 +33,7 @@ internal fun DrawScope.drawEditor(
     drawRect(theme.backgroundColor.toComposeColor())
 
     val lineHeight = model.cursor.height.takeIf { it > 0f } ?: (fontAscent * 1.4f)
-    if (model.currentLineRenderMode != CoreCurrentLineRenderMode.NONE) {
-        drawRect(
-            color = theme.currentLineColor.toComposeColor(),
-            topLeft = Offset(0f, model.currentLine.y),
-            size = Size(size.width, lineHeight),
-        )
-    }
+    drawCurrentLine(model, theme, 0f, size.width, lineHeight)
 
     for (effect in model.rangeEffects) {
         if (effect.kind != RangeEffectKind.SELECTION) continue
@@ -83,6 +81,10 @@ internal fun DrawScope.drawEditor(
             size = Size(2f, cursor.height.coerceAtLeast(1f)),
         )
     }
+
+    drawGutterOverlay(model, theme, lineHeight)
+    drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
+    drawScrollbars(model, theme)
 }
 
 private fun DrawScope.drawRun(
@@ -108,6 +110,123 @@ private fun DrawScope.drawRun(
         topLeft = Offset(x, y - fontAscent),
     )
 }
+
+private fun DrawScope.drawCurrentLine(
+    model: EditorRenderModel,
+    theme: EditorTheme,
+    left: Float,
+    right: Float,
+    lineHeight: Float,
+) {
+    if (right <= left) return
+    val width = right - left
+    when (model.currentLineRenderMode) {
+        CoreCurrentLineRenderMode.NONE -> Unit
+        CoreCurrentLineRenderMode.BACKGROUND -> drawRect(
+            color = theme.currentLineColor.toComposeColor(),
+            topLeft = Offset(left, model.currentLine.y),
+            size = Size(width, lineHeight),
+        )
+        CoreCurrentLineRenderMode.BORDER -> drawRect(
+            color = theme.currentLineColor.toComposeColor(),
+            topLeft = Offset(left, model.currentLine.y),
+            size = Size(width, lineHeight),
+            style = Stroke(width = 1f),
+        )
+    }
+}
+
+private fun DrawScope.drawGutterOverlay(
+    model: EditorRenderModel,
+    theme: EditorTheme,
+    lineHeight: Float,
+) {
+    if (!model.gutterVisible || model.splitX <= 0f) return
+    drawRect(
+        color = theme.backgroundColor.toComposeColor(),
+        topLeft = Offset.Zero,
+        size = Size(model.splitX, size.height),
+    )
+    drawCurrentLine(model, theme, 0f, model.splitX, lineHeight)
+    if (model.splitLineVisible) {
+        drawLine(
+            color = theme.splitLineColor.toComposeColor(),
+            start = Offset(model.splitX, 0f),
+            end = Offset(model.splitX, size.height),
+            strokeWidth = 1f,
+        )
+    }
+}
+
+private fun DrawScope.drawLineNumbers(
+    model: EditorRenderModel,
+    textMeasurer: TextMeasurer,
+    baseStyle: TextStyle,
+    fontAscent: Float,
+    theme: EditorTheme,
+) {
+    if (!model.gutterVisible) return
+    val activeLogicalLine = model.cursor.textPosition.line
+    for (line in model.lines) {
+        if (line.lineNumber < 0) continue
+        val isCurrent = line.ownsGutterSemantics && line.logicalLine == activeLogicalLine
+        val color = if (isCurrent) theme.currentLineNumberColor else theme.lineNumberColor
+        val style = baseStyle.copy(
+            color = color.toComposeColor(),
+            fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
+        )
+        val layout = textMeasurer.measure(
+            line.lineNumber.toString(),
+            style,
+            constraints = Constraints(),
+        )
+        drawText(
+            textLayoutResult = layout,
+            topLeft = Offset(line.lineNumberPosition.x, line.lineNumberPosition.y - fontAscent),
+        )
+    }
+}
+
+private fun DrawScope.drawScrollbars(model: EditorRenderModel, theme: EditorTheme) {
+    val vertical = model.verticalScrollbar
+    val horizontal = model.horizontalScrollbar
+    val hasVertical = vertical.isDrawable()
+    val hasHorizontal = horizontal.isDrawable()
+    if (hasVertical) drawScrollbar(vertical, theme)
+    if (hasHorizontal) drawScrollbar(horizontal, theme)
+    if (hasVertical && hasHorizontal) {
+        drawRect(
+            color = theme.scrollbarTrackColor.toComposeColor().withScrollbarAlpha(vertical.alpha),
+            topLeft = Offset(vertical.track.origin.x, horizontal.track.origin.y),
+            size = Size(vertical.track.width, horizontal.track.height),
+        )
+    }
+}
+
+private fun ScrollbarModel.isDrawable(): Boolean =
+    visible && alpha > 0f && track.width > 0f && track.height > 0f && thumb.width > 0f && thumb.height > 0f
+
+private fun DrawScope.drawScrollbar(bar: ScrollbarModel, theme: EditorTheme) {
+    drawRect(
+        color = theme.scrollbarTrackColor.toComposeColor().withScrollbarAlpha(bar.alpha),
+        topLeft = bar.track.toOffset(),
+        size = bar.track.toSize(),
+    )
+    val thumbColor = if (bar.thumbActive) theme.scrollbarThumbActiveColor else theme.scrollbarThumbColor
+    drawRoundRect(
+        color = thumbColor.toComposeColor().withScrollbarAlpha(bar.alpha),
+        topLeft = bar.thumb.toOffset(),
+        size = bar.thumb.toSize(),
+        cornerRadius = CornerRadius(3f, 3f),
+    )
+}
+
+private fun Rect.toOffset(): Offset = Offset(origin.x, origin.y)
+
+private fun Rect.toSize(): Size = Size(width, height)
+
+private fun Color.withScrollbarAlpha(alpha: Float): Color =
+    copy(alpha = this.alpha * alpha.coerceIn(0f, 1f))
 
 internal fun Int.toComposeColor(): Color {
     if (this == 0) return Color.Unspecified
