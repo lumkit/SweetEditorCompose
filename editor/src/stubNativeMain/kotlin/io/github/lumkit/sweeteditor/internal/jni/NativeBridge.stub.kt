@@ -125,6 +125,27 @@ internal actual object NativeBridge {
     actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? {
         unsupported()
     }
+    actual fun editorSearch(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorFindNextSearchMatch(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorFindPreviousSearchMatch(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorReplaceCurrentSearchMatch(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorReplaceAllSearchMatches(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorClearSearch(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorGetSearchState(editor: Long): ByteArray? {
+        unsupported()
+    }
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? {
         unsupported()
     }

@@ -206,6 +206,44 @@ class SweetEditorController(
         session?.clearAllDecorations()
     }
 
+    fun addDecorationProvider(provider: DecorationProvider) {
+        session?.addDecorationProvider(provider)
+    }
+
+    fun removeDecorationProvider(provider: DecorationProvider) {
+        session?.removeDecorationProvider(provider)
+    }
+
+    fun requestDecorationRefresh() {
+        session?.requestDecorationRefresh()
+    }
+
+    fun search(pattern: String, options: EditorSearchOptions = EditorSearchOptions()) {
+        session?.search(pattern, options)
+    }
+
+    fun findNextSearchMatch() {
+        session?.findNextSearchMatch()
+    }
+
+    fun findPreviousSearchMatch() {
+        session?.findPreviousSearchMatch()
+    }
+
+    fun replaceCurrentSearchMatch(replacement: String) {
+        session?.replaceCurrentSearchMatch(replacement)
+    }
+
+    fun replaceAllSearchMatches(replacement: String) {
+        session?.replaceAllSearchMatches(replacement)
+    }
+
+    fun clearSearch() {
+        session?.clearSearch()
+    }
+
+    fun getSearchState(): EditorSearchState? = session?.getSearchState()
+
     fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 

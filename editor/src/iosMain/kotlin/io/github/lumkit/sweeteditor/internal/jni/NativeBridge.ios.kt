@@ -85,6 +85,13 @@ import sweeteditor.cinterop.editor_set_auto_indent_mode
 import sweeteditor.cinterop.editor_set_backspace_unindent
 import sweeteditor.cinterop.editor_set_current_line_render_mode
 import sweeteditor.cinterop.editor_set_document
+import sweeteditor.cinterop.editor_clear_search
+import sweeteditor.cinterop.editor_find_next_search_match
+import sweeteditor.cinterop.editor_find_previous_search_match
+import sweeteditor.cinterop.editor_get_search_state
+import sweeteditor.cinterop.editor_replace_all_search_matches
+import sweeteditor.cinterop.editor_replace_current_search_match
+import sweeteditor.cinterop.editor_search
 import sweeteditor.cinterop.editor_set_editor_range_effect_styles
 import sweeteditor.cinterop.editor_set_editor_render_colors
 import sweeteditor.cinterop.editor_set_gutter_sticky
@@ -367,6 +374,60 @@ internal actual object NativeBridge {
                 }
             }
         }
+
+    actual fun editorSearch(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_search(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorFindNextSearchMatch(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_find_next_search_match(editor, size) } }
+
+    actual fun editorFindPreviousSearchMatch(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_find_previous_search_match(editor, size) } }
+
+    actual fun editorReplaceCurrentSearchMatch(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_replace_current_search_match(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorReplaceAllSearchMatches(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_replace_all_search_matches(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorClearSearch(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_clear_search(editor, size) } }
+
+    actual fun editorGetSearchState(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_get_search_state(editor, size) } }
 
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_ime_begin_session(editor, mutationModel, size) } }

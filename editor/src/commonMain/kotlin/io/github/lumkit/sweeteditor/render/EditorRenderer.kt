@@ -5,6 +5,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -20,8 +22,10 @@ import androidx.compose.ui.unit.Constraints
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.GuideType
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectRenderItem
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectUnderlineStyle
 import io.github.lumkit.sweeteditor.core.protocol.Rect
 import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
 import io.github.lumkit.sweeteditor.core.protocol.SelectionHandle
@@ -60,27 +64,25 @@ internal fun DrawScope.drawEditor(
         }
     }
 
-    if (model.gutterSticky && model.splitX > 0f) {
-        clipRect(left = model.splitX, top = 0f, right = size.width, bottom = size.height) {
-            drawRangeBackgrounds()
-            drawRuns()
-        }
-    } else {
+    val drawContentDecorations = {
         drawRangeBackgrounds()
         drawRuns()
+        drawGuideSegments(model, theme)
+        drawRangeEffectOverlays(model)
+        drawCursor(model, theme)
     }
 
-    val cursor = model.cursor
-    if (cursor.visible) {
-        drawRect(
-            color = theme.cursorColor.toComposeColor(),
-            topLeft = Offset(cursor.position.x, cursor.position.y),
-            size = Size(2f, cursor.height.coerceAtLeast(1f)),
-        )
+    if (model.gutterSticky && model.splitX > 0f) {
+        clipRect(left = model.splitX, top = 0f, right = size.width, bottom = size.height) {
+            drawContentDecorations()
+        }
+    } else {
+        drawContentDecorations()
     }
 
     drawGutterOverlay(model, theme, lineHeight)
     drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
+    drawGutterIcons(model, theme)
     drawSelectionHandles(model, theme)
     drawScrollbars(model, theme)
 }
@@ -228,6 +230,111 @@ private fun DrawScope.drawRangeEffectBackgrounds(model: EditorRenderModel, theme
             topLeft = Offset(effect.rect.origin.x, effect.rect.origin.y),
             size = Size(effect.rect.width, effect.rect.height),
         )
+    }
+}
+
+private fun DrawScope.drawCursor(model: EditorRenderModel, theme: EditorTheme) {
+    val cursor = model.cursor
+    if (!cursor.visible) return
+    drawRect(
+        color = theme.cursorColor.toComposeColor(),
+        topLeft = Offset(cursor.position.x, cursor.position.y),
+        size = Size(2f, cursor.height.coerceAtLeast(1f)),
+    )
+}
+
+private fun DrawScope.drawGuideSegments(model: EditorRenderModel, theme: EditorTheme) {
+    for (segment in model.guideSegments) {
+        val color = if (segment.type == GuideType.SEPARATOR) {
+            theme.separatorLineColor
+        } else {
+            theme.guideColor
+        }.toComposeColor().takeUnless { it == Color.Unspecified } ?: continue
+        drawLine(
+            color = color,
+            start = Offset(segment.start.x, segment.start.y),
+            end = Offset(segment.end.x, segment.end.y),
+            strokeWidth = if (segment.type == GuideType.INDENT) 1f else 1.2f,
+        )
+    }
+}
+
+private fun DrawScope.drawRangeEffectOverlays(model: EditorRenderModel) {
+    for (effect in model.rangeEffects) {
+        val rect = effect.rect
+        if (rect.width <= 0f || rect.height <= 0f) continue
+        val border = effect.style.borderColor.toComposeColor().takeUnless { it == Color.Unspecified }
+        if (border != null) {
+            val stroke = if (effect.kind == RangeEffectKind.LINKED_EDITING_ACTIVE) 2f else 1.5f
+            drawRect(
+                color = border,
+                topLeft = Offset(rect.origin.x, rect.origin.y),
+                size = Size(rect.width, rect.height),
+                style = Stroke(width = stroke),
+            )
+        }
+        val underline = effect.style.underlineColor.toComposeColor().takeUnless { it == Color.Unspecified }
+        if (underline != null && effect.style.underlineStyle != RangeEffectUnderlineStyle.NONE) {
+            drawRangeEffectUnderline(rect, underline, effect.style.underlineStyle)
+        }
+    }
+}
+
+private fun DrawScope.drawRangeEffectUnderline(
+    rect: Rect,
+    color: Color,
+    style: RangeEffectUnderlineStyle,
+) {
+    val startX = rect.origin.x
+    val endX = startX + rect.width
+    val baseY = rect.origin.y + rect.height - 1f
+    when (style) {
+        RangeEffectUnderlineStyle.SOLID -> drawLine(
+            color = color,
+            start = Offset(startX, baseY),
+            end = Offset(endX, baseY),
+            strokeWidth = 2f,
+            cap = StrokeCap.Butt,
+        )
+        RangeEffectUnderlineStyle.DASHED -> drawLine(
+            color = color,
+            start = Offset(startX, baseY),
+            end = Offset(endX, baseY),
+            strokeWidth = 2f,
+            cap = StrokeCap.Butt,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2f), 0f),
+        )
+        RangeEffectUnderlineStyle.WAVY -> {
+            val path = Path()
+            var x = startX
+            var step = 0
+            val halfWave = 7f
+            val amplitude = 3.5f
+            path.moveTo(x, baseY)
+            while (x < endX) {
+                val nextX = (x + halfWave).coerceAtMost(endX)
+                val midX = (x + nextX) / 2f
+                val peakY = if (step % 2 == 0) baseY - amplitude else baseY + amplitude
+                path.quadraticBezierTo(midX, peakY, nextX, baseY)
+                x = nextX
+                step++
+            }
+            drawPath(path, color, style = Stroke(width = 2f, cap = StrokeCap.Butt))
+        }
+        RangeEffectUnderlineStyle.NONE -> Unit
+    }
+}
+
+private fun DrawScope.drawGutterIcons(model: EditorRenderModel, theme: EditorTheme) {
+    if (!model.gutterVisible) return
+    val color = theme.gutterIconColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: return
+    for (icon in model.gutterIcons) {
+        val rect = icon.rect
+        if (rect.width <= 0f || rect.height <= 0f) continue
+        val size = minOf(rect.width, rect.height) * 0.55f
+        val cx = rect.origin.x + rect.width / 2f
+        val cy = rect.origin.y + rect.height / 2f
+        drawCircle(color = color, radius = size / 2f, center = Offset(cx, cy))
     }
 }
 

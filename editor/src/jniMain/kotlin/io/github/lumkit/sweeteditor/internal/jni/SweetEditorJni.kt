@@ -53,6 +53,13 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorSearch(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorFindNextSearchMatch(editor: Long): ByteArray?
+    @JvmStatic external fun editorFindPreviousSearchMatch(editor: Long): ByteArray?
+    @JvmStatic external fun editorReplaceCurrentSearchMatch(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorReplaceAllSearchMatches(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorClearSearch(editor: Long): ByteArray?
+    @JvmStatic external fun editorGetSearchState(editor: Long): ByteArray?
     @JvmStatic external fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     @JvmStatic external fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     @JvmStatic external fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?
@@ -146,6 +153,18 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetEditorRenderColors(editor, payload)
     actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? =
         SweetEditorJni.editorSetEditorRangeEffectStyles(editor, payload)
+    actual fun editorSearch(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSearch(editor, payload)
+    actual fun editorFindNextSearchMatch(editor: Long): ByteArray? =
+        SweetEditorJni.editorFindNextSearchMatch(editor)
+    actual fun editorFindPreviousSearchMatch(editor: Long): ByteArray? =
+        SweetEditorJni.editorFindPreviousSearchMatch(editor)
+    actual fun editorReplaceCurrentSearchMatch(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorReplaceCurrentSearchMatch(editor, payload)
+    actual fun editorReplaceAllSearchMatches(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorReplaceAllSearchMatches(editor, payload)
+    actual fun editorClearSearch(editor: Long): ByteArray? = SweetEditorJni.editorClearSearch(editor)
+    actual fun editorGetSearchState(editor: Long): ByteArray? = SweetEditorJni.editorGetSearchState(editor)
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =
         SweetEditorJni.editorImeBeginSession(editor, mutationModel)
     actual fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray? =
