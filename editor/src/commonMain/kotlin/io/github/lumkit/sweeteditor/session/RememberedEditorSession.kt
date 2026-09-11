@@ -4,8 +4,22 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.lumkit.sweeteditor.CompletionItem
+import io.github.lumkit.sweeteditor.CompletionProvider
+import io.github.lumkit.sweeteditor.CompletionTriggerKind
+import io.github.lumkit.sweeteditor.EditorActionSource
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
+import io.github.lumkit.sweeteditor.EditorTextEdit
+import io.github.lumkit.sweeteditor.TextPosition
+import io.github.lumkit.sweeteditor.TextRange
+import io.github.lumkit.sweeteditor.NewLineActionProvider
+import io.github.lumkit.sweeteditor.newline.NewLineActionProviderManager
+import io.github.lumkit.sweeteditor.newline.NewLineHost
+import io.github.lumkit.sweeteditor.EditorMetadata
+import io.github.lumkit.sweeteditor.encodeApplyTextEdits
+import io.github.lumkit.sweeteditor.isEmptyRange
+import io.github.lumkit.sweeteditor.toCodePointArrays
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.DecorationProvider
 import io.github.lumkit.sweeteditor.Diagnostic
@@ -19,6 +33,9 @@ import io.github.lumkit.sweeteditor.ScrollChangedEvent
 import io.github.lumkit.sweeteditor.TextChangedEvent
 import io.github.lumkit.sweeteditor.decoration.DecorationHost
 import io.github.lumkit.sweeteditor.decoration.DecorationProviderManager
+import io.github.lumkit.sweeteditor.completion.CompletionHost
+import io.github.lumkit.sweeteditor.completion.CompletionProviderManager
+import io.github.lumkit.sweeteditor.EditorIconProvider
 import io.github.lumkit.sweeteditor.EditorKeyBinding
 import io.github.lumkit.sweeteditor.EditorKeyChord
 import io.github.lumkit.sweeteditor.EditorKeyMap
@@ -26,8 +43,10 @@ import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
 import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.FoldRegion
 import io.github.lumkit.sweeteditor.GutterIcon
 import io.github.lumkit.sweeteditor.InlayHint
+import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
 import io.github.lumkit.sweeteditor.StyleSpan
@@ -43,6 +62,8 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorBuiltinCommand
+import io.github.lumkit.sweeteditor.core.protocol.KeyCode
+import io.github.lumkit.sweeteditor.core.protocol.KeyModifier
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetKeyMapPayload
 import io.github.lumkit.sweeteditor.input.EditorClipboard
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
@@ -76,6 +97,14 @@ internal class RememberedEditorSession(
         private set
     var visualScale by mutableStateOf(1f)
         private set
+    var completionItems by mutableStateOf<List<CompletionItem>>(emptyList())
+        private set
+    var completionSelectedIndex by mutableStateOf(0)
+        private set
+    var completionAnchor by mutableStateOf<EditorCursorRect?>(null)
+        private set
+    var iconProvider by mutableStateOf<EditorIconProvider?>(null)
+        private set
     internal var lastPointer = PointF(0f, 0f)
     internal var pointerHovering = false
     private var hostScaleGestureActive = false
@@ -95,7 +124,27 @@ internal class RememberedEditorSession(
     private var appliedSettings: EditorSettings? = null
     private var appliedKeyMap: EditorKeyMap? = null
     private var appliedKeyMapRevision = -1
+    private var languageConfiguration: LanguageConfiguration? = null
+    private var metadata: EditorMetadata? = null
+    private var appliedTabSize: Int? = null
+    private var appliedInsertSpaces: Boolean? = null
     private val decorations = DecorationProviderManager(SessionDecorationHost())
+    private val newLines = NewLineActionProviderManager(SessionNewLineHost())
+    private val completions = CompletionProviderManager(SessionCompletionHost()).also { manager ->
+        manager.listener = object : CompletionProviderManager.Listener {
+            override fun onCompletionItemsUpdated(items: List<CompletionItem>, anchor: EditorCursorRect?) {
+                completionItems = items
+                completionSelectedIndex = 0
+                completionAnchor = anchor
+            }
+
+            override fun onCompletionDismissed() {
+                completionItems = emptyList()
+                completionSelectedIndex = 0
+                completionAnchor = null
+            }
+        }
+    }
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -123,6 +172,43 @@ internal class RememberedEditorSession(
 
     override fun onAbandoned() = disposeSession()
 
+    fun applyLanguageConfiguration(config: LanguageConfiguration?) {
+        val core = editor ?: return
+        languageConfiguration = config
+        if (config != null) {
+            val brackets = config.brackets
+            if (brackets != null) {
+                val (opens, closes) = brackets.toCodePointArrays()
+                dispatchActionResult(core.setBracketPairs(opens, closes))
+            }
+            val autoClosing = config.autoClosingPairs
+            if (autoClosing != null) {
+                val (opens, closes) = autoClosing.toCodePointArrays()
+                dispatchActionResult(core.setAutoClosingPairs(opens, closes))
+            }
+        }
+        appliedSettings?.let { syncTabBehavior(it) }
+        decorations.requestRefresh()
+    }
+
+    fun getLanguageConfiguration(): LanguageConfiguration? = languageConfiguration
+
+    fun setMetadata(value: EditorMetadata?) {
+        metadata = value
+        decorations.requestRefresh()
+    }
+
+    fun getMetadata(): EditorMetadata? = metadata
+
+    fun setEditorIconProvider(provider: EditorIconProvider?) {
+        if (iconProvider === provider) return
+        iconProvider = provider
+        measurer.bindIconProvider(provider)
+        notifyFontMetricsChanged()
+    }
+
+    fun getEditorIconProvider(): EditorIconProvider? = iconProvider
+
     fun applyKeyMap(keyMap: EditorKeyMap) {
         val core = editor ?: return
         if (appliedKeyMap === keyMap && appliedKeyMapRevision == keyMap.revision) return
@@ -146,12 +232,6 @@ internal class RememberedEditorSession(
         if (previous != settings) {
             if (previous == null || previous.wrapMode != settings.wrapMode) {
                 dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
-            }
-            if (previous == null || previous.tabSize != settings.tabSize) {
-                dispatchActionResult(core.setTabSize(settings.tabSize.coerceAtLeast(1)))
-            }
-            if (previous == null || previous.insertSpaces != settings.insertSpaces) {
-                dispatchActionResult(core.setInsertSpaces(settings.insertSpaces))
             }
             if (previous == null ||
                 previous.lineSpacingAdd != settings.lineSpacingAdd ||
@@ -178,6 +258,15 @@ internal class RememberedEditorSession(
             if (previous == null || previous.currentLineRenderMode != settings.currentLineRenderMode) {
                 dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
             }
+            if (previous == null || previous.foldArrowMode != settings.foldArrowMode) {
+                dispatchActionResult(core.setFoldArrowMode(settings.foldArrowMode.value))
+            }
+            if (previous == null || previous.renderWhitespace != settings.renderWhitespace) {
+                dispatchActionResult(core.setRenderWhitespace(settings.renderWhitespace.value))
+            }
+            if (previous == null || previous.renderLineBreaks != settings.renderLineBreaks) {
+                dispatchActionResult(core.setRenderLineBreaks(settings.renderLineBreaks))
+            }
             if (previous == null || previous.autoIndentMode != settings.autoIndentMode) {
                 dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
             }
@@ -185,6 +274,22 @@ internal class RememberedEditorSession(
                 dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
             }
             appliedSettings = settings
+        }
+        syncTabBehavior(settings)
+    }
+
+    private fun syncTabBehavior(settings: EditorSettings) {
+        val core = editor ?: return
+        val tabSize = languageConfiguration?.tabSize?.takeIf { it > 0 }
+            ?: settings.tabSize.coerceAtLeast(1)
+        val insertSpaces = languageConfiguration?.insertSpaces ?: settings.insertSpaces
+        if (appliedTabSize != tabSize) {
+            dispatchActionResult(core.setTabSize(tabSize))
+            appliedTabSize = tabSize
+        }
+        if (appliedInsertSpaces != insertSpaces) {
+            dispatchActionResult(core.setInsertSpaces(insertSpaces))
+            appliedInsertSpaces = insertSpaces
         }
     }
 
@@ -244,6 +349,8 @@ internal class RememberedEditorSession(
 
     fun handleKey(keyCode: Int, text: ByteArray?, modifiers: Int) {
         val core = editor ?: return
+        if (handleCompletionKey(keyCode, modifiers)) return
+        if (tryHandleNewLine(keyCode, modifiers)) return
         dispatchActionResult(core.handleKeyEvent(keyCode, text, modifiers))
     }
 
@@ -381,11 +488,78 @@ internal class RememberedEditorSession(
 
     fun clearAllDecorations() = mutate { clearAllDecorations() }
 
+    fun setFoldRegions(regions: List<FoldRegion>) = mutate { setFoldRegions(regions) }
+
+    fun toggleFold(line: Int) = mutate { toggleFold(line) }
+
+    fun foldAt(line: Int) = mutate { foldAt(line) }
+
+    fun unfoldAt(line: Int) = mutate { unfoldAt(line) }
+
+    fun foldAll() = mutate { foldAll() }
+
+    fun unfoldAll() = mutate { unfoldAll() }
+
+    fun isLineVisible(line: Int): Boolean = editor?.isLineVisible(line) ?: true
+
     fun addDecorationProvider(provider: DecorationProvider) = decorations.addProvider(provider)
 
     fun removeDecorationProvider(provider: DecorationProvider) = decorations.removeProvider(provider)
 
     fun requestDecorationRefresh() = decorations.requestRefresh()
+
+    fun addCompletionProvider(provider: CompletionProvider) = completions.addProvider(provider)
+
+    fun removeCompletionProvider(provider: CompletionProvider) = completions.removeProvider(provider)
+
+    fun addNewLineActionProvider(provider: NewLineActionProvider) = newLines.addProvider(provider)
+
+    fun removeNewLineActionProvider(provider: NewLineActionProvider) = newLines.removeProvider(provider)
+
+    fun triggerCompletion() = completions.trigger(CompletionTriggerKind.INVOKED, null)
+
+    fun showCompletionItems(items: List<CompletionItem>) = completions.showItems(items)
+
+    fun dismissCompletion() = completions.dismiss()
+
+    fun selectCompletionIndex(index: Int) {
+        if (completionItems.isEmpty()) return
+        completionSelectedIndex = index.coerceIn(0, completionItems.lastIndex)
+    }
+
+    fun applyCompletionItem(item: CompletionItem) {
+        val core = editor ?: return
+        val insert = item.insertText ?: item.label
+        val primary = item.textEdit
+        val additional = item.additionalTextEdits
+        when {
+            primary != null -> {
+                dispatchActionResult(core.applyTextEdits(encodeApplyTextEdits(listOf(primary) + additional)))
+            }
+            additional.isEmpty() -> {
+                val word = core.getWordRangeAtCursor()
+                if (!word.isEmptyRange()) {
+                    dispatchActionResult(
+                        core.replaceText(
+                            word.start.line,
+                            word.start.column,
+                            word.end.line,
+                            word.end.column,
+                            insert,
+                        ),
+                    )
+                } else {
+                    dispatchActionResult(core.insertText(insert))
+                }
+            }
+            else -> {
+                val cursor = core.getCursorPosition()
+                val edits = listOf(EditorTextEdit(TextRange(cursor, cursor), insert)) + additional
+                dispatchActionResult(core.applyTextEdits(encodeApplyTextEdits(edits)))
+            }
+        }
+        completions.dismiss()
+    }
 
     fun search(pattern: String, options: EditorSearchOptions) =
         mutate { search(encodeSearchRequest(pattern, options)) }
@@ -432,6 +606,8 @@ internal class RememberedEditorSession(
     }
 
     fun getSelectedText(): String = editor?.getSelectedText().orEmpty()
+
+    fun getCursorPosition(): TextPosition? = editor?.getCursorPosition()
 
     fun copyToClipboard(): Boolean {
         val text = getSelectedText()
@@ -487,6 +663,8 @@ internal class RememberedEditorSession(
         imeAdapter?.closeOwnedSession()
         imeAdapter = null
         decorations.close()
+        completions.close()
+        newLines.close()
         controller.detach(this)
         editor?.close()
         editor = null
@@ -516,6 +694,7 @@ internal class RememberedEditorSession(
         if (disposed || result == null) return
         imeAdapter?.onEditorActionResult(result)
         if (result.gestureType == GestureType.TAP || result.gestureType == GestureType.DOUBLE_TAP) {
+            completions.dismiss()
             onTap?.invoke()
             if (result.hitTarget.type == HitTargetType.NONE) {
                 imeTapHandler?.invoke()
@@ -531,8 +710,14 @@ internal class RememberedEditorSession(
         collectStateEvents(result).forEach { event ->
             controller.events.publish(event)
             when (event) {
-                is TextChangedEvent -> decorations.onTextChanged(event.changes)
-                is ScrollChangedEvent -> decorations.onScrollChanged()
+                is TextChangedEvent -> {
+                    decorations.onTextChanged(event.changes)
+                    onCompletionTextChanged(event)
+                }
+                is ScrollChangedEvent -> {
+                    decorations.onScrollChanged()
+                    if (completionItems.isNotEmpty()) completions.dismiss()
+                }
                 else -> Unit
             }
         }
@@ -541,6 +726,7 @@ internal class RememberedEditorSession(
                 EditorBuiltinCommand.COPY.value -> copyToClipboard()
                 EditorBuiltinCommand.CUT.value -> cutToClipboard()
                 EditorBuiltinCommand.PASTE.value -> pasteFromClipboard()
+                EditorBuiltinCommand.TRIGGER_COMPLETION.value -> triggerCompletion()
             }
         }
         if (result.needsRedraw || renderModel == null) {
@@ -556,6 +742,76 @@ internal class RememberedEditorSession(
         }
     }
 
+    private fun tryHandleNewLine(keyCode: Int, modifiers: Int): Boolean {
+        if (keyCode != KeyCode.ENTER) return false
+        if (modifiers != KeyModifier.NONE) return false
+        val core = editor ?: return false
+        val action = newLines.provideNewLineAction() ?: return false
+        dispatchActionResult(
+            core.handleKeyEvent(KeyCode.NONE, action.text.encodeToByteArray(), modifiers),
+        )
+        return true
+    }
+
+    private fun handleCompletionKey(keyCode: Int, modifiers: Int): Boolean {
+        if (completionItems.isEmpty()) return false
+        if (modifiers != KeyModifier.NONE && modifiers != KeyModifier.SHIFT) return false
+        return when (keyCode) {
+            KeyCode.ESCAPE -> {
+                completions.dismiss()
+                true
+            }
+            KeyCode.ENTER, KeyCode.TAB -> {
+                completionItems.getOrNull(completionSelectedIndex)?.let { applyCompletionItem(it) }
+                true
+            }
+            KeyCode.UP -> {
+                completionSelectedIndex =
+                    (completionSelectedIndex - 1).mod(completionItems.size)
+                true
+            }
+            KeyCode.DOWN -> {
+                completionSelectedIndex =
+                    (completionSelectedIndex + 1).mod(completionItems.size)
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun onCompletionTextChanged(event: TextChangedEvent) {
+        if (event.source != EditorActionSource.KEYBOARD) return
+        if (event.changes.size != 1) {
+            completions.dismiss()
+            return
+        }
+        val inserted = event.changes[0].newText
+        if (inserted.length == 1 && completions.isTriggerCharacter(inserted)) {
+            completions.trigger(CompletionTriggerKind.CHARACTER, inserted)
+        } else if (completionItems.isNotEmpty()) {
+            completions.trigger(CompletionTriggerKind.RETRIGGER, null)
+        }
+    }
+
+    private inner class SessionCompletionHost : CompletionHost {
+        override fun isDisposed(): Boolean = disposed || editor == null
+        override fun cursorPosition(): TextPosition? = editor?.getCursorPosition()
+        override fun lineText(line: Int): String = documentLineText(line)
+        override fun wordRangeAtCursor(): TextRange =
+            editor?.getWordRangeAtCursor() ?: TextRange(TextPosition(0, 0), TextPosition(0, 0))
+        override fun cursorRect(): EditorCursorRect? = editor?.getCursorRect()
+        override fun languageConfiguration(): LanguageConfiguration? = languageConfiguration
+        override fun editorMetadata(): EditorMetadata? = metadata
+    }
+
+    private inner class SessionNewLineHost : NewLineHost {
+        override fun isDisposed(): Boolean = disposed || editor == null
+        override fun cursorPosition(): TextPosition? = editor?.getCursorPosition()
+        override fun lineText(line: Int): String = documentLineText(line)
+        override fun languageConfiguration(): LanguageConfiguration? = languageConfiguration
+        override fun editorMetadata(): EditorMetadata? = metadata
+    }
+
     private inner class SessionDecorationHost : DecorationHost {
         override fun isDisposed(): Boolean = disposed || editor == null
         override fun visibleLineRange(): VisibleLineRange =
@@ -565,6 +821,8 @@ internal class RememberedEditorSession(
             appliedSettings?.decorationOverscanViewportMultiplier ?: 1f
         override fun scrollRefreshMinIntervalMs(): Int =
             appliedSettings?.decorationScrollRefreshMinIntervalMs ?: 50
+        override fun languageConfiguration(): LanguageConfiguration? = languageConfiguration
+        override fun editorMetadata(): EditorMetadata? = metadata
         override fun clearHighlights(layer: EditorSpanLayer) {
             mutate { clearHighlights(layer) }
         }
@@ -613,11 +871,33 @@ internal class RememberedEditorSession(
         override fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>) {
             mutate { setBatchLineLinks(linksByLine) }
         }
+        override fun setFoldRegions(regions: List<FoldRegion>) {
+            mutate { setFoldRegions(regions) }
+        }
     }
 
     private fun documentLineCount(): Int {
         val text = document?.utf8Text().orEmpty()
         if (text.isEmpty()) return 1
         return text.count { it == '\n' } + 1
+    }
+
+    private fun documentLineText(line: Int): String {
+        val text = document?.utf8Text().orEmpty()
+        if (text.isEmpty()) return ""
+        var current = 0
+        var start = 0
+        var index = 0
+        while (index <= text.length) {
+            if (index == text.length || text[index] == '\n') {
+                if (current == line) {
+                    return text.substring(start, index).trimEnd('\r')
+                }
+                current++
+                start = index + 1
+            }
+            index++
+        }
+        return ""
     }
 }

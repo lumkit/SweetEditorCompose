@@ -9,6 +9,9 @@ class SweetEditorController(
 ) {
     private var session: RememberedEditorSession? = null
     private val readyCallbacks = mutableListOf<() -> Unit>()
+    private var languageConfiguration: LanguageConfiguration? = null
+    private var metadata: EditorMetadata? = null
+    private var iconProvider: EditorIconProvider? = null
     val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
@@ -75,6 +78,8 @@ class SweetEditorController(
     fun getScrollMetrics(): EditorScrollMetrics? = session?.getScrollMetrics()
 
     fun getSelectedText(): String = session?.getSelectedText().orEmpty()
+
+    fun getCursorPosition(): TextPosition? = session?.getCursorPosition()
 
     fun copy(): Boolean = session?.copyToClipboard() == true
 
@@ -244,6 +249,87 @@ class SweetEditorController(
 
     fun getSearchState(): EditorSearchState? = session?.getSearchState()
 
+    fun setFoldRegions(regions: List<FoldRegion>) {
+        session?.setFoldRegions(regions)
+    }
+
+    fun toggleFold(line: Int) {
+        session?.toggleFold(line)
+    }
+
+    fun foldAt(line: Int) {
+        session?.foldAt(line)
+    }
+
+    fun unfoldAt(line: Int) {
+        session?.unfoldAt(line)
+    }
+
+    fun foldAll() {
+        session?.foldAll()
+    }
+
+    fun unfoldAll() {
+        session?.unfoldAll()
+    }
+
+    fun isLineVisible(line: Int): Boolean = session?.isLineVisible(line) ?: true
+
+    fun setLanguageConfiguration(config: LanguageConfiguration?) {
+        languageConfiguration = config
+        session?.applyLanguageConfiguration(config)
+    }
+
+    fun getLanguageConfiguration(): LanguageConfiguration? =
+        session?.getLanguageConfiguration() ?: languageConfiguration
+
+    fun setMetadata(metadata: EditorMetadata?) {
+        this.metadata = metadata
+        session?.setMetadata(metadata)
+    }
+
+    fun getMetadata(): EditorMetadata? = session?.getMetadata() ?: metadata
+
+    fun setEditorIconProvider(provider: EditorIconProvider?) {
+        iconProvider = provider
+        session?.setEditorIconProvider(provider)
+    }
+
+    fun getEditorIconProvider(): EditorIconProvider? =
+        session?.getEditorIconProvider() ?: iconProvider
+
+    fun addCompletionProvider(provider: CompletionProvider) {
+        session?.addCompletionProvider(provider)
+    }
+
+    fun removeCompletionProvider(provider: CompletionProvider) {
+        session?.removeCompletionProvider(provider)
+    }
+
+    fun addNewLineActionProvider(provider: NewLineActionProvider) {
+        session?.addNewLineActionProvider(provider)
+    }
+
+    fun removeNewLineActionProvider(provider: NewLineActionProvider) {
+        session?.removeNewLineActionProvider(provider)
+    }
+
+    fun triggerCompletion() {
+        session?.triggerCompletion()
+    }
+
+    fun showCompletionItems(items: List<CompletionItem>) {
+        session?.showCompletionItems(items)
+    }
+
+    fun dismissCompletion() {
+        session?.dismissCompletion()
+    }
+
+    fun applyCompletionItem(item: CompletionItem) {
+        session?.applyCompletionItem(item)
+    }
+
     fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 
@@ -269,6 +355,9 @@ class SweetEditorController(
             "SweetEditorController is already attached to another SweetEditor"
         }
         session = next
+        next.applyLanguageConfiguration(languageConfiguration)
+        next.setMetadata(metadata)
+        next.setEditorIconProvider(iconProvider)
         val pending = readyCallbacks.toList()
         readyCallbacks.clear()
         pending.forEach { it() }

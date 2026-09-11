@@ -23,11 +23,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.lumkit.sweeteditor.AutoIndentMode
 import io.github.lumkit.sweeteditor.CodeLensItem
+import io.github.lumkit.sweeteditor.CompletionContext
+import io.github.lumkit.sweeteditor.CompletionItem
+import io.github.lumkit.sweeteditor.CompletionItemKind
+import io.github.lumkit.sweeteditor.CompletionProvider
+import io.github.lumkit.sweeteditor.CompletionReceiver
+import io.github.lumkit.sweeteditor.CompletionResult
+import io.github.lumkit.sweeteditor.EditorTextEdit
 import io.github.lumkit.sweeteditor.CurrentLineRenderMode
 import io.github.lumkit.sweeteditor.DecorationApplyMode
 import io.github.lumkit.sweeteditor.DecorationContext
@@ -40,8 +52,15 @@ import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorDiagnosticSeverity
 import io.github.lumkit.sweeteditor.EditorDocumentHighlightKind
 import io.github.lumkit.sweeteditor.EditorFontStyle
+import io.github.lumkit.sweeteditor.FoldRegion
+import io.github.lumkit.sweeteditor.EditorIconProvider
 import io.github.lumkit.sweeteditor.EditorInlayType
 import io.github.lumkit.sweeteditor.EditorKeyMap
+import io.github.lumkit.sweeteditor.EditorMetadata
+import io.github.lumkit.sweeteditor.LanguageConfiguration
+import io.github.lumkit.sweeteditor.NewLineAction
+import io.github.lumkit.sweeteditor.NewLineActionProvider
+import io.github.lumkit.sweeteditor.NewLineContext
 import io.github.lumkit.sweeteditor.EditorSearchStatus
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTextStyle
@@ -53,6 +72,7 @@ import io.github.lumkit.sweeteditor.PhantomText
 import io.github.lumkit.sweeteditor.StyleSpan
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.SweetEditorController
+import io.github.lumkit.sweeteditor.WhitespaceRenderMode
 import io.github.lumkit.sweeteditor.WrapMode
 import io.github.lumkit.sweeteditor.rememberSweetEditorController
 
@@ -74,21 +94,6 @@ private enum class KeyMapPreset {
     Jetbrains,
     Sublime,
 }
-
-private val LightEditorTheme = EditorTheme(
-    backgroundColor = 0xFFFFFFFF.toInt(),
-    textColor = 0xFF1E1E1E.toInt(),
-    cursorColor = 0xFF1E1E1E.toInt(),
-    currentLineColor = 0xFFF3F6FB.toInt(),
-    lineNumberColor = 0xFF8A93A3.toInt(),
-    currentLineNumberColor = 0xFF3D4F6F.toInt(),
-    splitLineColor = 0x33202838,
-    scrollbarTrackColor = 0x22000000,
-    scrollbarThumbColor = 0x66858585,
-    scrollbarThumbActiveColor = 0xFF7A7A7A.toInt(),
-    selectionColor = 0x664C9AFF,
-    linkColor = 0xFF0B67D3.toInt(),
-)
 
 @Composable
 @Preview
@@ -131,18 +136,24 @@ private fun DemoEditor(onBack: () -> Unit) {
     var wrapMode by remember { mutableStateOf(WrapMode.NONE) }
     var gutterVisible by remember { mutableStateOf(true) }
     var readOnly by remember { mutableStateOf(false) }
+    var renderWhitespace by remember { mutableStateOf(WhitespaceRenderMode.NONE) }
+    var renderLineBreaks by remember { mutableStateOf(false) }
     var scale by remember { mutableStateOf(1f) }
     var keyMapPreset by remember { mutableStateOf(KeyMapPreset.Vscode) }
     var status by remember { mutableStateOf("waiting for editor…") }
     val decorationProvider = remember { DemoDecorationProvider() }
+    val completionProvider = remember { DemoCompletionProvider() }
+    val newLineProvider = remember { DemoNewLineProvider() }
 
-    val theme = if (darkTheme) EditorTheme() else LightEditorTheme
+    val theme = if (darkTheme) EditorTheme.dark() else EditorTheme.light()
     val settings = EditorSettings(
         wrapMode = wrapMode,
         scale = scale,
         readOnly = readOnly,
         gutterVisible = gutterVisible,
         currentLineRenderMode = CurrentLineRenderMode.BACKGROUND,
+        renderWhitespace = renderWhitespace,
+        renderLineBreaks = renderLineBreaks,
         autoIndentMode = AutoIndentMode.KEEP_INDENT,
     )
     val keyMap = remember(keyMapPreset) {
@@ -157,7 +168,12 @@ private fun DemoEditor(onBack: () -> Unit) {
         val unsubs = mutableListOf<() -> Unit>()
         controller.whenReady {
             registerSampleStyles(controller)
+            controller.setMetadata(DemoFileMetadata("sample.kt"))
+            controller.setLanguageConfiguration(demoLanguageConfiguration())
+            controller.setEditorIconProvider(DemoIconProvider())
             controller.addDecorationProvider(decorationProvider)
+            controller.addCompletionProvider(completionProvider)
+            controller.addNewLineActionProvider(newLineProvider)
             refreshStatus(controller) { status = it }
             unsubs += controller.onTextChanged { refreshStatus(controller) { status = it } }
             unsubs += controller.onCursorChanged { refreshStatus(controller) { status = it } }
@@ -202,6 +218,18 @@ private fun DemoEditor(onBack: () -> Unit) {
             onToggleGutter = { gutterVisible = !gutterVisible },
             readOnly = readOnly,
             onToggleReadOnly = { readOnly = !readOnly },
+            renderWhitespace = renderWhitespace,
+            onCycleWhitespace = {
+                renderWhitespace = when (renderWhitespace) {
+                    WhitespaceRenderMode.NONE -> WhitespaceRenderMode.ALL
+                    WhitespaceRenderMode.ALL -> WhitespaceRenderMode.BOUNDARY
+                    WhitespaceRenderMode.BOUNDARY -> WhitespaceRenderMode.SELECTION
+                    WhitespaceRenderMode.SELECTION -> WhitespaceRenderMode.TRAILING
+                    WhitespaceRenderMode.TRAILING -> WhitespaceRenderMode.NONE
+                }
+            },
+            renderLineBreaks = renderLineBreaks,
+            onToggleLineBreaks = { renderLineBreaks = !renderLineBreaks },
             onZoomOut = { scale = (scale - 0.1f).coerceAtLeast(0.5f) },
             onZoomIn = { scale = (scale + 0.1f).coerceAtMost(3f) },
             keyMapPreset = keyMapPreset,
@@ -251,6 +279,13 @@ private fun DemoEditor(onBack: () -> Unit) {
                 controller.removeDecorationProvider(decorationProvider)
                 controller.clearAllDecorations()
             },
+            onTriggerCompletion = controller::triggerCompletion,
+            onFoldAll = controller::foldAll,
+            onUnfoldAll = controller::unfoldAll,
+            onToggleFold = {
+                val line = controller.getCursorPosition()?.line ?: 0
+                controller.toggleFold(line)
+            },
         )
         Text(
             text = status,
@@ -283,6 +318,10 @@ private fun DemoToolbar(
     onToggleGutter: () -> Unit,
     readOnly: Boolean,
     onToggleReadOnly: () -> Unit,
+    renderWhitespace: WhitespaceRenderMode,
+    onCycleWhitespace: () -> Unit,
+    renderLineBreaks: Boolean,
+    onToggleLineBreaks: () -> Unit,
     onZoomOut: () -> Unit,
     onZoomIn: () -> Unit,
     keyMapPreset: KeyMapPreset,
@@ -307,6 +346,10 @@ private fun DemoToolbar(
     onClearSearch: () -> Unit,
     onApplyDecorations: () -> Unit,
     onClearDecorations: () -> Unit,
+    onTriggerCompletion: () -> Unit,
+    onFoldAll: () -> Unit,
+    onUnfoldAll: () -> Unit,
+    onToggleFold: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -318,6 +361,12 @@ private fun DemoToolbar(
             FilterChip(selected = wrapMode != WrapMode.NONE, onClick = onCycleWrap, label = { Text("Wrap ${wrapMode.name}") })
             FilterChip(selected = gutterVisible, onClick = onToggleGutter, label = { Text("Gutter") })
             FilterChip(selected = readOnly, onClick = onToggleReadOnly, label = { Text("ReadOnly") })
+            FilterChip(
+                selected = renderWhitespace != WhitespaceRenderMode.NONE,
+                onClick = onCycleWhitespace,
+                label = { Text("WS ${renderWhitespace.name}") },
+            )
+            FilterChip(selected = renderLineBreaks, onClick = onToggleLineBreaks, label = { Text("¶") })
             TextButton(onClick = onZoomOut) { Text("A-") }
             TextButton(onClick = onZoomIn) { Text("A+") }
             KeyMapPreset.entries.forEach { preset ->
@@ -349,6 +398,10 @@ private fun DemoToolbar(
             TextButton(onClick = onReplaceHi) { Text("Replace Hi") }
             TextButton(onClick = onReplaceAllHi) { Text("Replace all Hi") }
             TextButton(onClick = onClearSearch) { Text("Clear find") }
+            TextButton(onClick = onTriggerCompletion) { Text("Complete") }
+            TextButton(onClick = onFoldAll) { Text("Fold all") }
+            TextButton(onClick = onUnfoldAll) { Text("Unfold") }
+            TextButton(onClick = onToggleFold) { Text("Toggle fold") }
         }
     }
 }
@@ -376,6 +429,81 @@ private fun registerSampleStyles(controller: SweetEditorController) {
     controller.setMaxGutterIcons(1)
 }
 
+private data class DemoFileMetadata(val path: String) : EditorMetadata
+
+private class DemoIconProvider : EditorIconProvider {
+    private val icon = makeDotIcon(Color(0xFF4EA1FF))
+    override fun getIcon(iconId: Int): ImageBitmap? = if (iconId == 1) icon else null
+}
+
+private fun makeDotIcon(color: Color): ImageBitmap {
+    val bitmap = ImageBitmap(16, 16)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply {
+        this.color = color
+        isAntiAlias = true
+    }
+    canvas.drawCircle(Offset(8f, 8f), 6f, paint)
+    return bitmap
+}
+
+private fun demoLanguageConfiguration(): LanguageConfiguration =
+    LanguageConfiguration.builder("kotlin")
+        .addBracket("(", ")")
+        .addBracket("{", "}")
+        .addBracket("[", "]")
+        .addAutoClosingPair("(", ")")
+        .addAutoClosingPair("{", "}")
+        .addAutoClosingPair("[", "]")
+        .addAutoClosingPair("\"", "\"")
+        .setTabSize(4)
+        .setInsertSpaces(true)
+        .build()
+
+private class DemoNewLineProvider : NewLineActionProvider {
+    override fun provideNewLineAction(context: NewLineContext): NewLineAction? {
+        val column = context.column.coerceIn(0, context.lineText.length)
+        val before = context.lineText.take(column)
+        val indent = before.takeWhile { it == ' ' || it == '\t' }
+        val extra = if (before.trimEnd().endsWith("{") || before.trimEnd().endsWith("(")) {
+            "    "
+        } else {
+            return null
+        }
+        return NewLineAction("\n$indent$extra")
+    }
+}
+
+private class DemoCompletionProvider : CompletionProvider {
+    private val catalog = listOf(
+        CompletionItem(label = "fun", kind = CompletionItemKind.KEYWORD, insertText = "fun ", detail = "keyword"),
+        CompletionItem(label = "println", kind = CompletionItemKind.FUNCTION, insertText = "println()", detail = "print line"),
+        CompletionItem(label = "main", kind = CompletionItemKind.FUNCTION, insertText = "main", detail = "entry"),
+        CompletionItem(label = "return", kind = CompletionItemKind.KEYWORD, insertText = "return ", detail = "keyword"),
+    )
+
+    override fun isTriggerCharacter(ch: String): Boolean = ch == "."
+
+    override fun provideCompletions(context: CompletionContext, receiver: CompletionReceiver) {
+        val prefix = context.prefix()
+        val items = catalog
+            .filter { it.matchText.startsWith(prefix, ignoreCase = true) }
+            .map { item ->
+                val text = item.insertText ?: item.label
+                item.copy(textEdit = EditorTextEdit(context.wordRange, text))
+            }
+        receiver.accept(CompletionResult(items))
+    }
+
+    private fun CompletionContext.prefix(): String {
+        if (cursorPosition.line != wordRange.start.line) return ""
+        val start = wordRange.start.column.coerceAtLeast(0)
+        val end = cursorPosition.column.coerceAtLeast(start)
+        if (start > lineText.length) return ""
+        return lineText.substring(start, end.coerceAtMost(lineText.length))
+    }
+}
+
 private class DemoDecorationProvider : DecorationProvider {
     override fun capabilities(): Set<DecorationType> = setOf(
         DecorationType.SYNTAX_HIGHLIGHT,
@@ -386,6 +514,7 @@ private class DemoDecorationProvider : DecorationProvider {
         DecorationType.LINK,
         DecorationType.DIAGNOSTIC,
         DecorationType.DOCUMENT_HIGHLIGHT,
+        DecorationType.FOLD_REGION,
     )
 
     override fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver) {
@@ -417,6 +546,8 @@ private class DemoDecorationProvider : DecorationProvider {
                     1 to listOf(DocumentHighlight(column = 4, length = 7, kind = EditorDocumentHighlightKind.READ)),
                 ),
                 documentHighlightsMode = DecorationApplyMode.REPLACE_RANGE,
+                foldRegions = listOf(FoldRegion(startLine = 0, endLine = 81, collapsed = false)),
+                foldRegionsMode = DecorationApplyMode.REPLACE_ALL,
             ),
         )
     }
@@ -442,6 +573,14 @@ private fun refreshStatus(controller: SweetEditorController, publish: (String) -
             val link = controller.getLinkTargetAt(1, 14)
             if (link.isNotEmpty()) {
                 append(" link")
+            }
+            val language = controller.getLanguageConfiguration()?.languageId
+            if (!language.isNullOrEmpty()) {
+                append(" lang=$language")
+            }
+            val meta = controller.getMetadata() as? DemoFileMetadata
+            if (meta != null) {
+                append(" file=${meta.path}")
             }
             val search = controller.getSearchState()
             if (search != null && search.status != EditorSearchStatus.INACTIVE) {
