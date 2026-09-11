@@ -74,6 +74,7 @@ import io.github.lumkit.sweeteditor.core.protocol.KeyModifier
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetKeyMapPayload
 import io.github.lumkit.sweeteditor.input.EditorClipboard
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.EventType
 import io.github.lumkit.sweeteditor.core.protocol.GestureType
 import io.github.lumkit.sweeteditor.core.protocol.HitTargetType
@@ -732,19 +733,9 @@ internal class RememberedEditorSession(
 
     private fun selectionMenuAnchorRect(): SelectionMenuAnchor? {
         val model = renderModel
-        val start = model?.selectionStartHandle
-        if (start != null && start.visible) {
-            val end = model.selectionEndHandle
-            val startBottom = start.position.y + start.height
-            val endX = if (end.visible) end.position.x else start.position.x
-            val endY = if (end.visible) end.position.y else start.position.y
-            val endBottom = if (end.visible) endY + end.height else startBottom
-            return SelectionMenuAnchor(
-                left = minOf(start.position.x, endX),
-                top = minOf(start.position.y, endY),
-                right = maxOf(start.position.x, endX),
-                bottom = maxOf(startBottom, endBottom),
-            )
+        if (model != null) {
+            selectionHighlightAnchor(model)?.let { return it }
+            selectionHandleAnchor(model)?.let { return it }
         }
         val cursor = getCursorRect() ?: return null
         return SelectionMenuAnchor(
@@ -752,6 +743,42 @@ internal class RememberedEditorSession(
             top = cursor.y,
             right = cursor.x,
             bottom = cursor.y + cursor.height,
+        )
+    }
+
+    private fun selectionHighlightAnchor(model: EditorRenderModel): SelectionMenuAnchor? {
+        var left = Float.POSITIVE_INFINITY
+        var top = Float.POSITIVE_INFINITY
+        var right = Float.NEGATIVE_INFINITY
+        var bottom = Float.NEGATIVE_INFINITY
+        var found = false
+        for (effect in model.rangeEffects) {
+            if (effect.kind != RangeEffectKind.SELECTION) continue
+            val rect = effect.rect
+            if (rect.width <= 0f || rect.height <= 0f) continue
+            found = true
+            left = minOf(left, rect.origin.x)
+            top = minOf(top, rect.origin.y)
+            right = maxOf(right, rect.origin.x + rect.width)
+            bottom = maxOf(bottom, rect.origin.y + rect.height)
+        }
+        if (!found) return null
+        return SelectionMenuAnchor(left, top, right, bottom)
+    }
+
+    private fun selectionHandleAnchor(model: EditorRenderModel): SelectionMenuAnchor? {
+        val start = model.selectionStartHandle
+        if (!start.visible) return null
+        val end = model.selectionEndHandle
+        val startBottom = start.position.y + start.height
+        val endX = if (end.visible) end.position.x else start.position.x
+        val endY = if (end.visible) end.position.y else start.position.y
+        val endBottom = if (end.visible) endY + end.height else startBottom
+        return SelectionMenuAnchor(
+            left = minOf(start.position.x, endX),
+            top = minOf(start.position.y, endY),
+            right = maxOf(start.position.x, endX),
+            bottom = maxOf(startBottom, endBottom),
         )
     }
 

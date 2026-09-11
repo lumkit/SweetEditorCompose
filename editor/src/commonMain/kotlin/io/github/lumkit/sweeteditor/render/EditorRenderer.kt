@@ -595,9 +595,9 @@ private fun RangeEffectRenderItem.backgroundColor(theme: EditorTheme): Color? {
     return null
 }
 
-private const val SelectionHandleLineWidth = 1.5f
-private const val SelectionHandleDropRadius = 10f
-private const val SelectionHandleCenterDist = 24f
+internal const val SelectionHandleLineWidth = 1.5f
+internal const val SelectionHandleDropRadius = 10f
+internal const val SelectionHandleCenterDist = 24f
 
 private fun DrawScope.drawSelectionHandles(model: EditorRenderModel, theme: EditorTheme) {
     val color = theme.cursorColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: Color.White
