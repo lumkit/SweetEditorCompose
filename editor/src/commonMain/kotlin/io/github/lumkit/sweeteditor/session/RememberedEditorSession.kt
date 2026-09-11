@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditorController
+import io.github.lumkit.sweeteditor.collectStateEvents
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.toRenderColors
 import io.github.lumkit.sweeteditor.core.Document
@@ -297,6 +298,7 @@ internal class RememberedEditorSession(
         if (result.pointerCursorChanged) {
             pointerCursor = result.pointerCursorAfter
         }
+        collectStateEvents(result).forEach { controller.events.publish(it) }
         if (result.needsRedraw || renderModel == null) {
             try {
                 val model = editor?.buildRenderModel()
