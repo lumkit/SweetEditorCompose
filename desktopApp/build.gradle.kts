@@ -27,5 +27,9 @@ compose.desktop {
             packageName = "io.github.lumkit.editor"
             packageVersion = "1.0.0"
         }
+
+        buildTypes.release.proguard {
+            configurationFiles.from(rootProject.file("editor/consumer-rules.pro"))
+        }
     }
 }
