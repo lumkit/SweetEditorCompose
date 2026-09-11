@@ -19,6 +19,15 @@ internal expect object NativeBridge {
     fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray?
     fun editorTickAnimations(editor: Long): ByteArray?
     fun editorInsertText(editor: Long, text: ByteArray): ByteArray?
+    fun editorReplaceText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: ByteArray,
+    ): ByteArray?
+    fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray?
     fun editorBackspace(editor: Long): ByteArray?
     fun editorUndo(editor: Long): ByteArray?
     fun editorRedo(editor: Long): ByteArray?
@@ -29,6 +38,8 @@ internal expect object NativeBridge {
     fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
     fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
     fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
+    fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
     fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     fun editorMoveLineUp(editor: Long): ByteArray?
@@ -42,6 +53,9 @@ internal expect object NativeBridge {
     fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
     fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
     fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
+    fun editorSetFoldArrowMode(editor: Long, mode: Int): ByteArray?
+    fun editorSetRenderWhitespace(editor: Long, mode: Int): ByteArray?
+    fun editorSetRenderLineBreaks(editor: Long, enabled: Boolean): ByteArray?
     fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
     fun editorSearch(editor: Long, payload: ByteArray): ByteArray?
@@ -67,6 +81,8 @@ internal expect object NativeBridge {
     fun editorGetVisibleLineRange(editor: Long): IntArray
     fun editorGetScrollMetrics(editor: Long): ByteArray?
     fun editorGetSelectedText(editor: Long): ByteArray
+    fun editorGetCursorPosition(editor: Long): IntArray
+    fun editorGetWordRangeAtCursor(editor: Long): IntArray
     fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -77,6 +93,13 @@ internal expect object NativeBridge {
         d: Int,
     ): ByteArray?
     fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray
+    fun editorSetFoldRegions(editor: Long, payload: ByteArray): ByteArray?
+    fun editorToggleFold(editor: Long, line: Int): ByteArray?
+    fun editorFoldAt(editor: Long, line: Int): ByteArray?
+    fun editorUnfoldAt(editor: Long, line: Int): ByteArray?
+    fun editorFoldAll(editor: Long): ByteArray?
+    fun editorUnfoldAll(editor: Long): ByteArray?
+    fun editorIsLineVisible(editor: Long, line: Int): Boolean
 }
 
 internal object NativeDecorationOp {

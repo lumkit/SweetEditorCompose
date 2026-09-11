@@ -28,6 +28,15 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray?
     @JvmStatic external fun editorTickAnimations(editor: Long): ByteArray?
     @JvmStatic external fun editorInsertText(editor: Long, text: ByteArray): ByteArray?
+    @JvmStatic external fun editorReplaceText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: ByteArray,
+    ): ByteArray?
+    @JvmStatic external fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorBackspace(editor: Long): ByteArray?
     @JvmStatic external fun editorUndo(editor: Long): ByteArray?
     @JvmStatic external fun editorRedo(editor: Long): ByteArray?
@@ -38,6 +47,8 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
     @JvmStatic external fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    @JvmStatic external fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
+    @JvmStatic external fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
     @JvmStatic external fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorMoveLineUp(editor: Long): ByteArray?
@@ -51,6 +62,9 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
     @JvmStatic external fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
     @JvmStatic external fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetFoldArrowMode(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetRenderWhitespace(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetRenderLineBreaks(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorSearch(editor: Long, payload: ByteArray): ByteArray?
@@ -76,6 +90,8 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorGetVisibleLineRange(editor: Long): IntArray
     @JvmStatic external fun editorGetScrollMetrics(editor: Long): ByteArray?
     @JvmStatic external fun editorGetSelectedText(editor: Long): ByteArray
+    @JvmStatic external fun editorGetCursorPosition(editor: Long): IntArray
+    @JvmStatic external fun editorGetWordRangeAtCursor(editor: Long): IntArray
     @JvmStatic external fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -86,6 +102,13 @@ internal object SweetEditorJni {
         d: Int,
     ): ByteArray?
     @JvmStatic external fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray
+    @JvmStatic external fun editorSetFoldRegions(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorToggleFold(editor: Long, line: Int): ByteArray?
+    @JvmStatic external fun editorFoldAt(editor: Long, line: Int): ByteArray?
+    @JvmStatic external fun editorUnfoldAt(editor: Long, line: Int): ByteArray?
+    @JvmStatic external fun editorFoldAll(editor: Long): ByteArray?
+    @JvmStatic external fun editorUnfoldAll(editor: Long): ByteArray?
+    @JvmStatic external fun editorIsLineVisible(editor: Long, line: Int): Boolean
 }
 
 internal actual object NativeBridge {
@@ -115,6 +138,23 @@ internal actual object NativeBridge {
     actual fun editorTickAnimations(editor: Long): ByteArray? = SweetEditorJni.editorTickAnimations(editor)
     actual fun editorInsertText(editor: Long, text: ByteArray): ByteArray? =
         SweetEditorJni.editorInsertText(editor, text)
+    actual fun editorReplaceText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: ByteArray,
+    ): ByteArray? = SweetEditorJni.editorReplaceText(
+        editor,
+        startLine,
+        startColumn,
+        endLine,
+        endColumn,
+        text,
+    )
+    actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorApplyTextEdits(editor, payload)
     actual fun editorBackspace(editor: Long): ByteArray? = SweetEditorJni.editorBackspace(editor)
     actual fun editorUndo(editor: Long): ByteArray? = SweetEditorJni.editorUndo(editor)
     actual fun editorRedo(editor: Long): ByteArray? = SweetEditorJni.editorRedo(editor)
@@ -130,6 +170,10 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetTabSize(editor, tabSize)
     actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? =
         SweetEditorJni.editorSetInsertSpaces(editor, enabled)
+    actual fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? =
+        SweetEditorJni.editorSetBracketPairs(editor, openChars, closeChars)
+    actual fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? =
+        SweetEditorJni.editorSetAutoClosingPairs(editor, openChars, closeChars)
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         SweetEditorJni.editorSetAutoIndentMode(editor, mode)
     actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =
@@ -149,6 +193,12 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetReadOnly(editor, readOnly)
     actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? =
         SweetEditorJni.editorSetCurrentLineRenderMode(editor, mode)
+    actual fun editorSetFoldArrowMode(editor: Long, mode: Int): ByteArray? =
+        SweetEditorJni.editorSetFoldArrowMode(editor, mode)
+    actual fun editorSetRenderWhitespace(editor: Long, mode: Int): ByteArray? =
+        SweetEditorJni.editorSetRenderWhitespace(editor, mode)
+    actual fun editorSetRenderLineBreaks(editor: Long, enabled: Boolean): ByteArray? =
+        SweetEditorJni.editorSetRenderLineBreaks(editor, enabled)
     actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? =
         SweetEditorJni.editorSetEditorRenderColors(editor, payload)
     actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? =
@@ -186,6 +236,9 @@ internal actual object NativeBridge {
     actual fun editorGetVisibleLineRange(editor: Long): IntArray = SweetEditorJni.editorGetVisibleLineRange(editor)
     actual fun editorGetScrollMetrics(editor: Long): ByteArray? = SweetEditorJni.editorGetScrollMetrics(editor)
     actual fun editorGetSelectedText(editor: Long): ByteArray = SweetEditorJni.editorGetSelectedText(editor)
+    actual fun editorGetCursorPosition(editor: Long): IntArray = SweetEditorJni.editorGetCursorPosition(editor)
+    actual fun editorGetWordRangeAtCursor(editor: Long): IntArray =
+        SweetEditorJni.editorGetWordRangeAtCursor(editor)
     actual fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -197,4 +250,14 @@ internal actual object NativeBridge {
     ): ByteArray? = SweetEditorJni.editorDecorationOp(editor, op, payload, a, b, c, d)
     actual fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray =
         SweetEditorJni.editorGetLinkTargetAt(editor, line, column)
+    actual fun editorSetFoldRegions(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetFoldRegions(editor, payload)
+    actual fun editorToggleFold(editor: Long, line: Int): ByteArray? =
+        SweetEditorJni.editorToggleFold(editor, line)
+    actual fun editorFoldAt(editor: Long, line: Int): ByteArray? = SweetEditorJni.editorFoldAt(editor, line)
+    actual fun editorUnfoldAt(editor: Long, line: Int): ByteArray? = SweetEditorJni.editorUnfoldAt(editor, line)
+    actual fun editorFoldAll(editor: Long): ByteArray? = SweetEditorJni.editorFoldAll(editor)
+    actual fun editorUnfoldAll(editor: Long): ByteArray? = SweetEditorJni.editorUnfoldAll(editor)
+    actual fun editorIsLineVisible(editor: Long, line: Int): Boolean =
+        SweetEditorJni.editorIsLineVisible(editor, line)
 }

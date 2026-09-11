@@ -127,7 +127,16 @@ internal fun encodeSetBatchLineDocumentHighlightsPayload(itemsByLine: Map<Int, L
     return writer.toByteArray()
 }
 
+internal fun encodeSetFoldRegionsPayload(regions: List<io.github.lumkit.sweeteditor.FoldRegion>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(regions) {
+        CoreProtocol.encodeFoldRegion(ProtocolFoldRegion(it.startLine, it.endLine, it.collapsed))
+    }
+    return writer.toByteArray()
+}
+
 private typealias ProtocolGutterIcon = io.github.lumkit.sweeteditor.core.protocol.GutterIcon
+private typealias ProtocolFoldRegion = io.github.lumkit.sweeteditor.core.protocol.FoldRegion
 
 private fun StyleSpan.toProtocol() = io.github.lumkit.sweeteditor.core.protocol.StyleSpan(column, length, styleId)
 
