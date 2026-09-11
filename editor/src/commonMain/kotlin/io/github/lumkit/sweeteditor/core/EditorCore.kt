@@ -98,6 +98,26 @@ internal class EditorCore(
     fun setInsertSpaces(enabled: Boolean): EditorActionResult? =
         decodeAction(NativeBridge.editorSetInsertSpaces(editorHandle, enabled))
 
+    fun setAutoIndentMode(mode: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetAutoIndentMode(editorHandle, mode))
+
+    fun setBackspaceUnindent(enabled: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetBackspaceUnindent(editorHandle, enabled))
+
+    fun moveLineUp(): EditorActionResult? = decodeAction(NativeBridge.editorMoveLineUp(editorHandle))
+
+    fun moveLineDown(): EditorActionResult? = decodeAction(NativeBridge.editorMoveLineDown(editorHandle))
+
+    fun copyLineUp(): EditorActionResult? = decodeAction(NativeBridge.editorCopyLineUp(editorHandle))
+
+    fun copyLineDown(): EditorActionResult? = decodeAction(NativeBridge.editorCopyLineDown(editorHandle))
+
+    fun deleteLine(): EditorActionResult? = decodeAction(NativeBridge.editorDeleteLine(editorHandle))
+
+    fun insertLineAbove(): EditorActionResult? = decodeAction(NativeBridge.editorInsertLineAbove(editorHandle))
+
+    fun insertLineBelow(): EditorActionResult? = decodeAction(NativeBridge.editorInsertLineBelow(editorHandle))
+
     fun setScale(scale: Float): EditorActionResult? =
         decodeAction(NativeBridge.editorSetScale(editorHandle, scale))
 

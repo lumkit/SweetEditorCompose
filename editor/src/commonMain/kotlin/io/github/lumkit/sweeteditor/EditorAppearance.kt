@@ -16,6 +16,11 @@ enum class CurrentLineRenderMode(val value: Int) {
     NONE(2),
 }
 
+enum class AutoIndentMode(val value: Int) {
+    NONE(0),
+    KEEP_INDENT(1),
+}
+
 @Immutable
 data class EditorSettings(
     val wrapMode: WrapMode = WrapMode.NONE,
@@ -29,6 +34,8 @@ data class EditorSettings(
     val gutterVisible: Boolean = true,
     val gutterSticky: Boolean = platformDefaultGutterSticky(),
     val currentLineRenderMode: CurrentLineRenderMode = CurrentLineRenderMode.BACKGROUND,
+    val autoIndentMode: AutoIndentMode = AutoIndentMode.KEEP_INDENT,
+    val backspaceUnindent: Boolean = true,
 )
 
 @Immutable

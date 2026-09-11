@@ -37,6 +37,34 @@ class SweetEditorController(
         session?.backspace()
     }
 
+    fun moveLineUp() {
+        session?.moveLineUp()
+    }
+
+    fun moveLineDown() {
+        session?.moveLineDown()
+    }
+
+    fun copyLineUp() {
+        session?.copyLineUp()
+    }
+
+    fun copyLineDown() {
+        session?.copyLineDown()
+    }
+
+    fun deleteLine() {
+        session?.deleteLine()
+    }
+
+    fun insertLineAbove() {
+        session?.insertLineAbove()
+    }
+
+    fun insertLineBelow() {
+        session?.insertLineBelow()
+    }
+
     fun dispose() {
         readyCallbacks.clear()
     }

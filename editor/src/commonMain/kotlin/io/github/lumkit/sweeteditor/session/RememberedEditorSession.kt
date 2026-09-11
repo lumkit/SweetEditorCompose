@@ -95,6 +95,8 @@ internal class RememberedEditorSession(
             dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
             dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
             dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
+            dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
+            dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
             appliedSettings = settings
         }
     }
@@ -145,6 +147,41 @@ internal class RememberedEditorSession(
     fun redo() {
         val core = editor ?: return
         dispatchActionResult(core.redo())
+    }
+
+    fun moveLineUp() {
+        val core = editor ?: return
+        dispatchActionResult(core.moveLineUp())
+    }
+
+    fun moveLineDown() {
+        val core = editor ?: return
+        dispatchActionResult(core.moveLineDown())
+    }
+
+    fun copyLineUp() {
+        val core = editor ?: return
+        dispatchActionResult(core.copyLineUp())
+    }
+
+    fun copyLineDown() {
+        val core = editor ?: return
+        dispatchActionResult(core.copyLineDown())
+    }
+
+    fun deleteLine() {
+        val core = editor ?: return
+        dispatchActionResult(core.deleteLine())
+    }
+
+    fun insertLineAbove() {
+        val core = editor ?: return
+        dispatchActionResult(core.insertLineAbove())
+    }
+
+    fun insertLineBelow() {
+        val core = editor ?: return
+        dispatchActionResult(core.insertLineBelow())
     }
 
     fun tickAnimations() {

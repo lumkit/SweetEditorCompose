@@ -36,6 +36,15 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
     @JvmStatic external fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    @JvmStatic external fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
+    @JvmStatic external fun editorMoveLineUp(editor: Long): ByteArray?
+    @JvmStatic external fun editorMoveLineDown(editor: Long): ByteArray?
+    @JvmStatic external fun editorCopyLineUp(editor: Long): ByteArray?
+    @JvmStatic external fun editorCopyLineDown(editor: Long): ByteArray?
+    @JvmStatic external fun editorDeleteLine(editor: Long): ByteArray?
+    @JvmStatic external fun editorInsertLineAbove(editor: Long): ByteArray?
+    @JvmStatic external fun editorInsertLineBelow(editor: Long): ByteArray?
     @JvmStatic external fun editorSetScale(editor: Long, scale: Float): ByteArray?
     @JvmStatic external fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
     @JvmStatic external fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
@@ -92,6 +101,17 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetTabSize(editor, tabSize)
     actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? =
         SweetEditorJni.editorSetInsertSpaces(editor, enabled)
+    actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
+        SweetEditorJni.editorSetAutoIndentMode(editor, mode)
+    actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =
+        SweetEditorJni.editorSetBackspaceUnindent(editor, enabled)
+    actual fun editorMoveLineUp(editor: Long): ByteArray? = SweetEditorJni.editorMoveLineUp(editor)
+    actual fun editorMoveLineDown(editor: Long): ByteArray? = SweetEditorJni.editorMoveLineDown(editor)
+    actual fun editorCopyLineUp(editor: Long): ByteArray? = SweetEditorJni.editorCopyLineUp(editor)
+    actual fun editorCopyLineDown(editor: Long): ByteArray? = SweetEditorJni.editorCopyLineDown(editor)
+    actual fun editorDeleteLine(editor: Long): ByteArray? = SweetEditorJni.editorDeleteLine(editor)
+    actual fun editorInsertLineAbove(editor: Long): ByteArray? = SweetEditorJni.editorInsertLineAbove(editor)
+    actual fun editorInsertLineBelow(editor: Long): ByteArray? = SweetEditorJni.editorInsertLineBelow(editor)
     actual fun editorSetScale(editor: Long, scale: Float): ByteArray? =
         SweetEditorJni.editorSetScale(editor, scale)
     actual fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray? =
