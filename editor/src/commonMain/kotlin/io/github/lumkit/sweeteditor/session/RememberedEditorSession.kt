@@ -6,6 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
+import io.github.lumkit.sweeteditor.EditorKeyBinding
+import io.github.lumkit.sweeteditor.EditorKeyChord
+import io.github.lumkit.sweeteditor.EditorKeyMap
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditorController
@@ -19,6 +22,7 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorBuiltinCommand
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetKeyMapPayload
 import io.github.lumkit.sweeteditor.input.EditorClipboard
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.EventType
@@ -68,6 +72,8 @@ internal class RememberedEditorSession(
     internal var imeTapHandler: (() -> Unit)? = null
     private var appliedTheme: EditorTheme? = null
     private var appliedSettings: EditorSettings? = null
+    private var appliedKeyMap: EditorKeyMap? = null
+    private var appliedKeyMapRevision = -1
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -93,6 +99,14 @@ internal class RememberedEditorSession(
     override fun onForgotten() = disposeSession()
 
     override fun onAbandoned() = disposeSession()
+
+    fun applyKeyMap(keyMap: EditorKeyMap) {
+        val core = editor ?: return
+        if (appliedKeyMap === keyMap && appliedKeyMapRevision == keyMap.revision) return
+        dispatchActionResult(core.setKeyMap(encodeSetKeyMapPayload(keyMap.toProtocolBindings())))
+        appliedKeyMap = keyMap
+        appliedKeyMapRevision = keyMap.revision
+    }
 
     fun applyAppearance(theme: EditorTheme, settings: EditorSettings) {
         val core = editor ?: return
@@ -319,6 +333,19 @@ internal class RememberedEditorSession(
         document?.close()
         document = null
         clipboard = null
+        appliedKeyMap = null
+        appliedKeyMapRevision = -1
+    }
+
+    private fun dispatchKeyMapCommand(command: Int): Boolean {
+        if (command == EditorBuiltinCommand.NONE.value) return false
+        val keyMap = appliedKeyMap ?: return false
+        val handler = keyMap.handlerFor(command) ?: return false
+        handler.onShortcut(
+            EditorKeyBinding(EditorKeyChord(0, 0), command = command),
+            controller,
+        )
+        return true
     }
 
     private companion object {
@@ -342,10 +369,12 @@ internal class RememberedEditorSession(
             pointerCursor = result.pointerCursorAfter
         }
         collectStateEvents(result).forEach { controller.events.publish(it) }
-        when (result.command) {
-            EditorBuiltinCommand.COPY.value -> copyToClipboard()
-            EditorBuiltinCommand.CUT.value -> cutToClipboard()
-            EditorBuiltinCommand.PASTE.value -> pasteFromClipboard()
+        if (!dispatchKeyMapCommand(result.command)) {
+            when (result.command) {
+                EditorBuiltinCommand.COPY.value -> copyToClipboard()
+                EditorBuiltinCommand.CUT.value -> cutToClipboard()
+                EditorBuiltinCommand.PASTE.value -> pasteFromClipboard()
+            }
         }
         if (result.needsRedraw || renderModel == null) {
             try {

@@ -34,6 +34,7 @@ import sweeteditor.cinterop.editor_get_selected_text
 import sweeteditor.cinterop.editor_get_visible_line_range
 import sweeteditor.cinterop.editor_handle_gesture_event
 import sweeteditor.cinterop.editor_handle_key_event
+import sweeteditor.cinterop.editor_set_keymap
 import sweeteditor.cinterop.editor_ime_apply_commands
 import sweeteditor.cinterop.editor_ime_begin_session
 import sweeteditor.cinterop.editor_ime_end_session
@@ -197,6 +198,20 @@ internal actual object NativeBridge {
                             size,
                         )
                     }
+                }
+            }
+        }
+
+    actual fun editorSetKeyMap(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_keymap(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
                 }
             }
         }

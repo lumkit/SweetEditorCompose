@@ -312,6 +312,15 @@ jbyteArray handle_key_jni(JNIEnv* env, jclass, jlong editor, jint key_code, jbyt
   return adopt_binary(env, result, size);
 }
 
+jbyteArray set_keymap_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_keymap(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
 jbyteArray tick_jni(JNIEnv* env, jclass, jlong editor) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -621,6 +630,7 @@ const JNINativeMethod kMethods[] = {
     {"editorBuildRenderModel", "(J)[B", (void*)build_render_model_jni},
     {"editorHandleGestureEvent", "(J[B)[B", (void*)handle_gesture_jni},
     {"editorHandleKeyEvent", "(JI[BI)[B", (void*)handle_key_jni},
+    {"editorSetKeyMap", "(J[B)[B", (void*)set_keymap_jni},
     {"editorUpdatePointerModifiers", "(JI)[B", (void*)update_pointer_modifiers_jni},
     {"editorTickAnimations", "(J)[B", (void*)tick_jni},
     {"editorInsertText", "(J[B)[B", (void*)insert_text_jni},

@@ -54,6 +54,7 @@ fun SweetEditor(
     controller: SweetEditorController,
     theme: EditorTheme = EditorTheme(),
     settings: EditorSettings = EditorSettings(),
+    keyMap: EditorKeyMap? = null,
 ) {
     val density = LocalDensity.current
     val densityValue = density.density
@@ -88,9 +89,11 @@ fun SweetEditor(
         )
     }
     val clipboard = rememberEditorClipboard()
+    val resolvedKeyMap = keyMap ?: remember { EditorKeyMap.defaultKeyMap() }
     val fontMetricsChanged = hostMeasurer.bind(textMeasurer, textStyle, densityValue, fontScale)
     SideEffect {
         session.bindClipboard(clipboard)
+        session.applyKeyMap(resolvedKeyMap)
         session.applyAppearance(theme, settings)
         if (fontMetricsChanged) {
             session.notifyFontMetricsChanged()

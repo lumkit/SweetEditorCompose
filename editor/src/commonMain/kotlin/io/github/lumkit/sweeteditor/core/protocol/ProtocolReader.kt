@@ -129,6 +129,11 @@ internal class ProtocolWriter(capacity: Int = 256) {
     fun writeUtf8String(value: String) {
         val bytes = value.encodeToByteArray()
         writeI32(bytes.size)
+        writeRaw(bytes)
+    }
+
+    fun writeRaw(bytes: ByteArray) {
+        if (bytes.isEmpty()) return
         ensure(bytes.size)
         bytes.copyInto(data, offset)
         offset += bytes.size
