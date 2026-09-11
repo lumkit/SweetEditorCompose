@@ -28,7 +28,9 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SelectionMenuItem
+import io.github.lumkit.sweeteditor.render.SelectionHandleCenterDist
 import io.github.lumkit.sweeteditor.render.toComposeColor
+import kotlin.math.roundToInt
 
 @Composable
 internal fun EditorSelectionMenuPopup(
@@ -41,7 +43,7 @@ internal fun EditorSelectionMenuPopup(
     if (items.isEmpty() || anchor == null) return
     val density = LocalDensity.current
     val gapPx = with(density) { SelectionMenuGap.roundToPx() }
-    val handleClearancePx = with(density) { SelectionMenuHandleClearance.roundToPx() }
+    val handleClearancePx = SelectionHandleCenterDist.roundToInt()
     val positionProvider = remember(anchor, gapPx, handleClearancePx) {
         SelectionMenuPopupPositionProvider(anchor, gapPx, handleClearancePx)
     }
@@ -87,7 +89,6 @@ internal fun EditorSelectionMenuPopup(
 }
 
 private val SelectionMenuGap = 8.dp
-private val SelectionMenuHandleClearance = 32.dp
 
 private class SelectionMenuPopupPositionProvider(
     private val anchor: SelectionMenuAnchor,
