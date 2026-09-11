@@ -10,9 +10,13 @@ import io.github.lumkit.sweeteditor.Diagnostic
 import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorMetadata
 import io.github.lumkit.sweeteditor.EditorSpanLayer
+import io.github.lumkit.sweeteditor.FlowGuide
 import io.github.lumkit.sweeteditor.FoldRegion
+import io.github.lumkit.sweeteditor.IndentGuide
 import io.github.lumkit.sweeteditor.LanguageConfiguration
+import io.github.lumkit.sweeteditor.BracketGuide
 import io.github.lumkit.sweeteditor.GutterIcon
+import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
@@ -50,6 +54,10 @@ internal interface DecorationHost {
     fun clearLinks()
     fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>)
     fun setFoldRegions(regions: List<FoldRegion>)
+    fun setIndentGuides(guides: List<IndentGuide>)
+    fun setBracketGuides(guides: List<BracketGuide>)
+    fun setFlowGuides(guides: List<FlowGuide>)
+    fun setSeparatorGuides(guides: List<SeparatorGuide>)
 }
 
 internal class DecorationProviderManager(
@@ -189,7 +197,15 @@ internal class DecorationProviderManager(
         val lenses = mutableMapOf<Int, MutableList<CodeLensItem>>()
         val links = mutableMapOf<Int, MutableList<LinkSpan>>()
         val folds = mutableListOf<FoldRegion>()
+        val indents = mutableListOf<IndentGuide>()
+        val brackets = mutableListOf<BracketGuide>()
+        val flows = mutableListOf<FlowGuide>()
+        val separators = mutableListOf<SeparatorGuide>()
         var hasFolds = false
+        var hasIndents = false
+        var hasBrackets = false
+        var hasFlows = false
+        var hasSeparators = false
         var syntaxMode = DecorationApplyMode.MERGE
         var semanticMode = DecorationApplyMode.MERGE
         var overlayMode = DecorationApplyMode.MERGE
@@ -201,6 +217,10 @@ internal class DecorationProviderManager(
         var lensMode = DecorationApplyMode.MERGE
         var linksMode = DecorationApplyMode.MERGE
         var foldMode = DecorationApplyMode.MERGE
+        var indentMode = DecorationApplyMode.MERGE
+        var bracketMode = DecorationApplyMode.MERGE
+        var flowMode = DecorationApplyMode.MERGE
+        var separatorMode = DecorationApplyMode.MERGE
 
         for (provider in providers) {
             val snapshot = states[provider]?.snapshot ?: continue
@@ -229,6 +249,26 @@ internal class DecorationProviderManager(
                 hasFolds = true
                 folds += it
             }
+            indentMode = mergeMode(indentMode, snapshot.indentGuidesMode)
+            snapshot.indentGuides?.let {
+                hasIndents = true
+                indents += it
+            }
+            bracketMode = mergeMode(bracketMode, snapshot.bracketGuidesMode)
+            snapshot.bracketGuides?.let {
+                hasBrackets = true
+                brackets += it
+            }
+            flowMode = mergeMode(flowMode, snapshot.flowGuidesMode)
+            snapshot.flowGuides?.let {
+                hasFlows = true
+                flows += it
+            }
+            separatorMode = mergeMode(separatorMode, snapshot.separatorGuidesMode)
+            snapshot.separatorGuides?.let {
+                hasSeparators = true
+                separators += it
+            }
         }
 
         applySpanLayer(EditorSpanLayer.SYNTAX, syntaxMode, syntax)
@@ -243,6 +283,21 @@ internal class DecorationProviderManager(
         applyLineMap(linksMode, host::clearLinks, host::setBatchLineLinks, links)
         if (hasFolds || foldMode != DecorationApplyMode.MERGE) {
             host.setFoldRegions(folds)
+        }
+        applyGuideList(indentMode, hasIndents, indents, host::setIndentGuides)
+        applyGuideList(bracketMode, hasBrackets, brackets, host::setBracketGuides)
+        applyGuideList(flowMode, hasFlows, flows, host::setFlowGuides)
+        applyGuideList(separatorMode, hasSeparators, separators, host::setSeparatorGuides)
+    }
+
+    private fun <T> applyGuideList(
+        mode: DecorationApplyMode,
+        hasData: Boolean,
+        values: List<T>,
+        set: (List<T>) -> Unit,
+    ) {
+        if (hasData || mode != DecorationApplyMode.MERGE) {
+            set(values)
         }
     }
 
@@ -345,6 +400,14 @@ internal fun mergePatch(current: DecorationResult?, patch: DecorationResult): De
         linksMode = pickMode(patch.links, patch.linksMode, base.linksMode),
         foldRegions = pickList(patch.foldRegions, patch.foldRegionsMode, base.foldRegions),
         foldRegionsMode = pickListMode(patch.foldRegions, patch.foldRegionsMode, base.foldRegionsMode),
+        indentGuides = pickList(patch.indentGuides, patch.indentGuidesMode, base.indentGuides),
+        indentGuidesMode = pickListMode(patch.indentGuides, patch.indentGuidesMode, base.indentGuidesMode),
+        bracketGuides = pickList(patch.bracketGuides, patch.bracketGuidesMode, base.bracketGuides),
+        bracketGuidesMode = pickListMode(patch.bracketGuides, patch.bracketGuidesMode, base.bracketGuidesMode),
+        flowGuides = pickList(patch.flowGuides, patch.flowGuidesMode, base.flowGuides),
+        flowGuidesMode = pickListMode(patch.flowGuides, patch.flowGuidesMode, base.flowGuidesMode),
+        separatorGuides = pickList(patch.separatorGuides, patch.separatorGuidesMode, base.separatorGuides),
+        separatorGuidesMode = pickListMode(patch.separatorGuides, patch.separatorGuidesMode, base.separatorGuidesMode),
     )
 }
 

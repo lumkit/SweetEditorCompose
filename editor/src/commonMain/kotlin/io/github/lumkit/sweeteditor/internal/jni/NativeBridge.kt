@@ -40,6 +40,14 @@ internal expect object NativeBridge {
     fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
     fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
     fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
+    fun editorSetMatchedBrackets(
+        editor: Long,
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): ByteArray?
+    fun editorClearMatchedBrackets(editor: Long): ByteArray?
     fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     fun editorMoveLineUp(editor: Long): ByteArray?
@@ -100,6 +108,11 @@ internal expect object NativeBridge {
     fun editorFoldAll(editor: Long): ByteArray?
     fun editorUnfoldAll(editor: Long): ByteArray?
     fun editorIsLineVisible(editor: Long, line: Int): Boolean
+    fun editorSetIndentGuides(editor: Long, payload: ByteArray): ByteArray?
+    fun editorSetBracketGuides(editor: Long, payload: ByteArray): ByteArray?
+    fun editorSetFlowGuides(editor: Long, payload: ByteArray): ByteArray?
+    fun editorSetSeparatorGuides(editor: Long, payload: ByteArray): ByteArray?
+    fun editorClearGuides(editor: Long): ByteArray?
 }
 
 internal object NativeDecorationOp {

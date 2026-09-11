@@ -59,4 +59,20 @@ class DecorationProviderManagerTest {
         assertEquals(previous.foldRegions, merged.foldRegions)
         assertEquals(DecorationApplyMode.REPLACE_ALL, merged.foldRegionsMode)
     }
+
+    @Test
+    fun mergePatchKeepsIndentGuidesOnMerge() {
+        val previous = DecorationResult(
+            indentGuides = listOf(
+                io.github.lumkit.sweeteditor.IndentGuide(
+                    io.github.lumkit.sweeteditor.TextPosition(0, 4),
+                    io.github.lumkit.sweeteditor.TextPosition(3, 4),
+                ),
+            ),
+            indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
+        )
+        val merged = mergePatch(previous, DecorationResult())
+        assertEquals(previous.indentGuides, merged.indentGuides)
+        assertEquals(DecorationApplyMode.REPLACE_ALL, merged.indentGuidesMode)
+    }
 }

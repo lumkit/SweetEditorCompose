@@ -26,6 +26,9 @@ import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.FoldState
+import io.github.lumkit.sweeteditor.core.protocol.GuideDirection
+import io.github.lumkit.sweeteditor.core.protocol.GuideSegment
+import io.github.lumkit.sweeteditor.core.protocol.GuideStyle
 import io.github.lumkit.sweeteditor.core.protocol.GuideType
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectRenderItem
@@ -35,8 +38,12 @@ import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
 import io.github.lumkit.sweeteditor.core.protocol.SelectionHandle
 import io.github.lumkit.sweeteditor.core.protocol.VisualRun
 import io.github.lumkit.sweeteditor.core.protocol.VisualRunType
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 internal fun DrawScope.drawEditor(
     model: EditorRenderModel,
@@ -351,13 +358,74 @@ private fun DrawScope.drawGuideSegments(model: EditorRenderModel, theme: EditorT
         } else {
             theme.guideColor
         }.toComposeColor().takeUnless { it == Color.Unspecified } ?: continue
+        val strokeWidth = if (segment.type == GuideType.INDENT) 1f else 1.2f
+        val start = Offset(segment.start.x, segment.start.y)
+        val end = Offset(segment.end.x, segment.end.y)
+        when (segment.style) {
+            GuideStyle.DOUBLE -> drawDoubleGuide(start, end, segment.direction, color, strokeWidth)
+            GuideStyle.DASHED -> drawLine(
+                color = color,
+                start = start,
+                end = end,
+                strokeWidth = strokeWidth,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f), 0f),
+            )
+            GuideStyle.SOLID -> if (segment.arrowEnd) {
+                drawArrowGuide(segment, color, strokeWidth)
+            } else {
+                drawLine(color = color, start = start, end = end, strokeWidth = strokeWidth)
+            }
+        }
+    }
+}
+
+private fun DrawScope.drawDoubleGuide(
+    start: Offset,
+    end: Offset,
+    direction: GuideDirection,
+    color: Color,
+    strokeWidth: Float,
+) {
+    val offset = 1.5f
+    if (direction == GuideDirection.HORIZONTAL) {
+        drawLine(color, Offset(start.x, start.y - offset), Offset(end.x, end.y - offset), strokeWidth)
+        drawLine(color, Offset(start.x, start.y + offset), Offset(end.x, end.y + offset), strokeWidth)
+    } else {
+        drawLine(color, Offset(start.x - offset, start.y), Offset(end.x - offset, end.y), strokeWidth)
+        drawLine(color, Offset(start.x + offset, start.y), Offset(end.x + offset, end.y), strokeWidth)
+    }
+}
+
+private fun DrawScope.drawArrowGuide(segment: GuideSegment, color: Color, strokeWidth: Float) {
+    val start = Offset(segment.start.x, segment.start.y)
+    val end = Offset(segment.end.x, segment.end.y)
+    val dx = end.x - start.x
+    val dy = end.y - start.y
+    val length = sqrt(dx * dx + dy * dy)
+    val arrowLen = 9f
+    val arrowAngle = (PI * 28.0 / 180.0).toFloat()
+    val trim = arrowLen * cos(arrowAngle) + strokeWidth * 0.5f
+    if (length > trim) {
+        val ratio = (length - trim) / length
         drawLine(
             color = color,
-            start = Offset(segment.start.x, segment.start.y),
-            end = Offset(segment.end.x, segment.end.y),
-            strokeWidth = if (segment.type == GuideType.INDENT) 1f else 1.2f,
+            start = start,
+            end = Offset(start.x + dx * ratio, start.y + dy * ratio),
+            strokeWidth = strokeWidth,
         )
     }
+    if (length < 1f) return
+    val ux = dx / length
+    val uy = dy / length
+    val cosA = cos(arrowAngle)
+    val sinA = sin(arrowAngle)
+    val path = Path().apply {
+        moveTo(end.x, end.y)
+        lineTo(end.x - arrowLen * (ux * cosA - uy * sinA), end.y - arrowLen * (uy * cosA + ux * sinA))
+        lineTo(end.x - arrowLen * (ux * cosA + uy * sinA), end.y - arrowLen * (uy * cosA - ux * sinA))
+        close()
+    }
+    drawPath(path, color)
 }
 
 private fun DrawScope.drawRangeEffectOverlays(model: EditorRenderModel) {

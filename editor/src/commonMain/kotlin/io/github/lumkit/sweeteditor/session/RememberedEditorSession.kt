@@ -43,9 +43,14 @@ import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
 import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.FlowGuide
 import io.github.lumkit.sweeteditor.FoldRegion
 import io.github.lumkit.sweeteditor.GutterIcon
+import io.github.lumkit.sweeteditor.IndentGuide
+import io.github.lumkit.sweeteditor.BracketGuide
+import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.InlayHint
+import io.github.lumkit.sweeteditor.BracketPair
 import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
@@ -502,6 +507,31 @@ internal class RememberedEditorSession(
 
     fun isLineVisible(line: Int): Boolean = editor?.isLineVisible(line) ?: true
 
+    fun setIndentGuides(guides: List<IndentGuide>) = mutate { setIndentGuides(guides) }
+
+    fun setBracketGuides(guides: List<BracketGuide>) = mutate { setBracketGuides(guides) }
+
+    fun setFlowGuides(guides: List<FlowGuide>) = mutate { setFlowGuides(guides) }
+
+    fun setSeparatorGuides(guides: List<SeparatorGuide>) = mutate { setSeparatorGuides(guides) }
+
+    fun clearGuides() = mutate { clearGuides() }
+
+    fun setBracketPairs(pairs: List<BracketPair>) = mutate {
+        val (opens, closes) = pairs.toCodePointArrays()
+        setBracketPairs(opens, closes)
+    }
+
+    fun setAutoClosingPairs(pairs: List<BracketPair>) = mutate {
+        val (opens, closes) = pairs.toCodePointArrays()
+        setAutoClosingPairs(opens, closes)
+    }
+
+    fun setMatchedBrackets(openLine: Int, openColumn: Int, closeLine: Int, closeColumn: Int) =
+        mutate { setMatchedBrackets(openLine, openColumn, closeLine, closeColumn) }
+
+    fun clearMatchedBrackets() = mutate { clearMatchedBrackets() }
+
     fun addDecorationProvider(provider: DecorationProvider) = decorations.addProvider(provider)
 
     fun removeDecorationProvider(provider: DecorationProvider) = decorations.removeProvider(provider)
@@ -873,6 +903,18 @@ internal class RememberedEditorSession(
         }
         override fun setFoldRegions(regions: List<FoldRegion>) {
             mutate { setFoldRegions(regions) }
+        }
+        override fun setIndentGuides(guides: List<IndentGuide>) {
+            mutate { setIndentGuides(guides) }
+        }
+        override fun setBracketGuides(guides: List<BracketGuide>) {
+            mutate { setBracketGuides(guides) }
+        }
+        override fun setFlowGuides(guides: List<FlowGuide>) {
+            mutate { setFlowGuides(guides) }
+        }
+        override fun setSeparatorGuides(guides: List<SeparatorGuide>) {
+            mutate { setSeparatorGuides(guides) }
         }
     }
 

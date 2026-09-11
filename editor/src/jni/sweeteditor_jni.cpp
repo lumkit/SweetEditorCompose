@@ -542,6 +542,33 @@ jbyteArray set_auto_closing_pairs_jni(
   return set_char_pairs_jni(env, editor, open_chars, close_chars, true);
 }
 
+jbyteArray set_matched_brackets_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jint open_line,
+    jint open_column,
+    jint close_line,
+    jint close_column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_matched_brackets(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(open_line),
+      static_cast<size_t>(open_column),
+      static_cast<size_t>(close_line),
+      static_cast<size_t>(close_column),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray clear_matched_brackets_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_clear_matched_brackets(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray set_auto_indent_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -1018,6 +1045,49 @@ jboolean is_line_visible_jni(JNIEnv*, jclass, jlong editor, jint line) {
   return editor_is_line_visible(static_cast<intptr_t>(editor), static_cast<size_t>(line)) != 0 ? JNI_TRUE : JNI_FALSE;
 }
 
+jbyteArray set_indent_guides_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_indent_guides(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray set_bracket_guides_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_bracket_guides(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray set_flow_guides_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_flow_guides(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray set_separator_guides_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_separator_guides(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray clear_guides_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_clear_guides(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -1055,6 +1125,8 @@ const JNINativeMethod kMethods[] = {
     {"editorSetInsertSpaces", "(JZ)[B", (void*)set_insert_spaces_jni},
     {"editorSetBracketPairs", "(J[I[I)[B", (void*)set_bracket_pairs_jni},
     {"editorSetAutoClosingPairs", "(J[I[I)[B", (void*)set_auto_closing_pairs_jni},
+    {"editorSetMatchedBrackets", "(JIIII)[B", (void*)set_matched_brackets_jni},
+    {"editorClearMatchedBrackets", "(J)[B", (void*)clear_matched_brackets_jni},
     {"editorSetAutoIndentMode", "(JI)[B", (void*)set_auto_indent_mode_jni},
     {"editorSetBackspaceUnindent", "(JZ)[B", (void*)set_backspace_unindent_jni},
     {"editorSetScale", "(JF)[B", (void*)set_scale_jni},
@@ -1094,6 +1166,11 @@ const JNINativeMethod kMethods[] = {
     {"editorFoldAll", "(J)[B", (void*)fold_all_jni},
     {"editorUnfoldAll", "(J)[B", (void*)unfold_all_jni},
     {"editorIsLineVisible", "(JI)Z", (void*)is_line_visible_jni},
+    {"editorSetIndentGuides", "(J[B)[B", (void*)set_indent_guides_jni},
+    {"editorSetBracketGuides", "(J[B)[B", (void*)set_bracket_guides_jni},
+    {"editorSetFlowGuides", "(J[B)[B", (void*)set_flow_guides_jni},
+    {"editorSetSeparatorGuides", "(J[B)[B", (void*)set_separator_guides_jni},
+    {"editorClearGuides", "(J)[B", (void*)clear_guides_jni},
 };
 
 }  // namespace

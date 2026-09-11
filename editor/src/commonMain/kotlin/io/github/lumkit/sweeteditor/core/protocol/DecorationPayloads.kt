@@ -12,7 +12,7 @@ import io.github.lumkit.sweeteditor.StyleSpan
 
 internal fun encodeRegisterBatchTextStylesPayload(styles: Map<Int, EditorTextStyle>): ByteArray {
     val writer = ProtocolWriter()
-    val ordered = styles.toSortedMap()
+    val ordered = styles.entries.sortedBy { it.key }
     writer.writeI32(ordered.size)
     for ((id, style) in ordered) {
         writer.writeU32(id)
@@ -135,8 +135,62 @@ internal fun encodeSetFoldRegionsPayload(regions: List<io.github.lumkit.sweetedi
     return writer.toByteArray()
 }
 
+internal fun encodeSetIndentGuidesPayload(guides: List<io.github.lumkit.sweeteditor.IndentGuide>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(guides) {
+        CoreProtocol.encodeIndentGuide(
+            ProtocolIndentGuide(it.start.toProtocol(), it.end.toProtocol()),
+        )
+    }
+    return writer.toByteArray()
+}
+
+internal fun encodeSetBracketGuidesPayload(guides: List<io.github.lumkit.sweeteditor.BracketGuide>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(guides) {
+        CoreProtocol.encodeBracketGuide(
+            ProtocolBracketGuide(
+                parent = it.parent.toProtocol(),
+                end = it.end.toProtocol(),
+                children = it.children.map { child -> child.toProtocol() },
+            ),
+        )
+    }
+    return writer.toByteArray()
+}
+
+internal fun encodeSetFlowGuidesPayload(guides: List<io.github.lumkit.sweeteditor.FlowGuide>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(guides) {
+        CoreProtocol.encodeFlowGuide(ProtocolFlowGuide(it.start.toProtocol(), it.end.toProtocol()))
+    }
+    return writer.toByteArray()
+}
+
+internal fun encodeSetSeparatorGuidesPayload(guides: List<io.github.lumkit.sweeteditor.SeparatorGuide>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(guides) {
+        CoreProtocol.encodeSeparatorGuide(
+            ProtocolSeparatorGuide(
+                line = it.line,
+                style = SeparatorStyle.fromValue(it.style.value),
+                count = it.count,
+                textEndColumn = it.textEndColumn,
+            ),
+        )
+    }
+    return writer.toByteArray()
+}
+
 private typealias ProtocolGutterIcon = io.github.lumkit.sweeteditor.core.protocol.GutterIcon
 private typealias ProtocolFoldRegion = io.github.lumkit.sweeteditor.core.protocol.FoldRegion
+private typealias ProtocolIndentGuide = io.github.lumkit.sweeteditor.core.protocol.IndentGuide
+private typealias ProtocolBracketGuide = io.github.lumkit.sweeteditor.core.protocol.BracketGuide
+private typealias ProtocolFlowGuide = io.github.lumkit.sweeteditor.core.protocol.FlowGuide
+private typealias ProtocolSeparatorGuide = io.github.lumkit.sweeteditor.core.protocol.SeparatorGuide
+private typealias ProtocolTextPosition = io.github.lumkit.sweeteditor.core.protocol.TextPosition
+
+private fun io.github.lumkit.sweeteditor.TextPosition.toProtocol() = ProtocolTextPosition(line, column)
 
 private fun StyleSpan.toProtocol() = io.github.lumkit.sweeteditor.core.protocol.StyleSpan(column, length, styleId)
 
@@ -177,7 +231,7 @@ private fun <T> ProtocolWriter.writeItems(items: List<T>, encode: (T) -> ByteArr
 }
 
 private fun <T> ProtocolWriter.writeLineMap(itemsByLine: Map<Int, List<T>>, encode: (T) -> ByteArray) {
-    val ordered = itemsByLine.toSortedMap()
+    val ordered = itemsByLine.entries.sortedBy { it.key }
     writeI32(ordered.size)
     for ((line, items) in ordered) {
         writeU32(line)
