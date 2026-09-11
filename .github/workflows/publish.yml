@@ -130,10 +130,17 @@ jobs:
             echo "Central secrets are missing; skip Portal upload."
             exit 0
           fi
+          VERSION=$(grep '^VERSION_NAME=' gradle.properties | cut -d= -f2- | tr -d '\r')
+          echo "Publishing $VERSION"
+          if [[ "$VERSION" == *"-SNAPSHOT" ]]; then
+            TASK="nmcpPublishAggregationToCentralPortalSnapshots"
+          else
+            TASK="nmcpPublishAggregationToCentralPortal"
+          fi
           ./gradlew --no-daemon \
             -Psweeteditor.publish.requireCompleteNatives=true \
             -PsweetEditor.home=.deps/SweetEditor \
-            nmcpPublishAggregationToCentralPortal
+            "$TASK"
       - uses: actions/upload-artifact@v4
         with:
           name: maven-repo
