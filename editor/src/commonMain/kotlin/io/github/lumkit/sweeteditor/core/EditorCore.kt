@@ -70,6 +70,9 @@ internal class EditorCore(
     fun handleKeyEvent(keyCode: Int, text: ByteArray?, modifiers: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorHandleKeyEvent(editorHandle, keyCode, text, modifiers))
 
+    fun setKeyMap(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetKeyMap(editorHandle, payload))
+
     fun updatePointerModifiers(modifiers: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorUpdatePointerModifiers(editorHandle, modifiers))
 

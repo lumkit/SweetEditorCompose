@@ -38,6 +38,9 @@ internal actual object NativeBridge {
     actual fun editorHandleKeyEvent(editor: Long, keyCode: Int, text: ByteArray?, modifiers: Int): ByteArray? {
         unsupported()
     }
+    actual fun editorSetKeyMap(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
     actual fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray? {
         unsupported()
     }
