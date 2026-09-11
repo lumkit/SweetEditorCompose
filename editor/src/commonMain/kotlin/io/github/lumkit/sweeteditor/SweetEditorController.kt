@@ -327,6 +327,28 @@ class SweetEditorController(
         session?.clearDiff()
     }
 
+    fun insertSnippet(template: String) {
+        session?.insertSnippet(template)
+    }
+
+    fun startLinkedEditing(groups: List<TabStopGroup>) {
+        session?.startLinkedEditing(groups)
+    }
+
+    fun isInLinkedEditing(): Boolean = session?.isInLinkedEditing() == true
+
+    fun linkedEditingNext() {
+        session?.linkedEditingNext()
+    }
+
+    fun linkedEditingPrev() {
+        session?.linkedEditingPrev()
+    }
+
+    fun cancelLinkedEditing() {
+        session?.cancelLinkedEditing()
+    }
+
     fun setLanguageConfiguration(config: LanguageConfiguration?) {
         languageConfiguration = config
         session?.applyLanguageConfiguration(config)

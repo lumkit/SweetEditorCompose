@@ -602,6 +602,52 @@ jbyteArray clear_diff_jni(JNIEnv* env, jclass, jlong editor) {
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray insert_snippet_jni(JNIEnv* env, jclass, jlong editor, jbyteArray template_utf8) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const std::string utf8 = bytes_to_string(env, template_utf8);
+  size_t size = 0;
+  const uint8_t* payload = editor_insert_snippet(static_cast<intptr_t>(editor), utf8.c_str(), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray start_linked_editing_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_start_linked_editing(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jboolean is_in_linked_editing_jni(JNIEnv*, jclass, jlong editor) {
+  if (editor == 0) {
+    return JNI_FALSE;
+  }
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  return editor_is_in_linked_editing(static_cast<intptr_t>(editor)) != 0 ? JNI_TRUE : JNI_FALSE;
+}
+
+jbyteArray linked_editing_next_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_linked_editing_next(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray linked_editing_prev_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_linked_editing_prev(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray cancel_linked_editing_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_cancel_linked_editing(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray set_auto_indent_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -1164,6 +1210,12 @@ const JNINativeMethod kMethods[] = {
     {"editorComputeDiff", "(J[B)[B", (void*)compute_diff_jni},
     {"editorSetBatchDiffLineSpans", "(J[B)[B", (void*)set_batch_diff_line_spans_jni},
     {"editorClearDiff", "(J)[B", (void*)clear_diff_jni},
+    {"editorInsertSnippet", "(J[B)[B", (void*)insert_snippet_jni},
+    {"editorStartLinkedEditing", "(J[B)[B", (void*)start_linked_editing_jni},
+    {"editorIsInLinkedEditing", "(J)Z", (void*)is_in_linked_editing_jni},
+    {"editorLinkedEditingNext", "(J)[B", (void*)linked_editing_next_jni},
+    {"editorLinkedEditingPrev", "(J)[B", (void*)linked_editing_prev_jni},
+    {"editorCancelLinkedEditing", "(J)[B", (void*)cancel_linked_editing_jni},
     {"editorSetAutoIndentMode", "(JI)[B", (void*)set_auto_indent_mode_jni},
     {"editorSetBackspaceUnindent", "(JZ)[B", (void*)set_backspace_unindent_jni},
     {"editorSetScale", "(JF)[B", (void*)set_scale_jni},

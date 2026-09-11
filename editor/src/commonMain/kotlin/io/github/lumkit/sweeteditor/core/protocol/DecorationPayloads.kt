@@ -167,6 +167,22 @@ internal fun encodeSetFlowGuidesPayload(guides: List<io.github.lumkit.sweetedito
     return writer.toByteArray()
 }
 
+internal fun encodeStartLinkedEditingPayload(groups: List<io.github.lumkit.sweeteditor.TabStopGroup>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(groups) { group ->
+        CoreProtocol.encodeTabStopGroup(
+            ProtocolTabStopGroup(
+                index = group.index,
+                ranges = group.ranges.map { range ->
+                    ProtocolTextRange(range.start.toProtocol(), range.end.toProtocol())
+                },
+                defaultText = group.defaultText,
+            ),
+        )
+    }
+    return writer.toByteArray()
+}
+
 internal fun encodeSetDiffChangesPayload(changes: List<io.github.lumkit.sweeteditor.DiffChange>): ByteArray {
     val writer = ProtocolWriter()
     writer.writeItems(changes) {
@@ -214,6 +230,8 @@ private typealias ProtocolBracketGuide = io.github.lumkit.sweeteditor.core.proto
 private typealias ProtocolFlowGuide = io.github.lumkit.sweeteditor.core.protocol.FlowGuide
 private typealias ProtocolSeparatorGuide = io.github.lumkit.sweeteditor.core.protocol.SeparatorGuide
 private typealias ProtocolTextPosition = io.github.lumkit.sweeteditor.core.protocol.TextPosition
+private typealias ProtocolTextRange = io.github.lumkit.sweeteditor.core.protocol.TextRange
+private typealias ProtocolTabStopGroup = io.github.lumkit.sweeteditor.core.protocol.TabStopGroup
 private typealias ProtocolDiffChange = io.github.lumkit.sweeteditor.core.protocol.DiffChange
 
 private fun io.github.lumkit.sweeteditor.TextPosition.toProtocol() = ProtocolTextPosition(line, column)

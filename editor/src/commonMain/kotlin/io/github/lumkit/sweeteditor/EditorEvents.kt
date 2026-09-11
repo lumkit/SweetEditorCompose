@@ -54,6 +54,12 @@ data class TextRange(
     val end: TextPosition,
 )
 
+data class TabStopGroup(
+    val index: Int,
+    val ranges: List<TextRange>,
+    val defaultText: String = "",
+)
+
 data class TextChange(
     val range: TextRange,
     val newText: String,
