@@ -17,26 +17,68 @@
     }
   }
 
+  function asU8(bytes) {
+    if (!bytes) return new Uint8Array(0);
+    if (bytes instanceof Uint8Array) return bytes;
+    if (ArrayBuffer.isView(bytes)) {
+      return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    }
+    const len = bytes.length | 0;
+    const out = new Uint8Array(len);
+    for (let i = 0; i < len; i++) out[i] = bytes[i] & 0xff;
+    return out;
+  }
+
+  function writeBytes(mod, ptr, bytes) {
+    const src = asU8(bytes);
+    for (let i = 0; i < src.length; i++) {
+      mod.setValue(ptr + i, src[i], "i8");
+    }
+    return src.length;
+  }
+
+  function readBytes(mod, ptr, size) {
+    const out = new Uint8Array(size);
+    for (let i = 0; i < size; i++) {
+      out[i] = mod.getValue(ptr + i, "i8") & 0xff;
+    }
+    return out;
+  }
+
+  function readU32(mod, ptr) {
+    return mod.getValue(ptr, "i32") >>> 0;
+  }
+
+  function writeU32(mod, ptr, value) {
+    mod.setValue(ptr, value >>> 0, "i32");
+  }
+
+  function readF32(mod, ptr) {
+    return mod.getValue(ptr, "float");
+  }
+
   function allocBytes(mod, bytes) {
-    if (!bytes || bytes.length === 0) return { ptr: 0, size: 0 };
-    const ptr = mod._malloc(bytes.length);
+    const src = asU8(bytes);
+    if (src.length === 0) return { ptr: 0, size: 0 };
+    const ptr = mod._malloc(src.length);
     if (!ptr) throw new Error("SweetEditor malloc failed");
-    mod.HEAPU8.set(bytes, ptr);
-    return { ptr, size: bytes.length };
+    writeBytes(mod, ptr, src);
+    return { ptr, size: src.length };
   }
 
   function allocCString(mod, bytes) {
-    const ptr = mod._malloc(bytes.length + 1);
+    const src = asU8(bytes);
+    const ptr = mod._malloc(src.length + 1);
     if (!ptr) throw new Error("SweetEditor malloc failed");
-    if (bytes.length > 0) mod.HEAPU8.set(bytes, ptr);
-    mod.HEAPU8[ptr + bytes.length] = 0;
+    writeBytes(mod, ptr, src);
+    mod.setValue(ptr + src.length, 0, "i8");
     return ptr;
   }
 
   function adoptBinary(mod, ptr, sizePtr) {
     if (!ptr) return null;
-    const size = mod.HEAPU32[sizePtr >> 2] >>> 0;
-    const copy = size > 0 ? mod.HEAPU8.slice(ptr, ptr + size) : new Uint8Array(0);
+    const size = readU32(mod, sizePtr);
+    const copy = size > 0 ? readBytes(mod, ptr, size) : new Uint8Array(0);
     mod._free_binary_data(ptr);
     return copy;
   }
@@ -190,8 +232,8 @@
       const closePtr = mod._malloc(count * 4);
       try {
         for (let i = 0; i < count; i++) {
-          mod.HEAPU32[(openPtr >> 2) + i] = opens[i] >>> 0;
-          mod.HEAPU32[(closePtr >> 2) + i] = closes[i] >>> 0;
+          writeU32(mod, openPtr + i * 4, opens[i]);
+          writeU32(mod, closePtr + i * 4, closes[i]);
         }
         return callBinary(mod, (sz) => fn(editor, openPtr, closePtr, count, sz));
       } finally {
@@ -274,7 +316,7 @@
       const ptr = mod._malloc(12);
       try {
         mod._editor_get_cursor_rect(editor, ptr, ptr + 4, ptr + 8);
-        return new Float32Array(mod.HEAPF32.slice(ptr >> 2, (ptr >> 2) + 3));
+        return new Float32Array([readF32(mod, ptr), readF32(mod, ptr + 4), readF32(mod, ptr + 8)]);
       } finally {
         mod._free(ptr);
       }
@@ -283,7 +325,7 @@
       const ptr = mod._malloc(12);
       try {
         mod._editor_get_position_rect(editor, line, column, ptr, ptr + 4, ptr + 8);
-        return new Float32Array(mod.HEAPF32.slice(ptr >> 2, (ptr >> 2) + 3));
+        return new Float32Array([readF32(mod, ptr), readF32(mod, ptr + 4), readF32(mod, ptr + 8)]);
       } finally {
         mod._free(ptr);
       }
@@ -292,7 +334,7 @@
       const ptr = mod._malloc(8);
       try {
         mod._editor_get_visible_line_range(editor, ptr, ptr + 4);
-        return new Int32Array(mod.HEAP32.slice(ptr >> 2, (ptr >> 2) + 2));
+        return new Int32Array([mod.getValue(ptr, "i32"), mod.getValue(ptr + 4, "i32")]);
       } finally {
         mod._free(ptr);
       }
@@ -303,7 +345,7 @@
       const ptr = mod._malloc(8);
       try {
         mod._editor_get_cursor_position(editor, ptr, ptr + 4);
-        return new Int32Array([mod.HEAPU32[ptr >> 2], mod.HEAPU32[(ptr >> 2) + 1]]);
+        return new Int32Array([readU32(mod, ptr), readU32(mod, ptr + 4)]);
       } finally {
         mod._free(ptr);
       }
@@ -313,10 +355,10 @@
       try {
         mod._editor_get_word_range_at_cursor(editor, ptr, ptr + 4, ptr + 8, ptr + 12);
         return new Int32Array([
-          mod.HEAPU32[ptr >> 2],
-          mod.HEAPU32[(ptr >> 2) + 1],
-          mod.HEAPU32[(ptr >> 2) + 2],
-          mod.HEAPU32[(ptr >> 2) + 3],
+          readU32(mod, ptr),
+          readU32(mod, ptr + 4),
+          readU32(mod, ptr + 8),
+          readU32(mod, ptr + 12),
         ]);
       } finally {
         mod._free(ptr);
