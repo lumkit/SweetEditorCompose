@@ -92,12 +92,20 @@ if [[ "$MODE" != "configure" ]]; then
   "$CMAKE" --build "$BUILD" --target sweeteditor --config Release
 fi
 
+# MinGW adds a "lib" prefix; MSVC does not. Accept both, normalize to LIB_NAME.
+MINGW_PREFIX=""
+if [[ "$OS" == MINGW* || "$OS" == MSYS* || "$OS" == CYGWIN* ]]; then
+  MINGW_PREFIX="lib"
+fi
+
 CORE=""
 for candidate in \
   "$BUILD/lib/$LIB_NAME" \
   "$BUILD/lib/Release/$LIB_NAME" \
   "$BUILD/bin/$LIB_NAME" \
-  "$BUILD/bin/Release/$LIB_NAME"
+  "$BUILD/bin/Release/$LIB_NAME" \
+  "$BUILD/lib/${MINGW_PREFIX}$LIB_NAME" \
+  "$BUILD/bin/${MINGW_PREFIX}$LIB_NAME"
 do
   if [[ -f "$candidate" ]]; then
     CORE="$candidate"
@@ -105,14 +113,19 @@ do
   fi
 done
 if [[ -z "$CORE" ]]; then
-  CORE="$(find "$BUILD" -type f -name "$LIB_NAME" | head -n 1 || true)"
+  CORE="$(find "$BUILD" -type f -name "$LIB_NAME" -o -name "${MINGW_PREFIX}$LIB_NAME" 2>/dev/null | head -n 1 || true)"
 fi
 if [[ -z "$CORE" || ! -f "$CORE" ]]; then
   echo "SweetEditor core library $LIB_NAME not found under $BUILD" >&2
   exit 1
 fi
 
-cp -f "$CORE" "$DEST_DIR/"
+mkdir -p "$DEST_DIR"
+if [[ "$(basename "$CORE")" != "$LIB_NAME" ]]; then
+  cp -f "$CORE" "$DEST_DIR/$LIB_NAME"
+else
+  cp -f "$CORE" "$DEST_DIR/"
+fi
 mkdir -p "$INCLUDE_DST"
 cp -R "$INCLUDE_SRC/." "$INCLUDE_DST/"
 echo "Installed $CORE -> $DEST_DIR/$LIB_NAME"
