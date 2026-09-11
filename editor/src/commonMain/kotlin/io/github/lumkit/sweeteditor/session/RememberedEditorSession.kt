@@ -88,6 +88,14 @@ import io.github.lumkit.sweeteditor.core.protocol.ImeTextSource
 import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.EditorImeAdapter
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
+import io.github.lumkit.sweeteditor.platformSelectionMenuEnabled
+import io.github.lumkit.sweeteditor.selection.SelectionMenuController
+import io.github.lumkit.sweeteditor.selection.toSelectionMenuSignal
+import io.github.lumkit.sweeteditor.SelectionMenuContext
+import io.github.lumkit.sweeteditor.SelectionMenuItem
+import io.github.lumkit.sweeteditor.SelectionMenuItemClickEvent
+import io.github.lumkit.sweeteditor.SelectionMenuItemProvider
+import io.github.lumkit.sweeteditor.selection.SelectionMenuLifecycle
 
 internal class RememberedEditorSession(
     private val controller: SweetEditorController,
@@ -113,6 +121,12 @@ internal class RememberedEditorSession(
     var completionSelectedIndex by mutableStateOf(0)
         private set
     var completionAnchor by mutableStateOf<EditorCursorRect?>(null)
+        private set
+    var selectionMenuItems by mutableStateOf<List<SelectionMenuItem>>(emptyList())
+        private set
+    var selectionMenuAnchor by mutableStateOf<EditorCursorRect?>(null)
+        private set
+    var selectionMenuShowToken by mutableStateOf(0)
         private set
     var iconProvider by mutableStateOf<EditorIconProvider?>(null)
         private set
@@ -156,6 +170,19 @@ internal class RememberedEditorSession(
             }
         }
     }
+    private val selectionMenu = SelectionMenuController(
+        enabled = platformSelectionMenuEnabled(),
+        buildContext = { hasSelection ->
+            SelectionMenuContext(
+                hasSelection = hasSelection,
+                cursorPosition = lastCursorPosition,
+                selection = lastSelectionRange.takeIf { hasSelection },
+                selectedText = getSelectedText(),
+            )
+        },
+    )
+    private var lastCursorPosition = TextPosition(0, 0)
+    private var lastSelectionRange: TextRange? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -173,6 +200,7 @@ internal class RememberedEditorSession(
             }
             controller.attach(this)
             decorations.requestRefresh()
+            applySelectionMenuProvider(controller.selectionMenuItemProvider)
         } catch (error: Throwable) {
             loadError = error.message ?: error.toString()
         }
@@ -683,6 +711,49 @@ internal class RememberedEditorSession(
         insertText(text)
     }
 
+    fun applySelectionMenuProvider(provider: SelectionMenuItemProvider?) {
+        selectionMenu.provider = provider
+    }
+
+    fun presentSelectionMenu(token: Int) {
+        val items = selectionMenu.consumePendingShow(token) ?: return
+        selectionMenuItems = items
+        selectionMenuAnchor = selectionMenuAnchorRect()
+        selectionMenuShowToken = selectionMenu.showToken
+    }
+
+    fun hideSelectionMenu() {
+        selectionMenu.hide()
+        selectionMenuItems = emptyList()
+        selectionMenuAnchor = null
+        selectionMenuShowToken = selectionMenu.showToken
+    }
+
+    private fun selectionMenuAnchorRect(): EditorCursorRect? {
+        val range = lastSelectionRange
+        if (range != null) {
+            return getPositionRect(range.start.line, range.start.column) ?: getCursorRect()
+        }
+        return getCursorRect()
+    }
+
+    fun onSelectionMenuItemClick(item: SelectionMenuItem) {
+        if (disposed) return
+        hideSelectionMenu()
+        when (item.id) {
+            SelectionMenuItem.ACTION_CUT -> cutToClipboard()
+            SelectionMenuItem.ACTION_COPY -> copyToClipboard()
+            SelectionMenuItem.ACTION_DELETE -> backspace()
+            SelectionMenuItem.ACTION_PASTE -> pasteFromClipboard()
+            SelectionMenuItem.ACTION_SELECT_ALL -> selectAll()
+            else -> controller.events.publish(SelectionMenuItemClickEvent(item.id))
+        }
+    }
+
+    fun selectAll() {
+        handleKey(KeyCode.A, null, KeyModifier.CTRL)
+    }
+
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
     }
@@ -721,6 +792,9 @@ internal class RememberedEditorSession(
         decorations.close()
         completions.close()
         newLines.close()
+        selectionMenu.dispose()
+        selectionMenuItems = emptyList()
+        selectionMenuAnchor = null
         controller.detach(this)
         editor?.close()
         editor = null
@@ -784,6 +858,25 @@ internal class RememberedEditorSession(
                 EditorBuiltinCommand.PASTE.value -> pasteFromClipboard()
                 EditorBuiltinCommand.TRIGGER_COMPLETION.value -> triggerCompletion()
             }
+        }
+        lastCursorPosition = TextPosition(result.cursorAfter.line, result.cursorAfter.column)
+        lastSelectionRange = if (result.hasSelectionAfter) {
+            TextRange(
+                TextPosition(result.selectionAfter.start.line, result.selectionAfter.start.column),
+                TextPosition(result.selectionAfter.end.line, result.selectionAfter.end.column),
+            )
+        } else {
+            null
+        }
+        selectionMenu.onEditorSignal(result.toSelectionMenuSignal())
+        selectionMenuShowToken = selectionMenu.showToken
+        if (selectionMenu.lifecycle != SelectionMenuLifecycle.VISIBLE) {
+            selectionMenuItems = emptyList()
+            if (selectionMenu.lifecycle != SelectionMenuLifecycle.PENDING_SHOW) {
+                selectionMenuAnchor = null
+            }
+        } else if (result.scrollChanged) {
+            selectionMenuAnchor = selectionMenuAnchorRect()
         }
         if (result.needsRedraw || renderModel == null) {
             try {
