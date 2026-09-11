@@ -24,6 +24,7 @@ internal object SweetEditorJni {
         text: ByteArray?,
         modifiers: Int,
     ): ByteArray?
+    @JvmStatic external fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray?
     @JvmStatic external fun editorTickAnimations(editor: Long): ByteArray?
     @JvmStatic external fun editorInsertText(editor: Long, text: ByteArray): ByteArray?
     @JvmStatic external fun editorBackspace(editor: Long): ByteArray?
@@ -83,6 +84,8 @@ internal actual object NativeBridge {
         SweetEditorJni.editorHandleGestureEvent(editor, payload)
     actual fun editorHandleKeyEvent(editor: Long, keyCode: Int, text: ByteArray?, modifiers: Int): ByteArray? =
         SweetEditorJni.editorHandleKeyEvent(editor, keyCode, text, modifiers)
+    actual fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray? =
+        SweetEditorJni.editorUpdatePointerModifiers(editor, modifiers)
     actual fun editorTickAnimations(editor: Long): ByteArray? = SweetEditorJni.editorTickAnimations(editor)
     actual fun editorInsertText(editor: Long, text: ByteArray): ByteArray? =
         SweetEditorJni.editorInsertText(editor, text)

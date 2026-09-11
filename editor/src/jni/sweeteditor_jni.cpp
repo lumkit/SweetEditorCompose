@@ -291,6 +291,14 @@ jbyteArray handle_gesture_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payl
   return adopt_binary(env, result, size);
 }
 
+jbyteArray update_pointer_modifiers_jni(JNIEnv* env, jclass, jlong editor, jint modifiers) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload =
+      editor_update_pointer_modifiers(static_cast<intptr_t>(editor), static_cast<uint8_t>(modifiers), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray handle_key_jni(JNIEnv* env, jclass, jlong editor, jint key_code, jbyteArray text, jint modifiers) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   const std::string utf8 = bytes_to_string(env, text);
@@ -547,6 +555,7 @@ const JNINativeMethod kMethods[] = {
     {"editorBuildRenderModel", "(J)[B", (void*)build_render_model_jni},
     {"editorHandleGestureEvent", "(J[B)[B", (void*)handle_gesture_jni},
     {"editorHandleKeyEvent", "(JI[BI)[B", (void*)handle_key_jni},
+    {"editorUpdatePointerModifiers", "(JI)[B", (void*)update_pointer_modifiers_jni},
     {"editorTickAnimations", "(J)[B", (void*)tick_jni},
     {"editorInsertText", "(J[B)[B", (void*)insert_text_jni},
     {"editorBackspace", "(J)[B", (void*)backspace_jni},

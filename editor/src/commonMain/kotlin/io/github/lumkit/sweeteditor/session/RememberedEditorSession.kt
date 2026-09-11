@@ -40,6 +40,8 @@ internal class RememberedEditorSession(
         private set
     var pointerCursor by mutableStateOf(PointerCursorType.TEXT)
         private set
+    var visualScale by mutableStateOf(1f)
+        private set
 
     val isReady: Boolean get() = editor != null && !disposed
 
@@ -90,7 +92,11 @@ internal class RememberedEditorSession(
             dispatchActionResult(core.setTabSize(settings.tabSize.coerceAtLeast(1)))
             dispatchActionResult(core.setInsertSpaces(settings.insertSpaces))
             dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
-            dispatchActionResult(core.setScale(settings.scale.coerceAtLeast(0.1f)))
+            val nextScale = settings.scale.coerceAtLeast(0.1f)
+            dispatchActionResult(core.setScale(nextScale))
+            if (visualScale != nextScale) {
+                visualScale = nextScale
+            }
             dispatchActionResult(core.setReadOnly(settings.readOnly))
             dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
             dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
@@ -127,6 +133,11 @@ internal class RememberedEditorSession(
     fun handleKey(keyCode: Int, text: ByteArray?, modifiers: Int) {
         val core = editor ?: return
         dispatchActionResult(core.handleKeyEvent(keyCode, text, modifiers))
+    }
+
+    fun updatePointerModifiers(modifiers: Int) {
+        val core = editor ?: return
+        dispatchActionResult(core.updatePointerModifiers(modifiers))
     }
 
     fun insertText(text: String) {
@@ -243,6 +254,9 @@ internal class RememberedEditorSession(
             }
         }
         wantsAnimation = result.animationFlags != AnimationFlag.NONE
+        if (result.scaleChanged && result.scaleAfter > 0f) {
+            visualScale = result.scaleAfter
+        }
         if (result.pointerCursorChanged) {
             pointerCursor = result.pointerCursorAfter
         }
