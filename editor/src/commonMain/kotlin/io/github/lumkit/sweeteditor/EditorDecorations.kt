@@ -78,6 +78,12 @@ data class Diagnostic(
     val severity: EditorDiagnosticSeverity,
 )
 
+data class FoldRegion(
+    val startLine: Int,
+    val endLine: Int,
+    val collapsed: Boolean = false,
+)
+
 data class DocumentHighlight(
     val column: Int,
     val length: Int,

@@ -8,7 +8,10 @@ import io.github.lumkit.sweeteditor.DecorationReceiver
 import io.github.lumkit.sweeteditor.DecorationResult
 import io.github.lumkit.sweeteditor.Diagnostic
 import io.github.lumkit.sweeteditor.DocumentHighlight
+import io.github.lumkit.sweeteditor.EditorMetadata
 import io.github.lumkit.sweeteditor.EditorSpanLayer
+import io.github.lumkit.sweeteditor.FoldRegion
+import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.GutterIcon
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
@@ -28,6 +31,8 @@ internal interface DecorationHost {
     fun totalLineCount(): Int
     fun overscanMultiplier(): Float
     fun scrollRefreshMinIntervalMs(): Int
+    fun languageConfiguration(): LanguageConfiguration?
+    fun editorMetadata(): EditorMetadata?
     fun clearHighlights(layer: EditorSpanLayer)
     fun setBatchLineSpans(layer: EditorSpanLayer, spansByLine: Map<Int, List<StyleSpan>>)
     fun clearInlayHints()
@@ -44,6 +49,7 @@ internal interface DecorationHost {
     fun setBatchLineCodeLens(itemsByLine: Map<Int, List<CodeLensItem>>)
     fun clearLinks()
     fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>)
+    fun setFoldRegions(regions: List<FoldRegion>)
 }
 
 internal class DecorationProviderManager(
@@ -137,7 +143,13 @@ internal class DecorationProviderManager(
             end = total - 1
         }
         lastContext = VisibleLineRange(start, end)
-        val context = DecorationContext(lastContext, total, changes)
+        val context = DecorationContext(
+            visibleLineRange = lastContext,
+            totalLineCount = total,
+            textChanges = changes,
+            languageConfiguration = host.languageConfiguration(),
+            editorMetadata = host.editorMetadata(),
+        )
         for (provider in providers.toList()) {
             val state = states.getOrPut(provider) { ProviderState() }
             state.receiver?.cancel()
@@ -176,6 +188,8 @@ internal class DecorationProviderManager(
         val phantoms = mutableMapOf<Int, MutableList<PhantomText>>()
         val lenses = mutableMapOf<Int, MutableList<CodeLensItem>>()
         val links = mutableMapOf<Int, MutableList<LinkSpan>>()
+        val folds = mutableListOf<FoldRegion>()
+        var hasFolds = false
         var syntaxMode = DecorationApplyMode.MERGE
         var semanticMode = DecorationApplyMode.MERGE
         var overlayMode = DecorationApplyMode.MERGE
@@ -186,6 +200,7 @@ internal class DecorationProviderManager(
         var phantomMode = DecorationApplyMode.MERGE
         var lensMode = DecorationApplyMode.MERGE
         var linksMode = DecorationApplyMode.MERGE
+        var foldMode = DecorationApplyMode.MERGE
 
         for (provider in providers) {
             val snapshot = states[provider]?.snapshot ?: continue
@@ -209,6 +224,11 @@ internal class DecorationProviderManager(
             appendMap(lenses, snapshot.codeLensItems)
             linksMode = mergeMode(linksMode, snapshot.linksMode)
             appendMap(links, snapshot.links)
+            foldMode = mergeMode(foldMode, snapshot.foldRegionsMode)
+            snapshot.foldRegions?.let {
+                hasFolds = true
+                folds += it
+            }
         }
 
         applySpanLayer(EditorSpanLayer.SYNTAX, syntaxMode, syntax)
@@ -221,6 +241,9 @@ internal class DecorationProviderManager(
         applyLineMap(phantomMode, host::clearPhantomTexts, host::setBatchLinePhantomTexts, phantoms)
         applyLineMap(lensMode, host::clearCodeLens, host::setBatchLineCodeLens, lenses)
         applyLineMap(linksMode, host::clearLinks, host::setBatchLineLinks, links)
+        if (hasFolds || foldMode != DecorationApplyMode.MERGE) {
+            host.setFoldRegions(folds)
+        }
     }
 
     private fun applySpanLayer(
@@ -320,6 +343,8 @@ internal fun mergePatch(current: DecorationResult?, patch: DecorationResult): De
         codeLensItemsMode = pickMode(patch.codeLensItems, patch.codeLensItemsMode, base.codeLensItemsMode),
         links = pickMap(patch.links, patch.linksMode, base.links),
         linksMode = pickMode(patch.links, patch.linksMode, base.linksMode),
+        foldRegions = pickList(patch.foldRegions, patch.foldRegionsMode, base.foldRegions),
+        foldRegionsMode = pickListMode(patch.foldRegions, patch.foldRegionsMode, base.foldRegionsMode),
     )
 }
 
@@ -335,6 +360,22 @@ private fun <T> pickMap(
 
 private fun pickMode(
     patch: Map<Int, *>?,
+    mode: DecorationApplyMode,
+    previous: DecorationApplyMode,
+): DecorationApplyMode = if (patch != null || mode != DecorationApplyMode.MERGE) mode else previous
+
+private fun <T> pickList(
+    patch: List<T>?,
+    mode: DecorationApplyMode,
+    previous: List<T>?,
+): List<T>? = when {
+    patch != null -> patch
+    mode != DecorationApplyMode.MERGE -> null
+    else -> previous
+}
+
+private fun pickListMode(
+    patch: List<*>?,
     mode: DecorationApplyMode,
     previous: DecorationApplyMode,
 ): DecorationApplyMode = if (patch != null || mode != DecorationApplyMode.MERGE) mode else previous

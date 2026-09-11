@@ -48,4 +48,15 @@ class DecorationProviderManagerTest {
         assertNull(merged.diagnostics)
         assertEquals(DecorationApplyMode.REPLACE_ALL, merged.diagnosticsMode)
     }
+
+    @Test
+    fun mergePatchKeepsFoldRegionsOnMerge() {
+        val previous = DecorationResult(
+            foldRegions = listOf(io.github.lumkit.sweeteditor.FoldRegion(0, 4)),
+            foldRegionsMode = DecorationApplyMode.REPLACE_ALL,
+        )
+        val merged = mergePatch(previous, DecorationResult())
+        assertEquals(previous.foldRegions, merged.foldRegions)
+        assertEquals(DecorationApplyMode.REPLACE_ALL, merged.foldRegionsMode)
+    }
 }
