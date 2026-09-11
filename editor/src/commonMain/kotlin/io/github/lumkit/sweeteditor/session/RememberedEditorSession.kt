@@ -98,6 +98,10 @@ internal class RememberedEditorSession(
         private set
     var loadError by mutableStateOf<String?>(null)
         private set
+
+    fun markLoadError(message: String) {
+        loadError = message
+    }
     var wantsAnimation by mutableStateOf(false)
         private set
     var pointerCursor by mutableStateOf(PointerCursorType.TEXT)
@@ -157,7 +161,6 @@ internal class RememberedEditorSession(
         if (disposed || editor != null) return
         try {
             if (!NativeBridge.isAvailable) {
-                loadError = "SweetEditor native core is not available on this target yet"
                 return
             }
             val createdDocument = Document.fromUtf8(initialText)
