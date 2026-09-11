@@ -27,6 +27,15 @@ internal expect object NativeBridge {
     fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
     fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
     fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
+    fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
+    fun editorMoveLineUp(editor: Long): ByteArray?
+    fun editorMoveLineDown(editor: Long): ByteArray?
+    fun editorCopyLineUp(editor: Long): ByteArray?
+    fun editorCopyLineDown(editor: Long): ByteArray?
+    fun editorDeleteLine(editor: Long): ByteArray?
+    fun editorInsertLineAbove(editor: Long): ByteArray?
+    fun editorInsertLineBelow(editor: Long): ByteArray?
     fun editorSetScale(editor: Long, scale: Float): ByteArray?
     fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
     fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?

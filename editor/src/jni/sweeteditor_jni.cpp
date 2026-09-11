@@ -326,6 +326,55 @@ jbyteArray backspace_jni(JNIEnv* env, jclass, jlong editor) {
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray move_line_up_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_move_line_up(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray move_line_down_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_move_line_down(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray copy_line_up_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_copy_line_up(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray copy_line_down_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_copy_line_down(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray delete_line_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_delete_line(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray insert_line_above_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_insert_line_above(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray insert_line_below_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_insert_line_below(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray undo_jni(JNIEnv* env, jclass, jlong editor) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -380,6 +429,20 @@ jbyteArray set_insert_spaces_jni(JNIEnv* env, jclass, jlong editor, jboolean ena
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
   const uint8_t* payload = editor_set_insert_spaces(static_cast<intptr_t>(editor), enabled ? 1 : 0, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_auto_indent_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_auto_indent_mode(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_backspace_unindent_jni(JNIEnv* env, jclass, jlong editor, jboolean enabled) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_backspace_unindent(static_cast<intptr_t>(editor), enabled ? 1 : 0, &size);
   return adopt_binary(env, payload, size);
 }
 
@@ -487,6 +550,13 @@ const JNINativeMethod kMethods[] = {
     {"editorTickAnimations", "(J)[B", (void*)tick_jni},
     {"editorInsertText", "(J[B)[B", (void*)insert_text_jni},
     {"editorBackspace", "(J)[B", (void*)backspace_jni},
+    {"editorMoveLineUp", "(J)[B", (void*)move_line_up_jni},
+    {"editorMoveLineDown", "(J)[B", (void*)move_line_down_jni},
+    {"editorCopyLineUp", "(J)[B", (void*)copy_line_up_jni},
+    {"editorCopyLineDown", "(J)[B", (void*)copy_line_down_jni},
+    {"editorDeleteLine", "(J)[B", (void*)delete_line_jni},
+    {"editorInsertLineAbove", "(J)[B", (void*)insert_line_above_jni},
+    {"editorInsertLineBelow", "(J)[B", (void*)insert_line_below_jni},
     {"editorUndo", "(J)[B", (void*)undo_jni},
     {"editorRedo", "(J)[B", (void*)redo_jni},
     {"editorCanUndo", "(J)Z", (void*)can_undo_jni},
@@ -496,6 +566,8 @@ const JNINativeMethod kMethods[] = {
     {"editorSetWrapMode", "(JI)[B", (void*)set_wrap_mode_jni},
     {"editorSetTabSize", "(JI)[B", (void*)set_tab_size_jni},
     {"editorSetInsertSpaces", "(JZ)[B", (void*)set_insert_spaces_jni},
+    {"editorSetAutoIndentMode", "(JI)[B", (void*)set_auto_indent_mode_jni},
+    {"editorSetBackspaceUnindent", "(JZ)[B", (void*)set_backspace_unindent_jni},
     {"editorSetScale", "(JF)[B", (void*)set_scale_jni},
     {"editorSetLineSpacing", "(JFF)[B", (void*)set_line_spacing_jni},
     {"editorSetReadOnly", "(JZ)[B", (void*)set_read_only_jni},

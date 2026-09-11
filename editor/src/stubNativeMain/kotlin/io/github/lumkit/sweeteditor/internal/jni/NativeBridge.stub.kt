@@ -74,6 +74,33 @@ internal actual object NativeBridge {
     actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? {
         unsupported()
     }
+    actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? {
+        unsupported()
+    }
+    actual fun editorMoveLineUp(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorMoveLineDown(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorCopyLineUp(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorCopyLineDown(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorDeleteLine(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorInsertLineAbove(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorInsertLineBelow(editor: Long): ByteArray? {
+        unsupported()
+    }
     actual fun editorSetScale(editor: Long, scale: Float): ByteArray? {
         unsupported()
     }

@@ -33,9 +33,18 @@ import sweeteditor.cinterop.editor_ime_begin_session
 import sweeteditor.cinterop.editor_ime_end_session
 import sweeteditor.cinterop.editor_ime_get_context
 import sweeteditor.cinterop.editor_ime_get_state
+import sweeteditor.cinterop.editor_copy_line_down
+import sweeteditor.cinterop.editor_copy_line_up
+import sweeteditor.cinterop.editor_delete_line
+import sweeteditor.cinterop.editor_insert_line_above
+import sweeteditor.cinterop.editor_insert_line_below
 import sweeteditor.cinterop.editor_insert_text
+import sweeteditor.cinterop.editor_move_line_down
+import sweeteditor.cinterop.editor_move_line_up
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_set_auto_indent_mode
+import sweeteditor.cinterop.editor_set_backspace_unindent
 import sweeteditor.cinterop.editor_set_current_line_render_mode
 import sweeteditor.cinterop.editor_set_document
 import sweeteditor.cinterop.editor_set_editor_render_colors
@@ -226,6 +235,35 @@ internal actual object NativeBridge {
         withActive(editor) {
             adoptBinary { size -> editor_set_insert_spaces(editor, if (enabled) 1 else 0, size) }
         }
+
+    actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_auto_indent_mode(editor, mode, size) } }
+
+    actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_backspace_unindent(editor, if (enabled) 1 else 0, size) }
+        }
+
+    actual fun editorMoveLineUp(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_move_line_up(editor, size) } }
+
+    actual fun editorMoveLineDown(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_move_line_down(editor, size) } }
+
+    actual fun editorCopyLineUp(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_copy_line_up(editor, size) } }
+
+    actual fun editorCopyLineDown(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_copy_line_down(editor, size) } }
+
+    actual fun editorDeleteLine(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_delete_line(editor, size) } }
+
+    actual fun editorInsertLineAbove(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_insert_line_above(editor, size) } }
+
+    actual fun editorInsertLineBelow(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_insert_line_below(editor, size) } }
 
     actual fun editorSetScale(editor: Long, scale: Float): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_set_scale(editor, scale, size) } }
