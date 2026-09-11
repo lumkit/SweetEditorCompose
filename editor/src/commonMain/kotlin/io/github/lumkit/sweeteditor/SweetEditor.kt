@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import io.github.lumkit.sweeteditor.completion.EditorCompletionPopup
 import io.github.lumkit.sweeteditor.contextmenu.EditorContextMenuPopup
+import io.github.lumkit.sweeteditor.copilot.EditorInlineSuggestionBar
 import io.github.lumkit.sweeteditor.selection.EditorSelectionMenuPopup
 import io.github.lumkit.sweeteditor.selection.SelectionMenuController
 import androidx.compose.runtime.Composable
@@ -276,6 +277,12 @@ fun SweetEditor(
         onSelect = { session.selectCompletionIndex(it) },
         onConfirm = session::applyCompletionItem,
         onDismiss = session::dismissCompletion,
+    )
+    EditorInlineSuggestionBar(
+        anchor = session.inlineSuggestionAnchor,
+        theme = theme,
+        onAccept = session::acceptInlineSuggestion,
+        onDismiss = session::dismissInlineSuggestion,
     )
     EditorSelectionMenuPopup(
         items = session.selectionMenuItems,

@@ -16,6 +16,8 @@ class SweetEditorController(
         private set
     internal var contextMenuItemProvider: ContextMenuItemProvider? = null
         private set
+    internal var inlineSuggestionListener: InlineSuggestionListener? = null
+        private set
     val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
@@ -367,6 +369,25 @@ class SweetEditorController(
         session?.insertSnippet(template)
     }
 
+    fun showInlineSuggestion(suggestion: InlineSuggestion) {
+        session?.showInlineSuggestion(suggestion)
+    }
+
+    fun dismissInlineSuggestion() {
+        session?.dismissInlineSuggestion()
+    }
+
+    fun acceptInlineSuggestion() {
+        session?.acceptInlineSuggestion()
+    }
+
+    fun isInlineSuggestionShowing(): Boolean = session?.isInlineSuggestionShowing == true
+
+    fun setInlineSuggestionListener(listener: InlineSuggestionListener?) {
+        inlineSuggestionListener = listener
+        session?.setInlineSuggestionListener(listener)
+    }
+
     fun startLinkedEditing(groups: List<TabStopGroup>) {
         session?.startLinkedEditing(groups)
     }
@@ -470,6 +491,7 @@ class SweetEditorController(
         next.setEditorIconProvider(iconProvider)
         next.applySelectionMenuProvider(selectionMenuItemProvider)
         next.applyContextMenuProvider(contextMenuItemProvider)
+        next.setInlineSuggestionListener(inlineSuggestionListener)
         val pending = readyCallbacks.toList()
         readyCallbacks.clear()
         pending.forEach { it() }

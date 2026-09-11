@@ -141,6 +141,9 @@ data class EditorTheme(
     val contextMenuBgColor: Int = 0xFF2B2B2B.toInt(),
     val contextMenuTextColor: Int = 0xFFE6E6E6.toInt(),
     val contextMenuDividerColor: Int = 0x33FFFFFF,
+    val inlineSuggestionBarBgColor: Int = 0xF2303030.toInt(),
+    val inlineSuggestionBarAcceptColor: Int = 0xFF4FC1FF.toInt(),
+    val inlineSuggestionBarDismissColor: Int = 0xFFCCCCCC.toInt(),
     val fontFamily: FontFamily = FontFamily.Monospace,
     val rangeEffects: EditorRangeEffects? = null,
 ) {
@@ -178,6 +181,9 @@ data class EditorTheme(
             contextMenuBgColor = 0xFFF5F5F5.toInt(),
             contextMenuTextColor = 0xFF1E1E1E.toInt(),
             contextMenuDividerColor = 0x33000000,
+            inlineSuggestionBarBgColor = 0xF2F0F0F0.toInt(),
+            inlineSuggestionBarAcceptColor = 0xFF1A73E8.toInt(),
+            inlineSuggestionBarDismissColor = 0xFF555555.toInt(),
         )
     }
 }
