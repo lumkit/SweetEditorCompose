@@ -68,6 +68,16 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorGetVisibleLineRange(editor: Long): IntArray
     @JvmStatic external fun editorGetScrollMetrics(editor: Long): ByteArray?
     @JvmStatic external fun editorGetSelectedText(editor: Long): ByteArray
+    @JvmStatic external fun editorDecorationOp(
+        editor: Long,
+        op: Int,
+        payload: ByteArray?,
+        a: Int,
+        b: Int,
+        c: Int,
+        d: Int,
+    ): ByteArray?
+    @JvmStatic external fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray
 }
 
 internal actual object NativeBridge {
@@ -154,4 +164,15 @@ internal actual object NativeBridge {
     actual fun editorGetVisibleLineRange(editor: Long): IntArray = SweetEditorJni.editorGetVisibleLineRange(editor)
     actual fun editorGetScrollMetrics(editor: Long): ByteArray? = SweetEditorJni.editorGetScrollMetrics(editor)
     actual fun editorGetSelectedText(editor: Long): ByteArray = SweetEditorJni.editorGetSelectedText(editor)
+    actual fun editorDecorationOp(
+        editor: Long,
+        op: Int,
+        payload: ByteArray?,
+        a: Int,
+        b: Int,
+        c: Int,
+        d: Int,
+    ): ByteArray? = SweetEditorJni.editorDecorationOp(editor, op, payload, a, b, c, d)
+    actual fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray =
+        SweetEditorJni.editorGetLinkTargetAt(editor, line, column)
 }

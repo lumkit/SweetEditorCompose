@@ -1,18 +1,46 @@
 package io.github.lumkit.sweeteditor.core
 
+import io.github.lumkit.sweeteditor.CodeLensItem
+import io.github.lumkit.sweeteditor.Diagnostic
+import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
+import io.github.lumkit.sweeteditor.EditorSpanLayer
+import io.github.lumkit.sweeteditor.EditorTextStyle
+import io.github.lumkit.sweeteditor.GutterIcon
+import io.github.lumkit.sweeteditor.InlayHint
+import io.github.lumkit.sweeteditor.LinkSpan
+import io.github.lumkit.sweeteditor.PhantomText
+import io.github.lumkit.sweeteditor.StyleSpan
 import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorOptions
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.encodeRegisterBatchTextStylesPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineCodeLensPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineDiagnosticsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineDocumentHighlightsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineGutterIconsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineInlayHintsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineLinksPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLinePhantomTextsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchLineSpansPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineCodeLensPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineDiagnosticsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineDocumentHighlightsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineGutterIconsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineInlayHintsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineLinksPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLinePhantomTextsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineSpansPayload
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
 import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
 import io.github.lumkit.sweeteditor.core.protocol.ImeState
 import io.github.lumkit.sweeteditor.core.protocol.ImeTextContext
 import io.github.lumkit.sweeteditor.core.protocol.ImeTextSource
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
+import io.github.lumkit.sweeteditor.internal.jni.NativeDecorationOp
 
 internal class Document(
     internal val handle: Long,
@@ -141,6 +169,108 @@ internal class EditorCore(
     }
 
     fun getSelectedText(): String = NativeBridge.editorGetSelectedText(editorHandle).decodeToString()
+
+    fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0): EditorActionResult? =
+        decoration(NativeDecorationOp.REGISTER_TEXT_STYLE, a = styleId, b = color, c = backgroundColor, d = fontStyle)
+
+    fun registerBatchTextStyles(styles: Map<Int, EditorTextStyle>): EditorActionResult? =
+        decoration(NativeDecorationOp.REGISTER_BATCH_TEXT_STYLES, encodeRegisterBatchTextStylesPayload(styles))
+
+    fun setLineSpans(line: Int, layer: EditorSpanLayer, spans: List<StyleSpan>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_SPANS, encodeSetLineSpansPayload(line, layer.value, spans))
+
+    fun setBatchLineSpans(layer: EditorSpanLayer, spansByLine: Map<Int, List<StyleSpan>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_SPANS, encodeSetBatchLineSpansPayload(layer.value, spansByLine))
+
+    fun clearLineSpans(line: Int, layer: EditorSpanLayer): EditorActionResult? =
+        decoration(NativeDecorationOp.CLEAR_LINE_SPANS, a = line, b = layer.value)
+
+    fun clearHighlights(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_HIGHLIGHTS)
+
+    fun clearHighlights(layer: EditorSpanLayer): EditorActionResult? =
+        decoration(NativeDecorationOp.CLEAR_HIGHLIGHTS_LAYER, a = layer.value)
+
+    fun setLineInlayHints(line: Int, hints: List<InlayHint>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_INLAY_HINTS, encodeSetLineInlayHintsPayload(line, hints))
+
+    fun setBatchLineInlayHints(hintsByLine: Map<Int, List<InlayHint>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_INLAY_HINTS, encodeSetBatchLineInlayHintsPayload(hintsByLine))
+
+    fun clearInlayHints(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_INLAY_HINTS)
+
+    fun setLinePhantomTexts(line: Int, phantoms: List<PhantomText>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_PHANTOM_TEXTS, encodeSetLinePhantomTextsPayload(line, phantoms))
+
+    fun setBatchLinePhantomTexts(phantomsByLine: Map<Int, List<PhantomText>>): EditorActionResult? =
+        decoration(
+            NativeDecorationOp.SET_BATCH_LINE_PHANTOM_TEXTS,
+            encodeSetBatchLinePhantomTextsPayload(phantomsByLine),
+        )
+
+    fun clearPhantomTexts(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_PHANTOM_TEXTS)
+
+    fun setLineGutterIcons(line: Int, icons: List<GutterIcon>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_GUTTER_ICONS, encodeSetLineGutterIconsPayload(line, icons))
+
+    fun setBatchLineGutterIcons(iconsByLine: Map<Int, List<GutterIcon>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_GUTTER_ICONS, encodeSetBatchLineGutterIconsPayload(iconsByLine))
+
+    fun setMaxGutterIcons(count: Int): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_MAX_GUTTER_ICONS, a = count)
+
+    fun clearGutterIcons(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_GUTTER_ICONS)
+
+    fun setLineCodeLens(line: Int, items: List<CodeLensItem>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_CODELENS, encodeSetLineCodeLensPayload(line, items))
+
+    fun setBatchLineCodeLens(itemsByLine: Map<Int, List<CodeLensItem>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_CODELENS, encodeSetBatchLineCodeLensPayload(itemsByLine))
+
+    fun clearCodeLens(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_CODELENS)
+
+    fun setLineLinks(line: Int, links: List<LinkSpan>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_LINKS, encodeSetLineLinksPayload(line, links))
+
+    fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_LINKS, encodeSetBatchLineLinksPayload(linksByLine))
+
+    fun clearLinks(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_LINKS)
+
+    fun getLinkTargetAt(line: Int, column: Int): String =
+        NativeBridge.editorGetLinkTargetAt(editorHandle, line, column).decodeToString()
+
+    fun setLineDiagnostics(line: Int, items: List<Diagnostic>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_LINE_DIAGNOSTICS, encodeSetLineDiagnosticsPayload(line, items))
+
+    fun setBatchLineDiagnostics(itemsByLine: Map<Int, List<Diagnostic>>): EditorActionResult? =
+        decoration(NativeDecorationOp.SET_BATCH_LINE_DIAGNOSTICS, encodeSetBatchLineDiagnosticsPayload(itemsByLine))
+
+    fun clearDiagnostics(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_DIAGNOSTICS)
+
+    fun setLineDocumentHighlights(line: Int, items: List<DocumentHighlight>): EditorActionResult? =
+        decoration(
+            NativeDecorationOp.SET_LINE_DOCUMENT_HIGHLIGHTS,
+            encodeSetLineDocumentHighlightsPayload(line, items),
+        )
+
+    fun setBatchLineDocumentHighlights(itemsByLine: Map<Int, List<DocumentHighlight>>): EditorActionResult? =
+        decoration(
+            NativeDecorationOp.SET_BATCH_LINE_DOCUMENT_HIGHLIGHTS,
+            encodeSetBatchLineDocumentHighlightsPayload(itemsByLine),
+        )
+
+    fun clearDocumentHighlights(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_DOCUMENT_HIGHLIGHTS)
+
+    fun clearAllDecorations(): EditorActionResult? = decoration(NativeDecorationOp.CLEAR_ALL_DECORATIONS)
+
+    private fun decoration(
+        op: Int,
+        payload: ByteArray? = null,
+        a: Int = 0,
+        b: Int = 0,
+        c: Int = 0,
+        d: Int = 0,
+    ): EditorActionResult? = decodeAction(NativeBridge.editorDecorationOp(editorHandle, op, payload, a, b, c, d))
 
     fun getScrollMetrics(): EditorScrollMetrics? {
         val bytes = NativeBridge.editorGetScrollMetrics(editorHandle) ?: return null

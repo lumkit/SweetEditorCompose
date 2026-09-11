@@ -158,6 +158,20 @@ internal actual object NativeBridge {
     actual fun editorGetSelectedText(editor: Long): ByteArray {
         unsupported()
     }
+    actual fun editorDecorationOp(
+        editor: Long,
+        op: Int,
+        payload: ByteArray?,
+        a: Int,
+        b: Int,
+        c: Int,
+        d: Int,
+    ): ByteArray? {
+        unsupported()
+    }
+    actual fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray {
+        unsupported()
+    }
 
     private fun unsupported(): Nothing {
         throw IllegalStateException("SweetEditor native core is not wired on this target yet")

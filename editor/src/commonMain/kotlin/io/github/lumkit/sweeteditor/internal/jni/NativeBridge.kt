@@ -59,4 +59,47 @@ internal expect object NativeBridge {
     fun editorGetVisibleLineRange(editor: Long): IntArray
     fun editorGetScrollMetrics(editor: Long): ByteArray?
     fun editorGetSelectedText(editor: Long): ByteArray
+    fun editorDecorationOp(
+        editor: Long,
+        op: Int,
+        payload: ByteArray?,
+        a: Int,
+        b: Int,
+        c: Int,
+        d: Int,
+    ): ByteArray?
+    fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray
+}
+
+internal object NativeDecorationOp {
+    const val SET_LINE_SPANS: Int = 1
+    const val SET_BATCH_LINE_SPANS: Int = 2
+    const val REGISTER_BATCH_TEXT_STYLES: Int = 3
+    const val SET_LINE_INLAY_HINTS: Int = 4
+    const val SET_BATCH_LINE_INLAY_HINTS: Int = 5
+    const val SET_LINE_PHANTOM_TEXTS: Int = 6
+    const val SET_BATCH_LINE_PHANTOM_TEXTS: Int = 7
+    const val SET_LINE_GUTTER_ICONS: Int = 8
+    const val SET_BATCH_LINE_GUTTER_ICONS: Int = 9
+    const val SET_LINE_CODELENS: Int = 10
+    const val SET_BATCH_LINE_CODELENS: Int = 11
+    const val SET_LINE_LINKS: Int = 12
+    const val SET_BATCH_LINE_LINKS: Int = 13
+    const val SET_LINE_DIAGNOSTICS: Int = 14
+    const val SET_BATCH_LINE_DIAGNOSTICS: Int = 15
+    const val SET_LINE_DOCUMENT_HIGHLIGHTS: Int = 16
+    const val SET_BATCH_LINE_DOCUMENT_HIGHLIGHTS: Int = 17
+    const val CLEAR_HIGHLIGHTS: Int = 18
+    const val CLEAR_HIGHLIGHTS_LAYER: Int = 19
+    const val CLEAR_LINE_SPANS: Int = 20
+    const val CLEAR_INLAY_HINTS: Int = 21
+    const val CLEAR_PHANTOM_TEXTS: Int = 22
+    const val CLEAR_GUTTER_ICONS: Int = 23
+    const val CLEAR_CODELENS: Int = 24
+    const val CLEAR_LINKS: Int = 25
+    const val CLEAR_DIAGNOSTICS: Int = 26
+    const val CLEAR_DOCUMENT_HIGHLIGHTS: Int = 27
+    const val CLEAR_ALL_DECORATIONS: Int = 28
+    const val REGISTER_TEXT_STYLE: Int = 29
+    const val SET_MAX_GUTTER_ICONS: Int = 30
 }
