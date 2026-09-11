@@ -69,3 +69,62 @@ internal fun cursorAfterReplacement(
     }
     return clampImeOffset(cursor, newTotalLength)
 }
+
+internal fun commandsForMarkedText(
+    state: ImeState,
+    markedText: String,
+    selectedLocation: Int,
+    selectedLength: Int,
+): List<ImeCommand>? {
+    val textLength = markedText.length
+    if (selectedLocation < 0 ||
+        selectedLength < 0 ||
+        selectedLocation > textLength ||
+        selectedLength > textLength - selectedLocation
+    ) {
+        return null
+    }
+    val commands = ArrayList<ImeCommand>(2)
+    if (!hasComposition(state)) {
+        val start = minOf(state.selection.anchorUtf16, state.selection.activeUtf16)
+        val end = maxOf(state.selection.anchorUtf16, state.selection.activeUtf16)
+        if (start < 0 || end < 0) return null
+        commands += imeCommand(
+            kind = ImeCommandKind.BEGIN_COMPOSITION,
+            targetRange = documentRange(start, end),
+        )
+    }
+    commands += imeCommand(
+        kind = ImeCommandKind.UPDATE_COMPOSITION,
+        text = markedText,
+        selectionAfter = ImeSelection(
+            ImeCoordinateSpace.COMPOSITION,
+            selectedLocation.toLong(),
+            (selectedLocation + selectedLength).toLong(),
+            CaretAffinity.DOWNSTREAM,
+        ),
+    )
+    return commands
+}
+
+internal fun commandsForCommitText(
+    state: ImeState,
+    text: String,
+    replacementStart: Long? = null,
+    replacementEnd: Long? = null,
+): List<ImeCommand> {
+    if (replacementStart == null || replacementEnd == null || replacementStart < 0 || replacementEnd < replacementStart) {
+        return listOf(imeCommand(ImeCommandKind.COMMIT_TEXT, text = text))
+    }
+    val target = documentRange(replacementStart, replacementEnd)
+    if (hasComposition(state)) {
+        val composition = state.compositionRange
+        if (composition.startUtf16 != replacementStart || composition.endUtf16 != replacementEnd) {
+            return listOf(
+                imeCommand(ImeCommandKind.FINISH_COMPOSITION),
+                imeCommand(ImeCommandKind.COMMIT_TEXT, targetRange = target, text = text),
+            )
+        }
+    }
+    return listOf(imeCommand(ImeCommandKind.COMMIT_TEXT, text = text))
+}
