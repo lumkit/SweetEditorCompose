@@ -12,6 +12,8 @@ class SweetEditorController(
     private var languageConfiguration: LanguageConfiguration? = null
     private var metadata: EditorMetadata? = null
     private var iconProvider: EditorIconProvider? = null
+    internal var selectionMenuItemProvider: SelectionMenuItemProvider? = null
+        private set
     val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
@@ -88,6 +90,18 @@ class SweetEditorController(
     fun paste() {
         session?.pasteFromClipboard()
     }
+
+    fun selectAll() {
+        session?.selectAll()
+    }
+
+    fun setSelectionMenuItemProvider(provider: SelectionMenuItemProvider?) {
+        selectionMenuItemProvider = provider
+        session?.applySelectionMenuProvider(provider)
+    }
+
+    fun onSelectionMenuItemClick(listener: (SelectionMenuItemClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
 
     fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0) {
         session?.registerTextStyle(styleId, color, backgroundColor, fontStyle)
@@ -432,6 +446,7 @@ class SweetEditorController(
         next.applyLanguageConfiguration(languageConfiguration)
         next.setMetadata(metadata)
         next.setEditorIconProvider(iconProvider)
+        next.applySelectionMenuProvider(selectionMenuItemProvider)
         val pending = readyCallbacks.toList()
         readyCallbacks.clear()
         pending.forEach { it() }

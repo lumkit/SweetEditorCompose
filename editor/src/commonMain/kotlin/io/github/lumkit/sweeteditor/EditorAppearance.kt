@@ -135,6 +135,9 @@ data class EditorTheme(
     val bracketHighlightBgColor: Int = 0x2A9ECE6A,
     val bracketHighlightBorderColor: Int = 0xCC9ECE6A.toInt(),
     val gutterIconColor: Int = 0xCC9CB0CD.toInt(),
+    val selectionMenuBgColor: Int = 0xFF2B2B2B.toInt(),
+    val selectionMenuTextColor: Int = 0xFFE6E6E6.toInt(),
+    val selectionMenuDividerColor: Int = 0x33FFFFFF,
     val fontFamily: FontFamily = FontFamily.Monospace,
     val rangeEffects: EditorRangeEffects? = null,
 ) {
@@ -166,11 +169,16 @@ data class EditorTheme(
             diagnosticWarningColor = 0xFFB26A00.toInt(),
             diagnosticInfoColor = 0xFF0277BD.toInt(),
             diagnosticHintColor = 0xFF546E7A.toInt(),
+            selectionMenuBgColor = 0xFFF5F5F5.toInt(),
+            selectionMenuTextColor = 0xFF1E1E1E.toInt(),
+            selectionMenuDividerColor = 0x33000000,
         )
     }
 }
 
 internal expect fun platformDefaultGutterSticky(): Boolean
+
+internal expect fun platformSelectionMenuEnabled(): Boolean
 
 internal fun EditorTheme.toRangeEffectStyles(): EditorRangeEffectStyles {
     val derived = EditorRangeEffectStyles(

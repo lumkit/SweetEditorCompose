@@ -6,6 +6,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import io.github.lumkit.sweeteditor.completion.EditorCompletionPopup
+import io.github.lumkit.sweeteditor.selection.EditorSelectionMenuPopup
+import io.github.lumkit.sweeteditor.selection.SelectionMenuController
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +52,7 @@ import io.github.lumkit.sweeteditor.render.toComposeColor
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 import androidx.compose.foundation.text.BasicText
+import kotlinx.coroutines.delay
 
 @Composable
 fun SweetEditor(
@@ -141,6 +144,13 @@ fun SweetEditor(
                 session.tickAnimations()
             }
         }
+    }
+
+    LaunchedEffect(session.selectionMenuShowToken) {
+        val token = session.selectionMenuShowToken
+        if (token == 0) return@LaunchedEffect
+        delay(SelectionMenuController.SHOW_DELAY_MS)
+        session.presentSelectionMenu(token)
     }
 
     val error = session.loadError
@@ -263,6 +273,13 @@ fun SweetEditor(
         onSelect = { session.selectCompletionIndex(it) },
         onConfirm = session::applyCompletionItem,
         onDismiss = session::dismissCompletion,
+    )
+    EditorSelectionMenuPopup(
+        items = session.selectionMenuItems,
+        anchor = session.selectionMenuAnchor,
+        theme = theme,
+        onItemClick = session::onSelectionMenuItemClick,
+        onDismiss = session::hideSelectionMenu,
     )
     }
 }
