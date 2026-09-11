@@ -38,8 +38,9 @@ import io.github.lumkit.sweeteditor.input.coreWheelDelta
 import io.github.lumkit.sweeteditor.input.editorIme
 import io.github.lumkit.sweeteditor.input.encodeGesture
 import io.github.lumkit.sweeteditor.input.mapKeyEvent
-import io.github.lumkit.sweeteditor.input.mapPointerEventType
+import io.github.lumkit.sweeteditor.input.mapPointerGesture
 import io.github.lumkit.sweeteditor.input.pointerModifiers
+import io.github.lumkit.sweeteditor.input.wheelModifiersForCore
 import io.github.lumkit.sweeteditor.render.drawEditor
 import io.github.lumkit.sweeteditor.render.toComposeColor
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
@@ -64,18 +65,25 @@ fun SweetEditor(
             defaultLayoutDirection = layoutDirection,
         )
     }
-    val textStyle = remember(theme, settings.fontSizeSp, settings.scale, densityValue, fontScale) {
-        TextStyle(
-            color = theme.textColor.toComposeColor(),
-            fontFamily = theme.fontFamily,
-            fontSize = (settings.fontSizeSp * settings.scale).sp,
-        )
-    }
     val hostMeasurer = remember(controller) {
-        HostTextMeasurer(textMeasurer, textStyle)
+        HostTextMeasurer(
+            textMeasurer,
+            TextStyle(
+                color = theme.textColor.toComposeColor(),
+                fontFamily = theme.fontFamily,
+                fontSize = (settings.fontSizeSp * settings.scale).sp,
+            ),
+        )
     }
     val session = remember(controller) {
         RememberedEditorSession(controller, controller.initialText, hostMeasurer)
+    }
+    val textStyle = remember(theme, settings.fontSizeSp, session.visualScale, densityValue, fontScale) {
+        TextStyle(
+            color = theme.textColor.toComposeColor(),
+            fontFamily = theme.fontFamily,
+            fontSize = (settings.fontSizeSp * session.visualScale).sp,
+        )
     }
     val fontMetricsChanged = hostMeasurer.bind(textMeasurer, textStyle, densityValue, fontScale)
     SideEffect {
@@ -131,78 +139,77 @@ fun SweetEditor(
             .focusable()
             .onPreviewKeyEvent { event ->
                 val mapped = mapKeyEvent(event) ?: return@onPreviewKeyEvent false
+                if (mapped.pointerModifiersOnly) {
+                    session.updatePointerModifiers(mapped.modifiers)
+                    return@onPreviewKeyEvent false
+                }
                 session.handleKey(mapped.keyCode, mapped.text, mapped.modifiers)
                 true
             }
             .pointerInput(session) {
-                var pointerDown = false
+                var previousPressedCount = 0
                 var lastPoint = PointF(0f, 0f)
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull() ?: continue
                         val modifiers = pointerModifiers(event)
-                        val isMouse = change.type == PointerType.Mouse || change.type == PointerType.Stylus
+                        val isMouse = event.changes.any {
+                            it.type == PointerType.Mouse || it.type == PointerType.Stylus
+                        }
+                        val pressedPoints = event.changes
+                            .filter { it.pressed }
+                            .map { PointF(it.position.x, it.position.y) }
                         lastPoint = PointF(change.position.x, change.position.y)
                         if (event.type == PointerEventType.Press) {
-                            pointerDown = true
                             runCatching { focusRequester.requestFocus() }
-                            change.consume()
                         }
                         if (event.type == PointerEventType.Scroll) {
                             val point = PointF(change.position.x, change.position.y)
                             val (wheelX, wheelY) = coreWheelDelta(change.scrollDelta)
+                            val wheelModifiers = wheelModifiersForCore(modifiers)
                             session.handleGesture(
-                                encodeGesture(EventType.DIRECT_GESTURE_BEGIN, listOf(point), modifiers),
+                                encodeGesture(EventType.DIRECT_GESTURE_BEGIN, listOf(point), wheelModifiers),
                             )
                             session.handleGesture(
                                 encodeGesture(
                                     type = EventType.MOUSE_WHEEL,
                                     points = listOf(point),
-                                    modifiers = modifiers,
+                                    modifiers = wheelModifiers,
                                     wheelDeltaX = wheelX,
                                     wheelDeltaY = wheelY,
                                 ),
                             )
                             session.handleGesture(
-                                encodeGesture(EventType.DIRECT_GESTURE_END, listOf(point), modifiers),
+                                encodeGesture(EventType.DIRECT_GESTURE_END, listOf(point), wheelModifiers),
                             )
-                            change.consume()
+                            event.changes.forEach { it.consume() }
                             continue
                         }
-                        if (event.type == PointerEventType.Exit) {
-                            if (pointerDown) {
-                                pointerDown = false
-                                session.handleGesture(
-                                    encodeGesture(
-                                        if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP,
-                                        listOf(lastPoint),
-                                        modifiers,
-                                    ),
-                                )
-                            } else if (isMouse) {
-                                session.handleGesture(
-                                    encodeGesture(
-                                        EventType.MOUSE_MOVE,
-                                        listOf(PointF(-1f, -1f)),
-                                        modifiers,
-                                    ),
-                                )
-                            }
+                        if (event.type == PointerEventType.Exit && previousPressedCount > 0) {
+                            val endType = if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP
+                            session.handleGesture(encodeGesture(endType, listOf(lastPoint), modifiers))
+                            previousPressedCount = 0
+                            event.changes.forEach { it.consume() }
                             continue
                         }
-                        val type = mapPointerEventType(event, change.type) ?: continue
-                        if (type == EventType.MOUSE_UP || type == EventType.TOUCH_UP) {
-                            pointerDown = false
-                        }
+                        val mapped = mapPointerGesture(
+                            eventType = event.type,
+                            isMouse = isMouse,
+                            pressedPoints = pressedPoints,
+                            fallbackPoint = lastPoint,
+                            previousPressedCount = previousPressedCount,
+                        )
+                        previousPressedCount = pressedPoints.size
+                        if (mapped == null) continue
                         session.handleGesture(
                             encodeGesture(
-                                type = type,
-                                points = listOf(lastPoint),
+                                type = mapped.type,
+                                points = mapped.points,
                                 modifiers = modifiers,
                             ),
                         )
-                        change.consume()
+                        event.changes.forEach { it.consume() }
                     }
                 }
             },

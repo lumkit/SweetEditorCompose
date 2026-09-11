@@ -54,14 +54,48 @@ internal fun encodeGesture(
     ),
 )
 
-internal fun mapPointerEventType(event: PointerEvent, changeType: PointerType): EventType? {
-    val isMouse = changeType == PointerType.Mouse || changeType == PointerType.Stylus
-    return when (event.type) {
-        PointerEventType.Press -> if (isMouse) EventType.MOUSE_DOWN else EventType.TOUCH_DOWN
-        PointerEventType.Move -> if (isMouse) EventType.MOUSE_MOVE else EventType.TOUCH_MOVE
-        PointerEventType.Release -> if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP
-        PointerEventType.Exit -> EventType.MOUSE_MOVE
+internal data class MappedPointerGesture(
+    val type: EventType,
+    val points: List<PointF>,
+)
+
+internal fun mapPointerGesture(
+    eventType: PointerEventType,
+    isMouse: Boolean,
+    pressedPoints: List<PointF>,
+    fallbackPoint: PointF,
+    previousPressedCount: Int,
+): MappedPointerGesture? {
+    return when (eventType) {
+        PointerEventType.Press -> when {
+            isMouse -> MappedPointerGesture(EventType.MOUSE_DOWN, listOf(fallbackPoint))
+            previousPressedCount == 0 -> MappedPointerGesture(EventType.TOUCH_DOWN, pressedPoints.ifEmpty { listOf(fallbackPoint) })
+            else -> MappedPointerGesture(EventType.TOUCH_POINTER_DOWN, pressedPoints.ifEmpty { listOf(fallbackPoint) })
+        }
+        PointerEventType.Move -> when {
+            isMouse -> MappedPointerGesture(EventType.MOUSE_MOVE, listOf(fallbackPoint))
+            pressedPoints.isEmpty() -> null
+            else -> MappedPointerGesture(EventType.TOUCH_MOVE, pressedPoints)
+        }
+        PointerEventType.Release -> when {
+            isMouse -> MappedPointerGesture(EventType.MOUSE_UP, listOf(fallbackPoint))
+            pressedPoints.isEmpty() -> MappedPointerGesture(EventType.TOUCH_UP, listOf(fallbackPoint))
+            else -> MappedPointerGesture(EventType.TOUCH_POINTER_UP, pressedPoints)
+        }
+        PointerEventType.Exit -> if (isMouse && previousPressedCount == 0) {
+            MappedPointerGesture(EventType.MOUSE_MOVE, listOf(PointF(-1f, -1f)))
+        } else {
+            null
+        }
         else -> null
+    }
+}
+
+internal fun wheelModifiersForCore(modifiers: Int): Int {
+    return if ((modifiers and (KeyModifier.CTRL or KeyModifier.META)) != 0) {
+        modifiers or KeyModifier.CTRL
+    } else {
+        modifiers
     }
 }
 
@@ -69,22 +103,55 @@ internal data class MappedKey(
     val keyCode: Int,
     val text: ByteArray?,
     val modifiers: Int,
+    val pointerModifiersOnly: Boolean = false,
 )
 
 internal fun mapKeyEvent(event: KeyEvent): MappedKey? {
+    val modifiers = keyModifiers(event)
+    if (isModifierKey(event.key)) {
+        if (event.type != KeyEventType.KeyDown && event.type != KeyEventType.KeyUp) return null
+        return MappedKey(KeyCode.NONE, null, modifiers, pointerModifiersOnly = true)
+    }
     if (event.type != KeyEventType.KeyDown) return null
+    val command = mapCommandKeyCode(event.key)
+    if (command != KeyCode.NONE) {
+        return MappedKey(command, null, modifiers)
+    }
+    val shortcut = (modifiers and (KeyModifier.CTRL or KeyModifier.ALT or KeyModifier.META)) != 0
+    if (shortcut) {
+        val shortcutCode = mapShortcutKeyCode(event.key)
+        if (shortcutCode != KeyCode.NONE) {
+            return MappedKey(shortcutCode, null, modifiers)
+        }
+    }
+    if (event.key == Key.Spacebar) {
+        return MappedKey(KeyCode.NONE, " ".encodeToByteArray(), 0)
+    }
+    val text = typedCharacterBytes(event.utf16CodePoint) ?: return null
+    return MappedKey(KeyCode.NONE, text, 0)
+}
+
+internal fun keyModifiers(event: KeyEvent): Int {
     var modifiers = 0
     if (event.isShiftPressed) modifiers = modifiers or KeyModifier.SHIFT
     if (event.isCtrlPressed) modifiers = modifiers or KeyModifier.CTRL
     if (event.isAltPressed) modifiers = modifiers or KeyModifier.ALT
     if (event.isMetaPressed) modifiers = modifiers or KeyModifier.META
-    val keyCode = mapKeyCode(event.key)
-    val text = characterBytes(event)
-    if (keyCode == KeyCode.NONE && text == null) return null
-    return MappedKey(keyCode, text, modifiers)
+    return modifiers
 }
 
-private fun mapKeyCode(key: Key): Int = when (key) {
+internal fun isModifierKey(key: Key): Boolean = when (key) {
+    Key.ShiftLeft, Key.ShiftRight,
+    Key.CtrlLeft, Key.CtrlRight,
+    Key.AltLeft, Key.AltRight,
+    Key.MetaLeft, Key.MetaRight,
+    Key.CapsLock, Key.NumLock, Key.ScrollLock,
+    Key.Function,
+    -> true
+    else -> false
+}
+
+private fun mapCommandKeyCode(key: Key): Int = when (key) {
     Key.Backspace -> KeyCode.BACKSPACE
     Key.Delete -> KeyCode.DELETE_KEY
     Key.Enter, Key.NumPadEnter -> KeyCode.ENTER
@@ -98,6 +165,10 @@ private fun mapKeyCode(key: Key): Int = when (key) {
     Key.MoveEnd -> KeyCode.END
     Key.PageUp -> KeyCode.PAGE_UP
     Key.PageDown -> KeyCode.PAGE_DOWN
+    else -> KeyCode.NONE
+}
+
+private fun mapShortcutKeyCode(key: Key): Int = when (key) {
     Key.A -> KeyCode.A
     Key.C -> KeyCode.C
     Key.D -> KeyCode.D
@@ -110,13 +181,17 @@ private fun mapKeyCode(key: Key): Int = when (key) {
     else -> KeyCode.NONE
 }
 
-private fun characterBytes(event: KeyEvent): ByteArray? {
-    val codePoint = event.utf16CodePoint
-    return if (codePoint in 32..0xFFFF) {
-        codePoint.toChar().toString().encodeToByteArray()
-    } else {
-        null
-    }
+internal fun typedCharacterBytes(codePoint: Int): ByteArray? {
+    if (!isTypedCharacter(codePoint)) return null
+    return codePoint.toChar().toString().encodeToByteArray()
+}
+
+internal fun isTypedCharacter(codePoint: Int): Boolean {
+    if (codePoint < 32 || codePoint == 127) return false
+    if (codePoint in 0x80..0x9F) return false
+    if (codePoint in 0xE000..0xF8FF) return false
+    if (codePoint >= 0xFFE0) return false
+    return codePoint <= 0x10FFFF
 }
 
 /**

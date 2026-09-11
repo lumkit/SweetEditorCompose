@@ -15,6 +15,7 @@ internal expect object NativeBridge {
     fun editorBuildRenderModel(editor: Long): ByteArray?
     fun editorHandleGestureEvent(editor: Long, payload: ByteArray): ByteArray?
     fun editorHandleKeyEvent(editor: Long, keyCode: Int, text: ByteArray?, modifiers: Int): ByteArray?
+    fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray?
     fun editorTickAnimations(editor: Long): ByteArray?
     fun editorInsertText(editor: Long, text: ByteArray): ByteArray?
     fun editorBackspace(editor: Long): ByteArray?

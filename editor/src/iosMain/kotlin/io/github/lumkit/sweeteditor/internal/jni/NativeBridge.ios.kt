@@ -58,6 +58,7 @@ import sweeteditor.cinterop.editor_set_tab_size
 import sweeteditor.cinterop.editor_set_viewport
 import sweeteditor.cinterop.editor_set_wrap_mode
 import sweeteditor.cinterop.editor_tick_animations
+import sweeteditor.cinterop.editor_update_pointer_modifiers
 import sweeteditor.cinterop.editor_undo
 import sweeteditor.cinterop.free_binary_data
 import sweeteditor.cinterop.free_document
@@ -167,6 +168,11 @@ internal actual object NativeBridge {
                     )
                 }
             }
+        }
+
+    actual fun editorUpdatePointerModifiers(editor: Long, modifiers: Int): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_update_pointer_modifiers(editor, modifiers.toUByte(), size) }
         }
 
     actual fun editorHandleKeyEvent(editor: Long, keyCode: Int, text: ByteArray?, modifiers: Int): ByteArray? =
