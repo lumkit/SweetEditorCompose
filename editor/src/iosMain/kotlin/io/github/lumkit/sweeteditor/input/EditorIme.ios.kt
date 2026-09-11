@@ -9,6 +9,8 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIView
 import platform.UIKit.UIWindow
 
+internal actual fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier = this
+
 internal actual fun Modifier.editorIme(session: RememberedEditorSession): Modifier =
     this.then(EditorImeElement(session))
 

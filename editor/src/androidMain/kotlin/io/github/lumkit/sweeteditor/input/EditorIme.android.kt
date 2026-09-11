@@ -15,6 +15,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
+internal actual fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier = this
+
 internal actual fun Modifier.editorIme(session: RememberedEditorSession): Modifier =
     this.then(EditorImeElement(session))
 

@@ -49,6 +49,14 @@ class InputMappingTest {
     }
 
     @Test
+    fun macosMagnificationDeltaBecomesCoreDirectScale() {
+        assertEquals(1.1f, magnificationToDirectScale(0.1)!!)
+        assertEquals(0.9f, magnificationToDirectScale(-0.1)!!)
+        assertNull(magnificationToDirectScale(0.0))
+        assertNull(magnificationToDirectScale(Double.NaN))
+    }
+
+    @Test
     fun commandOrControlWheelAddsCtrlForCoreZoom() {
         assertEquals(KeyModifier.CTRL, wheelModifiersForCore(KeyModifier.CTRL))
         assertEquals(KeyModifier.META or KeyModifier.CTRL, wheelModifiersForCore(KeyModifier.META))

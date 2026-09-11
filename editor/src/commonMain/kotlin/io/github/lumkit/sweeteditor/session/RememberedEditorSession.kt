@@ -15,8 +15,11 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.EventType
 import io.github.lumkit.sweeteditor.core.protocol.GestureType
 import io.github.lumkit.sweeteditor.core.protocol.HitTargetType
+import io.github.lumkit.sweeteditor.core.protocol.PointF
+import io.github.lumkit.sweeteditor.input.encodeGesture
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommand
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
 import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
@@ -42,6 +45,9 @@ internal class RememberedEditorSession(
         private set
     var visualScale by mutableStateOf(1f)
         private set
+    internal var lastPointer = PointF(0f, 0f)
+    internal var pointerHovering = false
+    private var hostScaleGestureActive = false
 
     val isReady: Boolean get() = editor != null && !disposed
 
@@ -128,6 +134,37 @@ internal class RememberedEditorSession(
     fun handleGesture(payload: ByteArray) {
         val core = editor ?: return
         dispatchActionResult(core.handleGestureEvent(payload))
+    }
+
+    fun notePointer(point: PointF, hovering: Boolean) {
+        lastPointer = point
+        pointerHovering = hovering
+    }
+
+    fun beginHostScaleGesture() {
+        if (hostScaleGestureActive || !pointerHovering) return
+        hostScaleGestureActive = true
+        handleGesture(encodeGesture(EventType.DIRECT_GESTURE_BEGIN, listOf(lastPointer)))
+    }
+
+    fun handleDirectScale(directScale: Float) {
+        if (!pointerHovering) return
+        if (!hostScaleGestureActive) {
+            beginHostScaleGesture()
+        }
+        handleGesture(
+            encodeGesture(
+                type = EventType.DIRECT_SCALE,
+                points = listOf(lastPointer),
+                directScale = directScale,
+            ),
+        )
+    }
+
+    fun endHostScaleGesture() {
+        if (!hostScaleGestureActive) return
+        hostScaleGestureActive = false
+        handleGesture(encodeGesture(EventType.DIRECT_GESTURE_END, listOf(lastPointer)))
     }
 
     fun handleKey(keyCode: Int, text: ByteArray?, modifiers: Int) {

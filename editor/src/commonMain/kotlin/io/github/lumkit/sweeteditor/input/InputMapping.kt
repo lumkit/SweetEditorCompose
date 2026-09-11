@@ -91,6 +91,11 @@ internal fun mapPointerGesture(
     }
 }
 
+internal fun magnificationToDirectScale(magnification: Double): Float? {
+    val factor = (1.0 + magnification).toFloat()
+    return factor.takeIf { it.isFinite() && it > 0f && it != 1f }
+}
+
 internal fun wheelModifiersForCore(modifiers: Int): Int {
     return if ((modifiers and (KeyModifier.CTRL or KeyModifier.META)) != 0) {
         modifiers or KeyModifier.CTRL
