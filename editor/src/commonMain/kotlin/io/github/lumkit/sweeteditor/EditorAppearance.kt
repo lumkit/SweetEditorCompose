@@ -2,7 +2,10 @@ package io.github.lumkit.sweeteditor
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.text.font.FontFamily
+import io.github.lumkit.sweeteditor.core.protocol.EditorRangeEffectStyles
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderColors
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectStyle
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectUnderlineStyle
 
 enum class WrapMode(val value: Int) {
     NONE(0),
@@ -63,6 +66,37 @@ data class EditorTheme(
 )
 
 internal expect fun platformDefaultGutterSticky(): Boolean
+
+private val EmptyRangeEffectStyle = RangeEffectStyle(
+    foregroundColor = 0,
+    backgroundColor = 0,
+    borderColor = 0,
+    underlineColor = 0,
+    underlineStyle = RangeEffectUnderlineStyle.NONE,
+)
+
+internal fun EditorTheme.toRangeEffectStyles(): EditorRangeEffectStyles = EditorRangeEffectStyles(
+    selection = RangeEffectStyle(
+        foregroundColor = 0,
+        backgroundColor = selectionColor,
+        borderColor = 0,
+        underlineColor = 0,
+        underlineStyle = RangeEffectUnderlineStyle.NONE,
+    ),
+    searchMatch = EmptyRangeEffectStyle,
+    searchCurrent = EmptyRangeEffectStyle,
+    documentHighlightText = EmptyRangeEffectStyle,
+    documentHighlightRead = EmptyRangeEffectStyle,
+    documentHighlightWrite = EmptyRangeEffectStyle,
+    linkedEditingActive = EmptyRangeEffectStyle,
+    linkedEditingInactive = EmptyRangeEffectStyle,
+    imeComposition = EmptyRangeEffectStyle,
+    bracketMatch = EmptyRangeEffectStyle,
+    diagnosticError = EmptyRangeEffectStyle,
+    diagnosticWarning = EmptyRangeEffectStyle,
+    diagnosticInfo = EmptyRangeEffectStyle,
+    diagnosticHint = EmptyRangeEffectStyle,
+)
 
 internal fun EditorTheme.toRenderColors(): EditorRenderColors = EditorRenderColors(
     textForeground = textColor,

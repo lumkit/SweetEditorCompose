@@ -500,6 +500,15 @@ jbyteArray set_editor_render_colors_jni(JNIEnv* env, jclass, jlong editor, jbyte
   return adopt_binary(env, result, size);
 }
 
+jbyteArray set_editor_range_effect_styles_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_editor_range_effect_styles(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
 jbyteArray ime_begin_session_jni(JNIEnv* env, jclass, jlong editor, jint mutation_model) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -788,6 +797,7 @@ const JNINativeMethod kMethods[] = {
     {"editorSetReadOnly", "(JZ)[B", (void*)set_read_only_jni},
     {"editorSetCurrentLineRenderMode", "(JI)[B", (void*)set_current_line_render_mode_jni},
     {"editorSetEditorRenderColors", "(J[B)[B", (void*)set_editor_render_colors_jni},
+    {"editorSetEditorRangeEffectStyles", "(J[B)[B", (void*)set_editor_range_effect_styles_jni},
     {"editorImeBeginSession", "(JI)[B", (void*)ime_begin_session_jni},
     {"editorImeEndSession", "(JJ)[B", (void*)ime_end_session_jni},
     {"editorImeApplyCommands", "(J[B)[B", (void*)ime_apply_commands_jni},
