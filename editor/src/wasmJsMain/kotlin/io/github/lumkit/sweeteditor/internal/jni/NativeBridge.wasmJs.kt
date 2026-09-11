@@ -444,14 +444,14 @@ private fun installMeasurerCallbacksJs(
     ascent: () -> Float,
     descent: () -> Float,
 ): Int = js(
-    "void (globalThis.__seMeasureText = measureText, globalThis.__seMeasureInlay = measureInlay, globalThis.__seMeasureIcon = measureIcon, globalThis.__seFontAscent = ascent, globalThis.__seFontDescent = descent), 0",
+    "(globalThis.__seMeasureText = measureText, globalThis.__seMeasureInlay = measureInlay, globalThis.__seMeasureIcon = measureIcon, globalThis.__seFontAscent = ascent, globalThis.__seFontDescent = descent, 0)",
 )
 
 private fun createDocumentFromUtf8Js(bytes: JsAny): Int =
     js("globalThis.SweetEditorWebAbi.createDocumentFromUtf8(bytes)")
 
 private fun freeDocumentJs(handle: Int): Int =
-    js("globalThis.SweetEditorWebAbi.freeDocument(handle), 0")
+    js("(globalThis.SweetEditorWebAbi.freeDocument(handle), 0)")
 
 private fun getDocumentUtf8Js(handle: Int): JsAny? =
     js("globalThis.SweetEditorWebAbi.getDocumentUtf8(handle)")
@@ -460,7 +460,7 @@ private fun createEditorJs(options: JsAny): Int =
     js("globalThis.SweetEditorWebAbi.createEditor(options)")
 
 private fun freeEditorJs(handle: Int): Int =
-    js("globalThis.SweetEditorWebAbi.freeEditor(handle), 0")
+    js("(globalThis.SweetEditorWebAbi.freeEditor(handle), 0)")
 
 private fun editorSetDocumentJs(editor: Int, document: Int): JsAny? =
     js("globalThis.SweetEditorWebAbi.editorSetDocument(editor, document)")
