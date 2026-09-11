@@ -65,6 +65,16 @@ data class TextChange(
     val newText: String,
 )
 
+data class EditorDocument(
+    val text: String,
+)
+
+enum class ScrollBehavior(val value: Int) {
+    GOTO_TOP(0),
+    GOTO_CENTER(1),
+    GOTO_BOTTOM(2),
+}
+
 sealed interface EditorEvent
 
 data class TextChangedEvent(
@@ -90,6 +100,43 @@ data class ScrollChangedEvent(
 
 data class ScaleChangedEvent(
     val scale: Float,
+) : EditorEvent
+
+data class DocumentLoadedEvent(
+    val lineCount: Int,
+) : EditorEvent
+
+data class FoldToggleEvent(
+    val line: Int,
+) : EditorEvent
+
+data class GutterIconClickEvent(
+    val line: Int,
+    val column: Int,
+    val iconId: Int,
+    val locationInEditor: EditorPoint,
+) : EditorEvent
+
+data class InlayHintClickEvent(
+    val line: Int,
+    val column: Int,
+    val locationInEditor: EditorPoint,
+) : EditorEvent
+
+data class CodeLensClickEvent(
+    val line: Int,
+    val column: Int,
+    val locationInEditor: EditorPoint,
+) : EditorEvent
+
+data class LongPressEvent(
+    val cursorPosition: TextPosition,
+    val locationInEditor: EditorPoint,
+) : EditorEvent
+
+data class DoubleTapEvent(
+    val cursorPosition: TextPosition,
+    val locationInEditor: EditorPoint,
 ) : EditorEvent
 
 class EditorEventBus {

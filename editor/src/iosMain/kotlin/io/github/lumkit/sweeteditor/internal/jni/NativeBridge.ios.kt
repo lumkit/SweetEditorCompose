@@ -144,6 +144,18 @@ import sweeteditor.cinterop.free_binary_data
 import sweeteditor.cinterop.free_document
 import sweeteditor.cinterop.free_editor
 import sweeteditor.cinterop.free_u8_string
+import sweeteditor.cinterop.editor_delete_text
+import sweeteditor.cinterop.editor_delete_forward
+import sweeteditor.cinterop.editor_ensure_cursor_visible
+import sweeteditor.cinterop.editor_get_selection
+import sweeteditor.cinterop.editor_get_word_at_cursor
+import sweeteditor.cinterop.editor_goto_position
+import sweeteditor.cinterop.editor_scroll_to_line
+import sweeteditor.cinterop.editor_select_all
+import sweeteditor.cinterop.editor_set_cursor_position
+import sweeteditor.cinterop.editor_set_scroll
+import sweeteditor.cinterop.editor_set_selection
+import sweeteditor.cinterop.get_document_line_count
 import sweeteditor.cinterop.get_document_utf8
 import sweeteditor.cinterop.text_measurer_t
 @OptIn(ExperimentalForeignApi::class)
@@ -194,6 +206,8 @@ internal actual object NativeBridge {
         free_u8_string(ptr.rawValue.toLong())
         return text.encodeToByteArray()
     }
+
+    actual fun getDocumentLineCount(handle: Long): Int = get_document_line_count(handle).toInt()
 
     actual fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long {
         pendingMeasurer = measurer
@@ -325,6 +339,28 @@ internal actual object NativeBridge {
             }
         }
     }
+
+    actual fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        adoptBinary { size ->
+            editor_delete_text(
+                editor,
+                startLine.convert(),
+                startColumn.convert(),
+                endLine.convert(),
+                endColumn.convert(),
+                size,
+            )
+        }
+    }
+
+    actual fun editorDeleteForward(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_delete_forward(editor, size) } }
 
     actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
         withActive(editor) {
@@ -720,6 +756,58 @@ internal actual object NativeBridge {
         }
     }
 
+    actual fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                editor_set_cursor_position(editor, line.convert(), column.convert(), size)
+            }
+        }
+
+    actual fun editorSelectAll(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_select_all(editor, size) } }
+
+    actual fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        adoptBinary { size ->
+            editor_set_selection(
+                editor,
+                startLine.convert(),
+                startColumn.convert(),
+                endLine.convert(),
+                endColumn.convert(),
+                size,
+            )
+        }
+    }
+
+    actual fun editorGetSelection(editor: Long): IntArray = withActive(editor) {
+        memScoped {
+            val startLine = alloc<size_tVar>()
+            val startColumn = alloc<size_tVar>()
+            val endLine = alloc<size_tVar>()
+            val endColumn = alloc<size_tVar>()
+            val has = editor_get_selection(
+                editor,
+                startLine.ptr,
+                startColumn.ptr,
+                endLine.ptr,
+                endColumn.ptr,
+            )
+            intArrayOf(
+                has,
+                startLine.value.toInt(),
+                startColumn.value.toInt(),
+                endLine.value.toInt(),
+                endColumn.value.toInt(),
+            )
+        }
+    }
+
     actual fun editorGetWordRangeAtCursor(editor: Long): IntArray = withActive(editor) {
         memScoped {
             val startLine = alloc<size_tVar>()
@@ -741,6 +829,33 @@ internal actual object NativeBridge {
             )
         }
     }
+
+    actual fun editorGetWordAtCursor(editor: Long): ByteArray = withActive(editor) {
+        val ptr = editor_get_word_at_cursor(editor) ?: return@withActive ByteArray(0)
+        val text = ptr.toKString()
+        free_u8_string(ptr.rawValue.toLong())
+        text.encodeToByteArray()
+    }
+
+    actual fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                editor_scroll_to_line(editor, line.convert(), behavior.toUByte(), size)
+            }
+        }
+
+    actual fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                editor_goto_position(editor, line.convert(), column.convert(), size)
+            }
+        }
+
+    actual fun editorEnsureCursorVisible(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_ensure_cursor_visible(editor, size) } }
+
+    actual fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_scroll(editor, scrollX, scrollY, size) } }
 
     actual fun editorDecorationOp(
         editor: Long,

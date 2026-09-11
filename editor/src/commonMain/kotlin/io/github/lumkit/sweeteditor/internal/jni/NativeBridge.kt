@@ -7,6 +7,7 @@ internal expect object NativeBridge {
     fun createDocumentFromUtf8(utf8: ByteArray): Long
     fun freeDocument(handle: Long)
     fun getDocumentUtf8(handle: Long): ByteArray
+    fun getDocumentLineCount(handle: Long): Int
     fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long
     fun freeEditor(handle: Long)
     fun editorSetDocument(editor: Long, document: Long): ByteArray?
@@ -28,6 +29,14 @@ internal expect object NativeBridge {
         text: ByteArray,
     ): ByteArray?
     fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray?
+    fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray?
+    fun editorDeleteForward(editor: Long): ByteArray?
     fun editorBackspace(editor: Long): ByteArray?
     fun editorUndo(editor: Long): ByteArray?
     fun editorRedo(editor: Long): ByteArray?
@@ -100,7 +109,22 @@ internal expect object NativeBridge {
     fun editorGetScrollMetrics(editor: Long): ByteArray?
     fun editorGetSelectedText(editor: Long): ByteArray
     fun editorGetCursorPosition(editor: Long): IntArray
+    fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray?
+    fun editorSelectAll(editor: Long): ByteArray?
+    fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray?
+    fun editorGetSelection(editor: Long): IntArray
     fun editorGetWordRangeAtCursor(editor: Long): IntArray
+    fun editorGetWordAtCursor(editor: Long): ByteArray
+    fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray?
+    fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray?
+    fun editorEnsureCursorVisible(editor: Long): ByteArray?
+    fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray?
     fun editorDecorationOp(
         editor: Long,
         op: Int,

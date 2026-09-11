@@ -15,4 +15,13 @@ class EditorEventBusTest {
         bus.publish(ScrollChangedEvent(3f, 4f))
         assertEquals(listOf("1,2"), seen)
     }
+
+    @Test
+    fun newHostEventsAreSubscribeable() {
+        val bus = EditorEventBus()
+        var loaded = 0
+        bus.subscribe<DocumentLoadedEvent> { loaded = it.lineCount }
+        bus.publish(DocumentLoadedEvent(3))
+        assertEquals(3, loaded)
+    }
 }

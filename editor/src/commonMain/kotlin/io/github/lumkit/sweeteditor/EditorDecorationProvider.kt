@@ -39,6 +39,7 @@ interface DecorationReceiver {
 
 interface DecorationProvider {
     fun capabilities(): Set<DecorationType> = DecorationType.entries.toSet()
+    fun getCapabilities(): Set<DecorationType> = capabilities()
     fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver)
 }
 

@@ -24,9 +24,9 @@ enum class CompletionItemKind {
     TEXT,
 }
 
-enum class CompletionInsertTextFormat {
-    PLAIN_TEXT,
-    SNIPPET,
+enum class CompletionInsertTextFormat(val value: Int) {
+    PLAIN_TEXT(1),
+    SNIPPET(2),
 }
 
 data class EditorTextEdit(
@@ -50,6 +50,7 @@ data class CompletionItem(
 
 data class CompletionResult(
     val items: List<CompletionItem>,
+    val isIncomplete: Boolean = false,
 )
 
 data class CompletionContext(

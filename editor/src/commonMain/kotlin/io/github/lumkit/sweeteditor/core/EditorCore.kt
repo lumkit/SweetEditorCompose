@@ -67,6 +67,8 @@ internal class Document(
 
     fun utf8Text(): String = utf8().decodeToString()
 
+    fun lineCount(): Int = NativeBridge.getDocumentLineCount(handle)
+
     fun close() {
         if (ownsHandle && handle != 0L) {
             NativeBridge.freeDocument(handle)
@@ -146,6 +148,17 @@ internal class EditorCore(
 
     fun applyTextEdits(payload: ByteArray): EditorActionResult? =
         decodeAction(NativeBridge.editorApplyTextEdits(editorHandle, payload))
+
+    fun deleteText(
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): EditorActionResult? = decodeAction(
+        NativeBridge.editorDeleteText(editorHandle, startLine, startColumn, endLine, endColumn),
+    )
+
+    fun deleteForward(): EditorActionResult? = decodeAction(NativeBridge.editorDeleteForward(editorHandle))
 
     fun backspace(): EditorActionResult? = decodeAction(NativeBridge.editorBackspace(editorHandle))
 
@@ -266,6 +279,31 @@ internal class EditorCore(
         )
     }
 
+    fun setCursorPosition(line: Int, column: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetCursorPosition(editorHandle, line, column))
+
+    fun selectAll(): EditorActionResult? = decodeAction(NativeBridge.editorSelectAll(editorHandle))
+
+    fun setSelection(start: TextPosition, end: TextPosition): EditorActionResult? =
+        decodeAction(
+            NativeBridge.editorSetSelection(
+                editorHandle,
+                start.line,
+                start.column,
+                end.line,
+                end.column,
+            ),
+        )
+
+    fun getSelection(): TextRange? {
+        val values = NativeBridge.editorGetSelection(editorHandle)
+        if (values.getOrElse(0) { 0 } == 0) return null
+        return TextRange(
+            start = TextPosition(values.getOrElse(1) { 0 }, values.getOrElse(2) { 0 }),
+            end = TextPosition(values.getOrElse(3) { 0 }, values.getOrElse(4) { 0 }),
+        )
+    }
+
     fun getWordRangeAtCursor(): TextRange {
         val values = NativeBridge.editorGetWordRangeAtCursor(editorHandle)
         return TextRange(
@@ -273,6 +311,20 @@ internal class EditorCore(
             end = TextPosition(values.getOrElse(2) { 0 }, values.getOrElse(3) { 0 }),
         )
     }
+
+    fun getWordAtCursor(): String = NativeBridge.editorGetWordAtCursor(editorHandle).decodeToString()
+
+    fun scrollToLine(line: Int, behavior: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorScrollToLine(editorHandle, line, behavior))
+
+    fun gotoPosition(line: Int, column: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorGotoPosition(editorHandle, line, column))
+
+    fun ensureCursorVisible(): EditorActionResult? =
+        decodeAction(NativeBridge.editorEnsureCursorVisible(editorHandle))
+
+    fun setScroll(scrollX: Float, scrollY: Float): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetScroll(editorHandle, scrollX, scrollY))
 
     fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0): EditorActionResult? =
         decoration(NativeDecorationOp.REGISTER_TEXT_STYLE, a = styleId, b = color, c = backgroundColor, d = fontStyle)

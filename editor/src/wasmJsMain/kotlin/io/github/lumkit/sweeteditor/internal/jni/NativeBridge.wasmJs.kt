@@ -23,6 +23,9 @@ internal actual object NativeBridge {
     actual fun getDocumentUtf8(handle: Long): ByteArray =
         adoptJsBytes(getDocumentUtf8Js(handle.toInt())) ?: ByteArray(0)
 
+    actual fun getDocumentLineCount(handle: Long): Int =
+        getDocumentLineCountJs(handle.toInt())
+
     actual fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long {
         installCallbacksIfNeeded()
         val previous = currentMeasurer
@@ -90,6 +93,19 @@ internal actual object NativeBridge {
 
     actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
         withActive(editor) { adoptJsBytes(editorApplyTextEditsJs(editor.toInt(), payload.toJsU8())) }
+
+    actual fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        adoptJsBytes(editorDeleteTextJs(editor.toInt(), startLine, startColumn, endLine, endColumn))
+    }
+
+    actual fun editorDeleteForward(editor: Long): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorDeleteForwardJs(editor.toInt())) }
 
     actual fun editorBackspace(editor: Long): ByteArray? =
         withActive(editor) { adoptJsBytes(editorBackspaceJs(editor.toInt())) }
@@ -300,8 +316,42 @@ internal actual object NativeBridge {
     actual fun editorGetCursorPosition(editor: Long): IntArray =
         withActive(editor) { adoptJsInts(editorGetCursorPositionJs(editor.toInt())) }
 
+    actual fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorSetCursorPositionJs(editor.toInt(), line, column)) }
+
+    actual fun editorSelectAll(editor: Long): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorSelectAllJs(editor.toInt())) }
+
+    actual fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        adoptJsBytes(editorSetSelectionJs(editor.toInt(), startLine, startColumn, endLine, endColumn))
+    }
+
+    actual fun editorGetSelection(editor: Long): IntArray =
+        withActive(editor) { adoptJsInts(editorGetSelectionJs(editor.toInt())) }
+
     actual fun editorGetWordRangeAtCursor(editor: Long): IntArray =
         withActive(editor) { adoptJsInts(editorGetWordRangeAtCursorJs(editor.toInt())) }
+
+    actual fun editorGetWordAtCursor(editor: Long): ByteArray =
+        withActive(editor) { adoptJsBytes(editorGetWordAtCursorJs(editor.toInt())) ?: ByteArray(0) }
+
+    actual fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorScrollToLineJs(editor.toInt(), line, behavior)) }
+
+    actual fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorGotoPositionJs(editor.toInt(), line, column)) }
+
+    actual fun editorEnsureCursorVisible(editor: Long): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorEnsureCursorVisibleJs(editor.toInt())) }
+
+    actual fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray? =
+        withActive(editor) { adoptJsBytes(editorSetScrollJs(editor.toInt(), scrollX, scrollY)) }
 
     actual fun editorDecorationOp(
         editor: Long,
@@ -456,6 +506,9 @@ private fun freeDocumentJs(handle: Int): Int =
 private fun getDocumentUtf8Js(handle: Int): JsAny? =
     js("globalThis.SweetEditorWebAbi.getDocumentUtf8(handle)")
 
+private fun getDocumentLineCountJs(handle: Int): Int =
+    js("globalThis.SweetEditorWebAbi.getDocumentLineCount(handle)")
+
 private fun createEditorJs(options: JsAny): Int =
     js("globalThis.SweetEditorWebAbi.createEditor(options)")
 
@@ -504,6 +557,18 @@ private fun editorReplaceTextJs(
 
 private fun editorApplyTextEditsJs(editor: Int, payload: JsAny): JsAny? =
     js("globalThis.SweetEditorWebAbi.editorApplyTextEdits(editor, payload)")
+
+private fun editorDeleteTextJs(
+    editor: Int,
+    startLine: Int,
+    startColumn: Int,
+    endLine: Int,
+    endColumn: Int,
+): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorDeleteText(editor, startLine, startColumn, endLine, endColumn)")
+
+private fun editorDeleteForwardJs(editor: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorDeleteForward(editor)")
 
 private fun editorBackspaceJs(editor: Int): JsAny? =
     js("globalThis.SweetEditorWebAbi.editorBackspace(editor)")
@@ -693,6 +758,39 @@ private fun editorGetCursorPositionJs(editor: Int): JsAny =
 
 private fun editorGetWordRangeAtCursorJs(editor: Int): JsAny =
     js("globalThis.SweetEditorWebAbi.editorGetWordRangeAtCursor(editor)")
+
+private fun editorSetCursorPositionJs(editor: Int, line: Int, column: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorSetCursorPosition(editor, line, column)")
+
+private fun editorSelectAllJs(editor: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorSelectAll(editor)")
+
+private fun editorSetSelectionJs(
+    editor: Int,
+    startLine: Int,
+    startColumn: Int,
+    endLine: Int,
+    endColumn: Int,
+): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorSetSelection(editor, startLine, startColumn, endLine, endColumn)")
+
+private fun editorGetSelectionJs(editor: Int): JsAny =
+    js("globalThis.SweetEditorWebAbi.editorGetSelection(editor)")
+
+private fun editorGetWordAtCursorJs(editor: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorGetWordAtCursor(editor)")
+
+private fun editorScrollToLineJs(editor: Int, line: Int, behavior: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorScrollToLine(editor, line, behavior)")
+
+private fun editorGotoPositionJs(editor: Int, line: Int, column: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorGotoPosition(editor, line, column)")
+
+private fun editorEnsureCursorVisibleJs(editor: Int): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorEnsureCursorVisible(editor)")
+
+private fun editorSetScrollJs(editor: Int, scrollX: Float, scrollY: Float): JsAny? =
+    js("globalThis.SweetEditorWebAbi.editorSetScroll(editor, scrollX, scrollY)")
 
 private fun editorDecorationOpJs(
     editor: Int,
