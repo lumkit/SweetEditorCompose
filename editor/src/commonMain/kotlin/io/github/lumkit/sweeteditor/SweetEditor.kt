@@ -274,6 +274,7 @@ fun SweetEditor(
         selectedIndex = session.completionSelectedIndex,
         anchor = session.completionAnchor,
         theme = theme,
+        itemRenderer = session.completionItemRenderer,
         onSelect = { session.selectCompletionIndex(it) },
         onConfirm = session::applyCompletionItem,
         onDismiss = session::dismissCompletion,

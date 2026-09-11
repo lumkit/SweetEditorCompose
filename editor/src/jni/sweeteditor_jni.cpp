@@ -212,6 +212,10 @@ jbyteArray get_document_utf8_jni(JNIEnv* env, jclass, jlong handle) {
   return utf8_to_bytes(env, get_document_utf8(static_cast<intptr_t>(handle)));
 }
 
+jint get_document_line_count_jni(JNIEnv*, jclass, jlong handle) {
+  return static_cast<jint>(get_document_line_count(static_cast<intptr_t>(handle)));
+}
+
 jlong create_editor_jni(JNIEnv* env, jclass, jobject measurer, jbyteArray options) {
   jobject global_measurer = env->NewGlobalRef(measurer);
   g_pending_measurer = global_measurer;
@@ -369,6 +373,33 @@ jbyteArray apply_text_edits_jni(JNIEnv* env, jclass, jlong editor, jbyteArray pa
       static_cast<size_t>(view.len),
       &size);
   return adopt_binary(env, result, size);
+}
+
+jbyteArray delete_text_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jint start_line,
+    jint start_column,
+    jint end_line,
+    jint end_column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_delete_text(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(start_line),
+      static_cast<size_t>(start_column),
+      static_cast<size_t>(end_line),
+      static_cast<size_t>(end_column),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray delete_forward_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_delete_forward(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
 }
 
 jbyteArray backspace_jni(JNIEnv* env, jclass, jlong editor) {
@@ -942,6 +973,120 @@ jintArray get_word_range_at_cursor_jni(JNIEnv* env, jclass, jlong editor) {
   return result;
 }
 
+jbyteArray set_cursor_position_jni(JNIEnv* env, jclass, jlong editor, jint line, jint column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_cursor_position(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(line),
+      static_cast<size_t>(column),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray select_all_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_select_all(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_selection_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jint start_line,
+    jint start_column,
+    jint end_line,
+    jint end_column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_selection(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(start_line),
+      static_cast<size_t>(start_column),
+      static_cast<size_t>(end_line),
+      static_cast<size_t>(end_column),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jintArray get_selection_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t start_line = 0;
+  size_t start_column = 0;
+  size_t end_line = 0;
+  size_t end_column = 0;
+  const int has = editor_get_selection(
+      static_cast<intptr_t>(editor),
+      &start_line,
+      &start_column,
+      &end_line,
+      &end_column);
+  jintArray result = env->NewIntArray(5);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jint data[5] = {
+      static_cast<jint>(has),
+      static_cast<jint>(start_line),
+      static_cast<jint>(start_column),
+      static_cast<jint>(end_line),
+      static_cast<jint>(end_column),
+  };
+  env->SetIntArrayRegion(result, 0, 5, data);
+  return result;
+}
+
+jbyteArray get_word_at_cursor_jni(JNIEnv* env, jclass, jlong editor) {
+  if (editor == 0) {
+    return env->NewByteArray(0);
+  }
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const char* text = editor_get_word_at_cursor(static_cast<intptr_t>(editor));
+  return utf8_to_bytes(env, const_cast<char*>(text));
+}
+
+jbyteArray scroll_to_line_jni(JNIEnv* env, jclass, jlong editor, jint line, jint behavior) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_scroll_to_line(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(line),
+      static_cast<uint8_t>(behavior),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray goto_position_jni(JNIEnv* env, jclass, jlong editor, jint line, jint column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_goto_position(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(line),
+      static_cast<size_t>(column),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray ensure_cursor_visible_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_ensure_cursor_visible(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_scroll_jni(JNIEnv* env, jclass, jlong editor, jfloat scroll_x, jfloat scroll_y) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_scroll(
+      static_cast<intptr_t>(editor),
+      scroll_x,
+      scroll_y,
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray decoration_op_jni(
     JNIEnv* env,
     jclass,
@@ -1171,6 +1316,7 @@ const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
     {"getDocumentUtf8", "(J)[B", (void*)get_document_utf8_jni},
+    {"getDocumentLineCount", "(J)I", (void*)get_document_line_count_jni},
     {"createEditor", "(Lio/github/lumkit/sweeteditor/core/HostTextMeasurer;[B)J", (void*)create_editor_jni},
     {"freeEditor", "(J)V", (void*)free_editor_jni},
     {"editorSetDocument", "(JJ)[B", (void*)set_document_jni},
@@ -1185,6 +1331,8 @@ const JNINativeMethod kMethods[] = {
     {"editorInsertText", "(J[B)[B", (void*)insert_text_jni},
     {"editorReplaceText", "(JIIII[B)[B", (void*)replace_text_jni},
     {"editorApplyTextEdits", "(J[B)[B", (void*)apply_text_edits_jni},
+    {"editorDeleteText", "(JIIII)[B", (void*)delete_text_jni},
+    {"editorDeleteForward", "(J)[B", (void*)delete_forward_jni},
     {"editorBackspace", "(J)[B", (void*)backspace_jni},
     {"editorMoveLineUp", "(J)[B", (void*)move_line_up_jni},
     {"editorMoveLineDown", "(J)[B", (void*)move_line_down_jni},
@@ -1245,7 +1393,16 @@ const JNINativeMethod kMethods[] = {
     {"editorGetScrollMetrics", "(J)[B", (void*)get_scroll_metrics_jni},
     {"editorGetSelectedText", "(J)[B", (void*)get_selected_text_jni},
     {"editorGetCursorPosition", "(J)[I", (void*)get_cursor_position_jni},
+    {"editorSetCursorPosition", "(JII)[B", (void*)set_cursor_position_jni},
+    {"editorSelectAll", "(J)[B", (void*)select_all_jni},
+    {"editorSetSelection", "(JIIII)[B", (void*)set_selection_jni},
+    {"editorGetSelection", "(J)[I", (void*)get_selection_jni},
     {"editorGetWordRangeAtCursor", "(J)[I", (void*)get_word_range_at_cursor_jni},
+    {"editorGetWordAtCursor", "(J)[B", (void*)get_word_at_cursor_jni},
+    {"editorScrollToLine", "(JII)[B", (void*)scroll_to_line_jni},
+    {"editorGotoPosition", "(JII)[B", (void*)goto_position_jni},
+    {"editorEnsureCursorVisible", "(J)[B", (void*)ensure_cursor_visible_jni},
+    {"editorSetScroll", "(JFF)[B", (void*)set_scroll_jni},
     {"editorDecorationOp", "(JI[BIIII)[B", (void*)decoration_op_jni},
     {"editorGetLinkTargetAt", "(JII)[B", (void*)get_link_target_at_jni},
     {"editorSetFoldRegions", "(J[B)[B", (void*)set_fold_regions_jni},

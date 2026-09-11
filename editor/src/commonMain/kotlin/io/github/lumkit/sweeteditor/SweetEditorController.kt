@@ -1,5 +1,6 @@
 package io.github.lumkit.sweeteditor
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 
@@ -18,6 +19,11 @@ class SweetEditorController(
         private set
     internal var inlineSuggestionListener: InlineSuggestionListener? = null
         private set
+    internal var completionItemRenderer: (@Composable (CompletionItem, Boolean, EditorTheme) -> Unit)? = null
+        private set
+    private var themeOverride: EditorTheme? = null
+    private var settingsOverride: EditorSettings? = null
+    private var keyMapOverride: EditorKeyMap? = null
     val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
@@ -35,6 +41,67 @@ class SweetEditorController(
         session?.insertText(text)
     }
 
+    fun insertTextAt(line: Int, column: Int, text: String) {
+        session?.insertTextAt(line, column, text)
+    }
+
+    fun replaceText(start: TextPosition, end: TextPosition, text: String) {
+        session?.replaceText(start.line, start.column, end.line, end.column, text)
+    }
+
+    fun replaceText(
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: String,
+    ) {
+        session?.replaceText(startLine, startColumn, endLine, endColumn, text)
+    }
+
+    fun deleteText(start: TextPosition, end: TextPosition) {
+        session?.deleteText(start.line, start.column, end.line, end.column)
+    }
+
+    fun deleteText(startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) {
+        session?.deleteText(startLine, startColumn, endLine, endColumn)
+    }
+
+    fun applyTextEdits(edits: List<EditorTextEdit>) {
+        session?.applyTextEdits(edits)
+    }
+
+    fun loadDocument(text: String) {
+        session?.loadDocument(text)
+    }
+
+    fun loadDocument(document: EditorDocument) {
+        loadDocument(document.text)
+    }
+
+    fun getDocument(): EditorDocument = EditorDocument(session?.getDocumentText() ?: initialText)
+
+    fun applyTheme(theme: EditorTheme) {
+        themeOverride = theme
+        session?.applyTheme(theme)
+    }
+
+    fun getTheme(): EditorTheme = session?.getTheme() ?: themeOverride ?: EditorTheme()
+
+    fun setSettings(settings: EditorSettings) {
+        settingsOverride = settings
+        session?.applySettings(settings)
+    }
+
+    fun getSettings(): EditorSettings = session?.getSettings() ?: settingsOverride ?: EditorSettings()
+
+    fun setKeyMap(keyMap: EditorKeyMap) {
+        keyMapOverride = keyMap
+        session?.applyKeyMap(keyMap)
+    }
+
+    fun getKeyMap(): EditorKeyMap? = session?.getKeyMap() ?: keyMapOverride
+
     fun undo() {
         session?.undo()
     }
@@ -42,6 +109,10 @@ class SweetEditorController(
     fun redo() {
         session?.redo()
     }
+
+    fun canUndo(): Boolean = session?.canUndo() == true
+
+    fun canRedo(): Boolean = session?.canRedo() == true
 
     fun backspace() {
         session?.backspace()
@@ -87,12 +158,56 @@ class SweetEditorController(
 
     fun getCursorPosition(): TextPosition? = session?.getCursorPosition()
 
+    fun setCursorPosition(line: Int, column: Int) {
+        session?.setCursorPosition(line, column)
+    }
+
+    fun setCursorPosition(position: TextPosition) {
+        setCursorPosition(position.line, position.column)
+    }
+
+    fun getSelection(): TextRange? = session?.getSelection()
+
+    fun setSelection(start: TextPosition, end: TextPosition) {
+        session?.setSelection(start, end)
+    }
+
+    fun getWordRangeAtCursor(): TextRange? = session?.getWordRangeAtCursor()
+
+    fun getWordAtCursor(): String = session?.getWordAtCursor().orEmpty()
+
+    fun getTotalLineCount(): Int = session?.getTotalLineCount() ?: 1
+
+    fun gotoPosition(line: Int, column: Int) {
+        session?.gotoPosition(line, column)
+    }
+
+    fun scrollToLine(line: Int, behavior: ScrollBehavior = ScrollBehavior.GOTO_CENTER) {
+        session?.scrollToLine(line, behavior)
+    }
+
+    fun setScroll(scrollX: Float, scrollY: Float) {
+        session?.setScroll(scrollX, scrollY)
+    }
+
+    fun ensureCursorVisible() {
+        session?.ensureCursorVisible()
+    }
+
     fun copy(): Boolean = session?.copyToClipboard() == true
+
+    fun copyToClipboard(): Boolean = copy()
 
     fun cut(): Boolean = session?.cutToClipboard() == true
 
+    fun cutToClipboard(): Boolean = cut()
+
     fun paste() {
         session?.pasteFromClipboard()
+    }
+
+    fun pasteFromClipboard() {
+        paste()
     }
 
     fun selectAll() {
@@ -461,6 +576,13 @@ class SweetEditorController(
         session?.applyCompletionItem(item)
     }
 
+    fun setCompletionItemRenderer(
+        renderer: (@Composable (item: CompletionItem, selected: Boolean, theme: EditorTheme) -> Unit)?,
+    ) {
+        completionItemRenderer = renderer
+        session?.setCompletionItemRenderer(renderer)
+    }
+
     fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 
@@ -474,6 +596,27 @@ class SweetEditorController(
         events.subscribe(listener)
 
     fun onScaleChanged(listener: (ScaleChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onDocumentLoaded(listener: (DocumentLoadedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onFoldToggle(listener: (FoldToggleEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onGutterIconClick(listener: (GutterIconClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onInlayHintClick(listener: (InlayHintClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onCodeLensClick(listener: (CodeLensClickEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onLongPress(listener: (LongPressEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onDoubleTap(listener: (DoubleTapEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 
     fun dispose() {
@@ -492,6 +635,10 @@ class SweetEditorController(
         next.applySelectionMenuProvider(selectionMenuItemProvider)
         next.applyContextMenuProvider(contextMenuItemProvider)
         next.setInlineSuggestionListener(inlineSuggestionListener)
+        next.setCompletionItemRenderer(completionItemRenderer)
+        themeOverride?.let { next.applyTheme(it) }
+        settingsOverride?.let { next.applySettings(it) }
+        keyMapOverride?.let { next.applyKeyMap(it) }
         val pending = readyCallbacks.toList()
         readyCallbacks.clear()
         pending.forEach { it() }

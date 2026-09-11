@@ -25,6 +25,9 @@ internal actual object NativeBridge {
     actual fun getDocumentUtf8(handle: Long): ByteArray =
         toBytes(abi().getDocumentUtf8(handle.toInt())) ?: ByteArray(0)
 
+    actual fun getDocumentLineCount(handle: Long): Int =
+        (abi().getDocumentLineCount(handle.toInt()) as Number).toInt()
+
     actual fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long {
         installCallbacksIfNeeded()
         val previous = currentMeasurer
@@ -88,6 +91,19 @@ internal actual object NativeBridge {
 
     actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
         withActive(editor) { toBytes(abi().editorApplyTextEdits(editor.toInt(), payload.toTyped())) }
+
+    actual fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        toBytes(abi().editorDeleteText(editor.toInt(), startLine, startColumn, endLine, endColumn))
+    }
+
+    actual fun editorDeleteForward(editor: Long): ByteArray? =
+        withActive(editor) { toBytes(abi().editorDeleteForward(editor.toInt())) }
 
     actual fun editorBackspace(editor: Long): ByteArray? =
         withActive(editor) { toBytes(abi().editorBackspace(editor.toInt())) }
@@ -287,8 +303,42 @@ internal actual object NativeBridge {
     actual fun editorGetCursorPosition(editor: Long): IntArray =
         withActive(editor) { toInts(abi().editorGetCursorPosition(editor.toInt())) }
 
+    actual fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) { toBytes(abi().editorSetCursorPosition(editor.toInt(), line, column)) }
+
+    actual fun editorSelectAll(editor: Long): ByteArray? =
+        withActive(editor) { toBytes(abi().editorSelectAll(editor.toInt())) }
+
+    actual fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = withActive(editor) {
+        toBytes(abi().editorSetSelection(editor.toInt(), startLine, startColumn, endLine, endColumn))
+    }
+
+    actual fun editorGetSelection(editor: Long): IntArray =
+        withActive(editor) { toInts(abi().editorGetSelection(editor.toInt())) }
+
     actual fun editorGetWordRangeAtCursor(editor: Long): IntArray =
         withActive(editor) { toInts(abi().editorGetWordRangeAtCursor(editor.toInt())) }
+
+    actual fun editorGetWordAtCursor(editor: Long): ByteArray =
+        withActive(editor) { toBytes(abi().editorGetWordAtCursor(editor.toInt())) ?: ByteArray(0) }
+
+    actual fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray? =
+        withActive(editor) { toBytes(abi().editorScrollToLine(editor.toInt(), line, behavior)) }
+
+    actual fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        withActive(editor) { toBytes(abi().editorGotoPosition(editor.toInt(), line, column)) }
+
+    actual fun editorEnsureCursorVisible(editor: Long): ByteArray? =
+        withActive(editor) { toBytes(abi().editorEnsureCursorVisible(editor.toInt())) }
+
+    actual fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray? =
+        withActive(editor) { toBytes(abi().editorSetScroll(editor.toInt(), scrollX, scrollY)) }
 
     actual fun editorDecorationOp(
         editor: Long,

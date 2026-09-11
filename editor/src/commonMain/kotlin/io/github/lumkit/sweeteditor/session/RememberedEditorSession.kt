@@ -2,9 +2,19 @@ package io.github.lumkit.sweeteditor.session
 
 import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.lumkit.sweeteditor.CodeLensClickEvent
+import io.github.lumkit.sweeteditor.CompletionInsertTextFormat
 import io.github.lumkit.sweeteditor.CompletionItem
+import io.github.lumkit.sweeteditor.DocumentLoadedEvent
+import io.github.lumkit.sweeteditor.DoubleTapEvent
+import io.github.lumkit.sweeteditor.FoldToggleEvent
+import io.github.lumkit.sweeteditor.GutterIconClickEvent
+import io.github.lumkit.sweeteditor.InlayHintClickEvent
+import io.github.lumkit.sweeteditor.LongPressEvent
+import io.github.lumkit.sweeteditor.ScrollBehavior
 import io.github.lumkit.sweeteditor.CompletionProvider
 import io.github.lumkit.sweeteditor.CompletionTriggerKind
 import io.github.lumkit.sweeteditor.EditorActionSource
@@ -18,7 +28,6 @@ import io.github.lumkit.sweeteditor.newline.NewLineActionProviderManager
 import io.github.lumkit.sweeteditor.newline.NewLineHost
 import io.github.lumkit.sweeteditor.EditorMetadata
 import io.github.lumkit.sweeteditor.encodeApplyTextEdits
-import io.github.lumkit.sweeteditor.isEmptyRange
 import io.github.lumkit.sweeteditor.toCodePointArrays
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.DecorationProvider
@@ -143,6 +152,8 @@ internal class RememberedEditorSession(
         private set
     var completionAnchor by mutableStateOf<EditorCursorRect?>(null)
         private set
+    var completionItemRenderer: (@Composable (CompletionItem, Boolean, EditorTheme) -> Unit)? = null
+        private set
     var selectionMenuItems by mutableStateOf<List<SelectionMenuItem>>(emptyList())
         private set
     var selectionMenuAnchor by mutableStateOf<SelectionMenuAnchor?>(null)
@@ -234,6 +245,7 @@ internal class RememberedEditorSession(
                 dispatchActionResult(createdEditor.setViewport(viewportWidth, viewportHeight))
             }
             controller.attach(this)
+            controller.events.publish(DocumentLoadedEvent(getTotalLineCount()))
             decorations.requestRefresh()
             applySelectionMenuProvider(controller.selectionMenuItemProvider)
             applyContextMenuProvider(controller.contextMenuItemProvider)
@@ -292,65 +304,81 @@ internal class RememberedEditorSession(
         appliedKeyMapRevision = keyMap.revision
     }
 
-    fun applyAppearance(theme: EditorTheme, settings: EditorSettings) {
+    fun getKeyMap(): EditorKeyMap? = appliedKeyMap
+
+    fun applyTheme(theme: EditorTheme) {
         val core = editor ?: return
-        if (appliedTheme != theme) {
-            dispatchActionResult(core.setEditorRenderColors(CoreProtocol.encodeEditorRenderColors(theme.toRenderColors())))
-            dispatchActionResult(
-                core.setEditorRangeEffectStyles(
-                    CoreProtocol.encodeEditorRangeEffectStyles(theme.toRangeEffectStyles()),
-                ),
-            )
-            appliedTheme = theme
-        }
+        if (appliedTheme == theme) return
+        dispatchActionResult(core.setEditorRenderColors(CoreProtocol.encodeEditorRenderColors(theme.toRenderColors())))
+        dispatchActionResult(
+            core.setEditorRangeEffectStyles(
+                CoreProtocol.encodeEditorRangeEffectStyles(theme.toRangeEffectStyles()),
+            ),
+        )
+        appliedTheme = theme
+    }
+
+    fun getTheme(): EditorTheme? = appliedTheme
+
+    fun applySettings(settings: EditorSettings) {
+        val core = editor ?: return
         val previous = appliedSettings
-        if (previous != settings) {
-            if (previous == null || previous.wrapMode != settings.wrapMode) {
-                dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
-            }
-            if (previous == null ||
-                previous.lineSpacingAdd != settings.lineSpacingAdd ||
-                previous.lineSpacingMult != settings.lineSpacingMult
-            ) {
-                dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
-            }
-            val nextScale = settings.scale.coerceAtLeast(0.1f)
-            if (previous == null || previous.scale != settings.scale || visualScale != nextScale) {
-                dispatchActionResult(core.setScale(nextScale))
-                if (visualScale != nextScale) {
-                    visualScale = nextScale
-                }
-            }
-            if (previous == null || previous.readOnly != settings.readOnly) {
-                dispatchActionResult(core.setReadOnly(settings.readOnly))
-            }
-            if (previous == null || previous.gutterVisible != settings.gutterVisible) {
-                dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
-            }
-            if (previous == null || previous.gutterSticky != settings.gutterSticky) {
-                dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
-            }
-            if (previous == null || previous.currentLineRenderMode != settings.currentLineRenderMode) {
-                dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
-            }
-            if (previous == null || previous.foldArrowMode != settings.foldArrowMode) {
-                dispatchActionResult(core.setFoldArrowMode(settings.foldArrowMode.value))
-            }
-            if (previous == null || previous.renderWhitespace != settings.renderWhitespace) {
-                dispatchActionResult(core.setRenderWhitespace(settings.renderWhitespace.value))
-            }
-            if (previous == null || previous.renderLineBreaks != settings.renderLineBreaks) {
-                dispatchActionResult(core.setRenderLineBreaks(settings.renderLineBreaks))
-            }
-            if (previous == null || previous.autoIndentMode != settings.autoIndentMode) {
-                dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
-            }
-            if (previous == null || previous.backspaceUnindent != settings.backspaceUnindent) {
-                dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
-            }
-            appliedSettings = settings
+        if (previous == settings) {
+            syncTabBehavior(settings)
+            return
         }
+        if (previous == null || previous.wrapMode != settings.wrapMode) {
+            dispatchActionResult(core.setWrapMode(settings.wrapMode.value))
+        }
+        if (previous == null ||
+            previous.lineSpacingAdd != settings.lineSpacingAdd ||
+            previous.lineSpacingMult != settings.lineSpacingMult
+        ) {
+            dispatchActionResult(core.setLineSpacing(settings.lineSpacingAdd, settings.lineSpacingMult))
+        }
+        val nextScale = settings.scale.coerceAtLeast(0.1f)
+        if (previous == null || previous.scale != settings.scale || visualScale != nextScale) {
+            dispatchActionResult(core.setScale(nextScale))
+            if (visualScale != nextScale) {
+                visualScale = nextScale
+            }
+        }
+        if (previous == null || previous.readOnly != settings.readOnly) {
+            dispatchActionResult(core.setReadOnly(settings.readOnly))
+        }
+        if (previous == null || previous.gutterVisible != settings.gutterVisible) {
+            dispatchActionResult(core.setGutterVisible(settings.gutterVisible))
+        }
+        if (previous == null || previous.gutterSticky != settings.gutterSticky) {
+            dispatchActionResult(core.setGutterSticky(settings.gutterSticky))
+        }
+        if (previous == null || previous.currentLineRenderMode != settings.currentLineRenderMode) {
+            dispatchActionResult(core.setCurrentLineRenderMode(settings.currentLineRenderMode.value))
+        }
+        if (previous == null || previous.foldArrowMode != settings.foldArrowMode) {
+            dispatchActionResult(core.setFoldArrowMode(settings.foldArrowMode.value))
+        }
+        if (previous == null || previous.renderWhitespace != settings.renderWhitespace) {
+            dispatchActionResult(core.setRenderWhitespace(settings.renderWhitespace.value))
+        }
+        if (previous == null || previous.renderLineBreaks != settings.renderLineBreaks) {
+            dispatchActionResult(core.setRenderLineBreaks(settings.renderLineBreaks))
+        }
+        if (previous == null || previous.autoIndentMode != settings.autoIndentMode) {
+            dispatchActionResult(core.setAutoIndentMode(settings.autoIndentMode.value))
+        }
+        if (previous == null || previous.backspaceUnindent != settings.backspaceUnindent) {
+            dispatchActionResult(core.setBackspaceUnindent(settings.backspaceUnindent))
+        }
+        appliedSettings = settings
         syncTabBehavior(settings)
+    }
+
+    fun getSettings(): EditorSettings? = appliedSettings
+
+    fun applyAppearance(theme: EditorTheme, settings: EditorSettings) {
+        applyTheme(theme)
+        applySettings(settings)
     }
 
     private fun syncTabBehavior(settings: EditorSettings) {
@@ -441,6 +469,71 @@ internal class RememberedEditorSession(
     fun insertText(text: String) {
         val core = editor ?: return
         dispatchActionResult(core.insertText(text))
+    }
+
+    fun insertTextAt(line: Int, column: Int, text: String) {
+        mutate { replaceText(line, column, line, column, text) }
+    }
+
+    fun replaceText(startLine: Int, startColumn: Int, endLine: Int, endColumn: Int, text: String) {
+        mutate { replaceText(startLine, startColumn, endLine, endColumn, text) }
+    }
+
+    fun deleteText(startLine: Int, startColumn: Int, endLine: Int, endColumn: Int) {
+        mutate { deleteText(startLine, startColumn, endLine, endColumn) }
+    }
+
+    fun applyTextEdits(edits: List<EditorTextEdit>) {
+        if (edits.isEmpty()) return
+        mutate { applyTextEdits(encodeApplyTextEdits(edits)) }
+    }
+
+    fun loadDocument(text: String) {
+        val core = editor ?: return
+        val created = Document.fromUtf8(text)
+        val previous = document
+        document = created
+        dispatchActionResult(core.setDocument(created))
+        previous?.close()
+        controller.events.publish(DocumentLoadedEvent(getTotalLineCount()))
+    }
+
+    fun getDocumentText(): String = document?.utf8Text().orEmpty()
+
+    fun getTotalLineCount(): Int = document?.lineCount()?.coerceAtLeast(1) ?: 1
+
+    fun canUndo(): Boolean = editor?.canUndo() == true
+
+    fun canRedo(): Boolean = editor?.canRedo() == true
+
+    fun setCursorPosition(line: Int, column: Int) {
+        mutate { setCursorPosition(line, column) }
+    }
+
+    fun getSelection(): TextRange? = editor?.getSelection()
+
+    fun setSelection(start: TextPosition, end: TextPosition) {
+        mutate { setSelection(start, end) }
+    }
+
+    fun getWordRangeAtCursor(): TextRange? = editor?.getWordRangeAtCursor()
+
+    fun getWordAtCursor(): String = editor?.getWordAtCursor().orEmpty()
+
+    fun gotoPosition(line: Int, column: Int) {
+        mutate { gotoPosition(line, column) }
+    }
+
+    fun scrollToLine(line: Int, behavior: ScrollBehavior) {
+        mutate { scrollToLine(line, behavior.value) }
+    }
+
+    fun setScroll(scrollX: Float, scrollY: Float) {
+        mutate { setScroll(scrollX, scrollY) }
+    }
+
+    fun ensureCursorVisible() {
+        mutate { ensureCursorVisible() }
     }
 
     fun backspace() {
@@ -569,11 +662,20 @@ internal class RememberedEditorSession(
 
     fun setFoldRegions(regions: List<FoldRegion>) = mutate { setFoldRegions(regions) }
 
-    fun toggleFold(line: Int) = mutate { toggleFold(line) }
+    fun toggleFold(line: Int) {
+        mutate { toggleFold(line) }
+        controller.events.publish(FoldToggleEvent(line))
+    }
 
-    fun foldAt(line: Int) = mutate { foldAt(line) }
+    fun foldAt(line: Int) {
+        mutate { foldAt(line) }
+        controller.events.publish(FoldToggleEvent(line))
+    }
 
-    fun unfoldAt(line: Int) = mutate { unfoldAt(line) }
+    fun unfoldAt(line: Int) {
+        mutate { unfoldAt(line) }
+        controller.events.publish(FoldToggleEvent(line))
+    }
 
     fun foldAll() = mutate { foldAll() }
 
@@ -647,6 +749,12 @@ internal class RememberedEditorSession(
 
     fun dismissCompletion() = completions.dismiss()
 
+    fun setCompletionItemRenderer(
+        renderer: (@Composable (CompletionItem, Boolean, EditorTheme) -> Unit)?,
+    ) {
+        completionItemRenderer = renderer
+    }
+
     fun selectCompletionIndex(index: Int) {
         if (completionItems.isEmpty()) return
         completionSelectedIndex = index.coerceIn(0, completionItems.lastIndex)
@@ -661,21 +769,14 @@ internal class RememberedEditorSession(
             primary != null -> {
                 dispatchActionResult(core.applyTextEdits(encodeApplyTextEdits(listOf(primary) + additional)))
             }
-            additional.isEmpty() -> {
-                val word = core.getWordRangeAtCursor()
-                if (!word.isEmptyRange()) {
-                    dispatchActionResult(
-                        core.replaceText(
-                            word.start.line,
-                            word.start.column,
-                            word.end.line,
-                            word.end.column,
-                            insert,
-                        ),
-                    )
-                } else {
-                    dispatchActionResult(core.insertText(insert))
+            item.insertTextFormat == CompletionInsertTextFormat.SNIPPET -> {
+                if (additional.isNotEmpty()) {
+                    dispatchActionResult(core.applyTextEdits(encodeApplyTextEdits(additional)))
                 }
+                dispatchActionResult(core.insertSnippet(insert))
+            }
+            additional.isEmpty() -> {
+                dispatchActionResult(core.insertText(insert))
             }
             else -> {
                 val cursor = core.getCursorPosition()
@@ -835,7 +936,8 @@ internal class RememberedEditorSession(
     }
 
     fun selectAll() {
-        handleKey(KeyCode.A, null, KeyModifier.CTRL)
+        val core = editor ?: return
+        dispatchActionResult(core.selectAll())
     }
 
     fun applyContextMenuProvider(provider: ContextMenuItemProvider?) {
@@ -999,6 +1101,50 @@ internal class RememberedEditorSession(
         const val MaxClipboardChars = 1_000_000
     }
 
+    private fun publishPointerEvents(result: EditorActionResult) {
+        val location = EditorPoint(
+            x = if (result.tapPoint.x != 0f || result.tapPoint.y != 0f) result.tapPoint.x else lastPointer.x,
+            y = if (result.tapPoint.x != 0f || result.tapPoint.y != 0f) result.tapPoint.y else lastPointer.y,
+        )
+        val cursor = TextPosition(result.cursorAfter.line, result.cursorAfter.column)
+        when (result.gestureType) {
+            GestureType.LONG_PRESS -> {
+                controller.events.publish(LongPressEvent(cursor, location))
+            }
+            GestureType.DOUBLE_TAP -> {
+                controller.events.publish(DoubleTapEvent(cursor, location))
+            }
+            GestureType.TAP -> {
+                val target = result.hitTarget
+                when (target.type) {
+                    HitTargetType.GUTTER_ICON -> controller.events.publish(
+                        GutterIconClickEvent(target.line, target.column, target.iconId, location),
+                    )
+                    HitTargetType.INLAY_HINT_TEXT,
+                    HitTargetType.INLAY_HINT_ICON,
+                    HitTargetType.INLAY_HINT_COLOR,
+                    -> controller.events.publish(InlayHintClickEvent(target.line, target.column, location))
+                    HitTargetType.CODELENS -> controller.events.publish(
+                        CodeLensClickEvent(target.line, target.column, location),
+                    )
+                    HitTargetType.LINK -> {
+                        val link = getLinkTargetAt(target.line, target.column)
+                        if (link.isNotEmpty()) {
+                            controller.events.publish(
+                                LinkClickEvent(target.line, target.column, link, location),
+                            )
+                        }
+                    }
+                    HitTargetType.FOLD_GUTTER,
+                    HitTargetType.FOLD_PLACEHOLDER,
+                    -> controller.events.publish(FoldToggleEvent(target.line))
+                    else -> Unit
+                }
+            }
+            else -> Unit
+        }
+    }
+
     private fun dispatchActionResult(result: EditorActionResult?) {
         if (disposed || result == null) return
         imeAdapter?.onEditorActionResult(result)
@@ -1038,6 +1184,7 @@ internal class RememberedEditorSession(
                 else -> Unit
             }
         }
+        publishPointerEvents(result)
         if (!dispatchKeyMapCommand(result.command)) {
             when (result.command) {
                 EditorBuiltinCommand.COPY.value -> copyToClipboard()
@@ -1267,11 +1414,7 @@ internal class RememberedEditorSession(
         }
     }
 
-    private fun documentLineCount(): Int {
-        val text = document?.utf8Text().orEmpty()
-        if (text.isEmpty()) return 1
-        return text.count { it == '\n' } + 1
-    }
+    private fun documentLineCount(): Int = getTotalLineCount()
 
     private fun documentLineText(line: Int): String {
         val text = document?.utf8Text().orEmpty()

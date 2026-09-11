@@ -11,6 +11,7 @@ internal object SweetEditorJni {
     @JvmStatic external fun createDocumentFromUtf8(utf8: ByteArray): Long
     @JvmStatic external fun freeDocument(handle: Long)
     @JvmStatic external fun getDocumentUtf8(handle: Long): ByteArray
+    @JvmStatic external fun getDocumentLineCount(handle: Long): Int
     @JvmStatic external fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long
     @JvmStatic external fun freeEditor(handle: Long)
     @JvmStatic external fun editorSetDocument(editor: Long, document: Long): ByteArray?
@@ -37,6 +38,14 @@ internal object SweetEditorJni {
         text: ByteArray,
     ): ByteArray?
     @JvmStatic external fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray?
+    @JvmStatic external fun editorDeleteForward(editor: Long): ByteArray?
     @JvmStatic external fun editorBackspace(editor: Long): ByteArray?
     @JvmStatic external fun editorUndo(editor: Long): ByteArray?
     @JvmStatic external fun editorRedo(editor: Long): ByteArray?
@@ -109,7 +118,22 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorGetScrollMetrics(editor: Long): ByteArray?
     @JvmStatic external fun editorGetSelectedText(editor: Long): ByteArray
     @JvmStatic external fun editorGetCursorPosition(editor: Long): IntArray
+    @JvmStatic external fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray?
+    @JvmStatic external fun editorSelectAll(editor: Long): ByteArray?
+    @JvmStatic external fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray?
+    @JvmStatic external fun editorGetSelection(editor: Long): IntArray
     @JvmStatic external fun editorGetWordRangeAtCursor(editor: Long): IntArray
+    @JvmStatic external fun editorGetWordAtCursor(editor: Long): ByteArray
+    @JvmStatic external fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray?
+    @JvmStatic external fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray?
+    @JvmStatic external fun editorEnsureCursorVisible(editor: Long): ByteArray?
+    @JvmStatic external fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray?
     @JvmStatic external fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -140,6 +164,7 @@ internal actual object NativeBridge {
     actual fun createDocumentFromUtf8(utf8: ByteArray): Long = SweetEditorJni.createDocumentFromUtf8(utf8)
     actual fun freeDocument(handle: Long) = SweetEditorJni.freeDocument(handle)
     actual fun getDocumentUtf8(handle: Long): ByteArray = SweetEditorJni.getDocumentUtf8(handle)
+    actual fun getDocumentLineCount(handle: Long): Int = SweetEditorJni.getDocumentLineCount(handle)
     actual fun createEditor(measurer: HostTextMeasurer, options: ByteArray): Long =
         SweetEditorJni.createEditor(measurer, options)
     actual fun freeEditor(handle: Long) = SweetEditorJni.freeEditor(handle)
@@ -178,6 +203,14 @@ internal actual object NativeBridge {
     )
     actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
         SweetEditorJni.editorApplyTextEdits(editor, payload)
+    actual fun editorDeleteText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = SweetEditorJni.editorDeleteText(editor, startLine, startColumn, endLine, endColumn)
+    actual fun editorDeleteForward(editor: Long): ByteArray? = SweetEditorJni.editorDeleteForward(editor)
     actual fun editorBackspace(editor: Long): ByteArray? = SweetEditorJni.editorBackspace(editor)
     actual fun editorUndo(editor: Long): ByteArray? = SweetEditorJni.editorUndo(editor)
     actual fun editorRedo(editor: Long): ByteArray? = SweetEditorJni.editorRedo(editor)
@@ -291,8 +324,28 @@ internal actual object NativeBridge {
     actual fun editorGetScrollMetrics(editor: Long): ByteArray? = SweetEditorJni.editorGetScrollMetrics(editor)
     actual fun editorGetSelectedText(editor: Long): ByteArray = SweetEditorJni.editorGetSelectedText(editor)
     actual fun editorGetCursorPosition(editor: Long): IntArray = SweetEditorJni.editorGetCursorPosition(editor)
+    actual fun editorSetCursorPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        SweetEditorJni.editorSetCursorPosition(editor, line, column)
+    actual fun editorSelectAll(editor: Long): ByteArray? = SweetEditorJni.editorSelectAll(editor)
+    actual fun editorSetSelection(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+    ): ByteArray? = SweetEditorJni.editorSetSelection(editor, startLine, startColumn, endLine, endColumn)
+    actual fun editorGetSelection(editor: Long): IntArray = SweetEditorJni.editorGetSelection(editor)
     actual fun editorGetWordRangeAtCursor(editor: Long): IntArray =
         SweetEditorJni.editorGetWordRangeAtCursor(editor)
+    actual fun editorGetWordAtCursor(editor: Long): ByteArray = SweetEditorJni.editorGetWordAtCursor(editor)
+    actual fun editorScrollToLine(editor: Long, line: Int, behavior: Int): ByteArray? =
+        SweetEditorJni.editorScrollToLine(editor, line, behavior)
+    actual fun editorGotoPosition(editor: Long, line: Int, column: Int): ByteArray? =
+        SweetEditorJni.editorGotoPosition(editor, line, column)
+    actual fun editorEnsureCursorVisible(editor: Long): ByteArray? =
+        SweetEditorJni.editorEnsureCursorVisible(editor)
+    actual fun editorSetScroll(editor: Long, scrollX: Float, scrollY: Float): ByteArray? =
+        SweetEditorJni.editorSetScroll(editor, scrollX, scrollY)
     actual fun editorDecorationOp(
         editor: Long,
         op: Int,

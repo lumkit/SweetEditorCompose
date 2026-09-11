@@ -29,6 +29,7 @@ internal fun EditorCompletionPopup(
     selectedIndex: Int,
     anchor: EditorCursorRect?,
     theme: EditorTheme,
+    itemRenderer: (@Composable (CompletionItem, Boolean, EditorTheme) -> Unit)? = null,
     onSelect: (Int) -> Unit,
     onConfirm: (CompletionItem) -> Unit,
     onDismiss: () -> Unit,
@@ -65,22 +66,26 @@ internal fun EditorCompletionPopup(
                         }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
-                    BasicText(
-                        text = item.label,
-                        style = TextStyle(
-                            color = theme.textColor.toComposeColor(),
-                            fontSize = 13.sp,
-                        ),
-                    )
-                    val detail = item.detail
-                    if (!detail.isNullOrEmpty()) {
+                    if (itemRenderer != null) {
+                        itemRenderer(item, selected, theme)
+                    } else {
                         BasicText(
-                            text = detail,
+                            text = item.label,
                             style = TextStyle(
-                                color = theme.lineNumberColor.toComposeColor(),
-                                fontSize = 11.sp,
+                                color = theme.textColor.toComposeColor(),
+                                fontSize = 13.sp,
                             ),
                         )
+                        val detail = item.detail
+                        if (!detail.isNullOrEmpty()) {
+                            BasicText(
+                                text = detail,
+                                style = TextStyle(
+                                    color = theme.lineNumberColor.toComposeColor(),
+                                    fontSize = 11.sp,
+                                ),
+                            )
+                        }
                     }
                 }
             }

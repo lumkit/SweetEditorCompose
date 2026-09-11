@@ -150,6 +150,7 @@
     abi.createDocumentFromUtf8 = (bytes) => withCString(mod, bytes, (ptr) => mod._create_document_from_utf8(ptr));
     abi.freeDocument = (handle) => mod._free_document(handle);
     abi.getDocumentUtf8 = (handle) => readU8String(mod, mod._get_document_utf8(handle));
+    abi.getDocumentLineCount = (handle) => Number(mod._get_document_line_count(handle));
 
     abi.createEditor = (options) => {
       const callbacks = bindMeasurer(mod);
@@ -209,6 +210,11 @@
         ),
       );
     abi.editorApplyTextEdits = binBytes(mod._editor_apply_text_edits);
+    abi.editorDeleteText = (editor, startLine, startColumn, endLine, endColumn) =>
+      callBinary(mod, (sz) =>
+        mod._editor_delete_text(editor, startLine, startColumn, endLine, endColumn, sz),
+      );
+    abi.editorDeleteForward = bin0(mod._editor_delete_forward);
     abi.editorBackspace = bin0(mod._editor_backspace);
     abi.editorUndo = bin0(mod._editor_undo);
     abi.editorRedo = bin0(mod._editor_redo);
@@ -364,6 +370,37 @@
         mod._free(ptr);
       }
     };
+    abi.editorSetCursorPosition = (editor, line, column) =>
+      callBinary(mod, (sz) => mod._editor_set_cursor_position(editor, line, column, sz));
+    abi.editorSelectAll = bin0(mod._editor_select_all);
+    abi.editorSetSelection = (editor, startLine, startColumn, endLine, endColumn) =>
+      callBinary(mod, (sz) =>
+        mod._editor_set_selection(editor, startLine, startColumn, endLine, endColumn, sz),
+      );
+    abi.editorGetSelection = (editor) => {
+      const ptr = mod._malloc(16);
+      try {
+        const has = mod._editor_get_selection(editor, ptr, ptr + 4, ptr + 8, ptr + 12);
+        return new Int32Array([
+          has,
+          readU32(mod, ptr),
+          readU32(mod, ptr + 4),
+          readU32(mod, ptr + 8),
+          readU32(mod, ptr + 12),
+        ]);
+      } finally {
+        mod._free(ptr);
+      }
+    };
+    abi.editorGetWordAtCursor = (editor) =>
+      readU8String(mod, mod._editor_get_word_at_cursor(editor));
+    abi.editorScrollToLine = (editor, line, behavior) =>
+      callBinary(mod, (sz) => mod._editor_scroll_to_line(editor, line, behavior, sz));
+    abi.editorGotoPosition = (editor, line, column) =>
+      callBinary(mod, (sz) => mod._editor_goto_position(editor, line, column, sz));
+    abi.editorEnsureCursorVisible = bin0(mod._editor_ensure_cursor_visible);
+    abi.editorSetScroll = (editor, scrollX, scrollY) =>
+      callBinary(mod, (sz) => mod._editor_set_scroll(editor, scrollX, scrollY, sz));
     abi.editorGetLinkTargetAt = (editor, line, column) =>
       readU8String(mod, mod._editor_get_link_target_at(editor, line, column));
 
