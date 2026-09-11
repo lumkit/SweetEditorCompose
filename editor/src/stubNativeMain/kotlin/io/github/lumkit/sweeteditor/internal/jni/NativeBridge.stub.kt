@@ -50,6 +50,19 @@ internal actual object NativeBridge {
     actual fun editorInsertText(editor: Long, text: ByteArray): ByteArray? {
         unsupported()
     }
+    actual fun editorReplaceText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: ByteArray,
+    ): ByteArray? {
+        unsupported()
+    }
+    actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
     actual fun editorBackspace(editor: Long): ByteArray? {
         unsupported()
     }
@@ -78,6 +91,12 @@ internal actual object NativeBridge {
         unsupported()
     }
     actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? {
         unsupported()
     }
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? {
@@ -117,6 +136,15 @@ internal actual object NativeBridge {
         unsupported()
     }
     actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetFoldArrowMode(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetRenderWhitespace(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetRenderLineBreaks(editor: Long, enabled: Boolean): ByteArray? {
         unsupported()
     }
     actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? {
@@ -182,6 +210,12 @@ internal actual object NativeBridge {
     actual fun editorGetSelectedText(editor: Long): ByteArray {
         unsupported()
     }
+    actual fun editorGetCursorPosition(editor: Long): IntArray {
+        unsupported()
+    }
+    actual fun editorGetWordRangeAtCursor(editor: Long): IntArray {
+        unsupported()
+    }
     actual fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -194,6 +228,27 @@ internal actual object NativeBridge {
         unsupported()
     }
     actual fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray {
+        unsupported()
+    }
+    actual fun editorSetFoldRegions(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorToggleFold(editor: Long, line: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorFoldAt(editor: Long, line: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorUnfoldAt(editor: Long, line: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorFoldAll(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorUnfoldAll(editor: Long): ByteArray? {
+        unsupported()
+    }
+    actual fun editorIsLineVisible(editor: Long, line: Int): Boolean {
         unsupported()
     }
 

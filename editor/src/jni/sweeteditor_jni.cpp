@@ -336,6 +336,41 @@ jbyteArray insert_text_jni(JNIEnv* env, jclass, jlong editor, jbyteArray text) {
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray replace_text_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jint start_line,
+    jint start_column,
+    jint end_line,
+    jint end_column,
+    jbyteArray text) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const std::string utf8 = bytes_to_string(env, text);
+  size_t size = 0;
+  const uint8_t* payload = editor_replace_text(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(start_line),
+      static_cast<size_t>(start_column),
+      static_cast<size_t>(end_line),
+      static_cast<size_t>(end_column),
+      utf8.c_str(),
+      &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray apply_text_edits_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_apply_text_edits(
+      static_cast<intptr_t>(editor),
+      view.ptr,
+      static_cast<size_t>(view.len),
+      &size);
+  return adopt_binary(env, result, size);
+}
+
 jbyteArray backspace_jni(JNIEnv* env, jclass, jlong editor) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -449,6 +484,64 @@ jbyteArray set_insert_spaces_jni(JNIEnv* env, jclass, jlong editor, jboolean ena
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray set_char_pairs_jni(
+    JNIEnv* env,
+    jlong editor,
+    jintArray open_chars,
+    jintArray close_chars,
+    bool auto_closing) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const jsize open_len = open_chars != nullptr ? env->GetArrayLength(open_chars) : 0;
+  const jsize close_len = close_chars != nullptr ? env->GetArrayLength(close_chars) : 0;
+  const size_t count = static_cast<size_t>(open_len < close_len ? open_len : close_len);
+  std::vector<uint32_t> opens(count);
+  std::vector<uint32_t> closes(count);
+  if (count > 0) {
+    jint* open_raw = env->GetIntArrayElements(open_chars, nullptr);
+    jint* close_raw = env->GetIntArrayElements(close_chars, nullptr);
+    if (open_raw != nullptr && close_raw != nullptr) {
+      for (size_t i = 0; i < count; i++) {
+        opens[i] = static_cast<uint32_t>(open_raw[i]);
+        closes[i] = static_cast<uint32_t>(close_raw[i]);
+      }
+    }
+    if (open_raw != nullptr) {
+      env->ReleaseIntArrayElements(open_chars, open_raw, JNI_ABORT);
+    }
+    if (close_raw != nullptr) {
+      env->ReleaseIntArrayElements(close_chars, close_raw, JNI_ABORT);
+    }
+  }
+  size_t size = 0;
+  const uint8_t* payload = auto_closing
+      ? editor_set_auto_closing_pairs(
+            static_cast<intptr_t>(editor),
+            opens.empty() ? nullptr : opens.data(),
+            closes.empty() ? nullptr : closes.data(),
+            count,
+            &size)
+      : editor_set_bracket_pairs(
+            static_cast<intptr_t>(editor),
+            opens.empty() ? nullptr : opens.data(),
+            closes.empty() ? nullptr : closes.data(),
+            count,
+            &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_bracket_pairs_jni(JNIEnv* env, jclass, jlong editor, jintArray open_chars, jintArray close_chars) {
+  return set_char_pairs_jni(env, editor, open_chars, close_chars, false);
+}
+
+jbyteArray set_auto_closing_pairs_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jintArray open_chars,
+    jintArray close_chars) {
+  return set_char_pairs_jni(env, editor, open_chars, close_chars, true);
+}
+
 jbyteArray set_auto_indent_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -488,6 +581,27 @@ jbyteArray set_current_line_render_mode_jni(JNIEnv* env, jclass, jlong editor, j
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
   const uint8_t* payload = editor_set_current_line_render_mode(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_fold_arrow_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_fold_arrow_mode(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_render_whitespace_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_render_whitespace(static_cast<intptr_t>(editor), mode, &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_render_line_breaks_jni(JNIEnv* env, jclass, jlong editor, jboolean enabled) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_set_render_line_breaks(static_cast<intptr_t>(editor), enabled ? 1 : 0, &size);
   return adopt_binary(env, payload, size);
 }
 
@@ -682,6 +796,46 @@ jbyteArray get_selected_text_jni(JNIEnv* env, jclass, jlong editor) {
   return utf8_to_bytes(env, const_cast<char*>(text));
 }
 
+jintArray get_cursor_position_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t line = 0;
+  size_t column = 0;
+  editor_get_cursor_position(static_cast<intptr_t>(editor), &line, &column);
+  jintArray result = env->NewIntArray(2);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jint data[2] = {static_cast<jint>(line), static_cast<jint>(column)};
+  env->SetIntArrayRegion(result, 0, 2, data);
+  return result;
+}
+
+jintArray get_word_range_at_cursor_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t start_line = 0;
+  size_t start_column = 0;
+  size_t end_line = 0;
+  size_t end_column = 0;
+  editor_get_word_range_at_cursor(
+      static_cast<intptr_t>(editor),
+      &start_line,
+      &start_column,
+      &end_line,
+      &end_column);
+  jintArray result = env->NewIntArray(4);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jint data[4] = {
+      static_cast<jint>(start_line),
+      static_cast<jint>(start_column),
+      static_cast<jint>(end_line),
+      static_cast<jint>(end_column),
+  };
+  env->SetIntArrayRegion(result, 0, 4, data);
+  return result;
+}
+
 jbyteArray decoration_op_jni(
     JNIEnv* env,
     jclass,
@@ -812,6 +966,58 @@ jbyteArray get_link_target_at_jni(JNIEnv* env, jclass, jlong editor, jint line, 
   return utf8_to_bytes(env, const_cast<char*>(text));
 }
 
+jbyteArray set_fold_regions_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_fold_regions(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray toggle_fold_jni(JNIEnv* env, jclass, jlong editor, jint line) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_toggle_fold(static_cast<intptr_t>(editor), static_cast<size_t>(line), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray fold_at_jni(JNIEnv* env, jclass, jlong editor, jint line) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_fold_at(static_cast<intptr_t>(editor), static_cast<size_t>(line), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray unfold_at_jni(JNIEnv* env, jclass, jlong editor, jint line) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_unfold_at(static_cast<intptr_t>(editor), static_cast<size_t>(line), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray fold_all_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_fold_all(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray unfold_all_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_unfold_all(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jboolean is_line_visible_jni(JNIEnv*, jclass, jlong editor, jint line) {
+  if (editor == 0) {
+    return JNI_FALSE;
+  }
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  return editor_is_line_visible(static_cast<intptr_t>(editor), static_cast<size_t>(line)) != 0 ? JNI_TRUE : JNI_FALSE;
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -828,6 +1034,8 @@ const JNINativeMethod kMethods[] = {
     {"editorUpdatePointerModifiers", "(JI)[B", (void*)update_pointer_modifiers_jni},
     {"editorTickAnimations", "(J)[B", (void*)tick_jni},
     {"editorInsertText", "(J[B)[B", (void*)insert_text_jni},
+    {"editorReplaceText", "(JIIII[B)[B", (void*)replace_text_jni},
+    {"editorApplyTextEdits", "(J[B)[B", (void*)apply_text_edits_jni},
     {"editorBackspace", "(J)[B", (void*)backspace_jni},
     {"editorMoveLineUp", "(J)[B", (void*)move_line_up_jni},
     {"editorMoveLineDown", "(J)[B", (void*)move_line_down_jni},
@@ -845,12 +1053,17 @@ const JNINativeMethod kMethods[] = {
     {"editorSetWrapMode", "(JI)[B", (void*)set_wrap_mode_jni},
     {"editorSetTabSize", "(JI)[B", (void*)set_tab_size_jni},
     {"editorSetInsertSpaces", "(JZ)[B", (void*)set_insert_spaces_jni},
+    {"editorSetBracketPairs", "(J[I[I)[B", (void*)set_bracket_pairs_jni},
+    {"editorSetAutoClosingPairs", "(J[I[I)[B", (void*)set_auto_closing_pairs_jni},
     {"editorSetAutoIndentMode", "(JI)[B", (void*)set_auto_indent_mode_jni},
     {"editorSetBackspaceUnindent", "(JZ)[B", (void*)set_backspace_unindent_jni},
     {"editorSetScale", "(JF)[B", (void*)set_scale_jni},
     {"editorSetLineSpacing", "(JFF)[B", (void*)set_line_spacing_jni},
     {"editorSetReadOnly", "(JZ)[B", (void*)set_read_only_jni},
     {"editorSetCurrentLineRenderMode", "(JI)[B", (void*)set_current_line_render_mode_jni},
+    {"editorSetFoldArrowMode", "(JI)[B", (void*)set_fold_arrow_mode_jni},
+    {"editorSetRenderWhitespace", "(JI)[B", (void*)set_render_whitespace_jni},
+    {"editorSetRenderLineBreaks", "(JZ)[B", (void*)set_render_line_breaks_jni},
     {"editorSetEditorRenderColors", "(J[B)[B", (void*)set_editor_render_colors_jni},
     {"editorSetEditorRangeEffectStyles", "(J[B)[B", (void*)set_editor_range_effect_styles_jni},
     {"editorSearch", "(J[B)[B", (void*)search_jni},
@@ -870,8 +1083,17 @@ const JNINativeMethod kMethods[] = {
     {"editorGetVisibleLineRange", "(J)[I", (void*)get_visible_line_range_jni},
     {"editorGetScrollMetrics", "(J)[B", (void*)get_scroll_metrics_jni},
     {"editorGetSelectedText", "(J)[B", (void*)get_selected_text_jni},
+    {"editorGetCursorPosition", "(J)[I", (void*)get_cursor_position_jni},
+    {"editorGetWordRangeAtCursor", "(J)[I", (void*)get_word_range_at_cursor_jni},
     {"editorDecorationOp", "(JI[BIIII)[B", (void*)decoration_op_jni},
     {"editorGetLinkTargetAt", "(JII)[B", (void*)get_link_target_at_jni},
+    {"editorSetFoldRegions", "(J[B)[B", (void*)set_fold_regions_jni},
+    {"editorToggleFold", "(JI)[B", (void*)toggle_fold_jni},
+    {"editorFoldAt", "(JI)[B", (void*)fold_at_jni},
+    {"editorUnfoldAt", "(JI)[B", (void*)unfold_at_jni},
+    {"editorFoldAll", "(J)[B", (void*)fold_all_jni},
+    {"editorUnfoldAll", "(J)[B", (void*)unfold_all_jni},
+    {"editorIsLineVisible", "(JI)Z", (void*)is_line_visible_jni},
 };
 
 }  // namespace

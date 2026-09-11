@@ -7,11 +7,14 @@ import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
 import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
+import io.github.lumkit.sweeteditor.FoldRegion
 import io.github.lumkit.sweeteditor.GutterIcon
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
 import io.github.lumkit.sweeteditor.StyleSpan
+import io.github.lumkit.sweeteditor.TextPosition
+import io.github.lumkit.sweeteditor.TextRange
 import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
@@ -34,6 +37,7 @@ import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineInlayHintsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineLinksPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLinePhantomTextsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineSpansPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetFoldRegionsPayload
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
 import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
 import io.github.lumkit.sweeteditor.core.protocol.ImeState
@@ -110,6 +114,26 @@ internal class EditorCore(
     fun insertText(text: String): EditorActionResult? =
         decodeAction(NativeBridge.editorInsertText(editorHandle, text.encodeToByteArray()))
 
+    fun replaceText(
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: String,
+    ): EditorActionResult? = decodeAction(
+        NativeBridge.editorReplaceText(
+            editorHandle,
+            startLine,
+            startColumn,
+            endLine,
+            endColumn,
+            text.encodeToByteArray(),
+        ),
+    )
+
+    fun applyTextEdits(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorApplyTextEdits(editorHandle, payload))
+
     fun backspace(): EditorActionResult? = decodeAction(NativeBridge.editorBackspace(editorHandle))
 
     fun undo(): EditorActionResult? = decodeAction(NativeBridge.editorUndo(editorHandle))
@@ -134,6 +158,12 @@ internal class EditorCore(
 
     fun setInsertSpaces(enabled: Boolean): EditorActionResult? =
         decodeAction(NativeBridge.editorSetInsertSpaces(editorHandle, enabled))
+
+    fun setBracketPairs(openChars: IntArray, closeChars: IntArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetBracketPairs(editorHandle, openChars, closeChars))
+
+    fun setAutoClosingPairs(openChars: IntArray, closeChars: IntArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetAutoClosingPairs(editorHandle, openChars, closeChars))
 
     fun setAutoIndentMode(mode: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorSetAutoIndentMode(editorHandle, mode))
@@ -169,6 +199,22 @@ internal class EditorCore(
     }
 
     fun getSelectedText(): String = NativeBridge.editorGetSelectedText(editorHandle).decodeToString()
+
+    fun getCursorPosition(): TextPosition {
+        val values = NativeBridge.editorGetCursorPosition(editorHandle)
+        return TextPosition(
+            line = values.getOrElse(0) { 0 },
+            column = values.getOrElse(1) { 0 },
+        )
+    }
+
+    fun getWordRangeAtCursor(): TextRange {
+        val values = NativeBridge.editorGetWordRangeAtCursor(editorHandle)
+        return TextRange(
+            start = TextPosition(values.getOrElse(0) { 0 }, values.getOrElse(1) { 0 }),
+            end = TextPosition(values.getOrElse(2) { 0 }, values.getOrElse(3) { 0 }),
+        )
+    }
 
     fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0): EditorActionResult? =
         decoration(NativeDecorationOp.REGISTER_TEXT_STYLE, a = styleId, b = color, c = backgroundColor, d = fontStyle)
@@ -239,6 +285,24 @@ internal class EditorCore(
     fun getLinkTargetAt(line: Int, column: Int): String =
         NativeBridge.editorGetLinkTargetAt(editorHandle, line, column).decodeToString()
 
+    fun setFoldRegions(regions: List<FoldRegion>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetFoldRegions(editorHandle, encodeSetFoldRegionsPayload(regions)))
+
+    fun toggleFold(line: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorToggleFold(editorHandle, line))
+
+    fun foldAt(line: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorFoldAt(editorHandle, line))
+
+    fun unfoldAt(line: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorUnfoldAt(editorHandle, line))
+
+    fun foldAll(): EditorActionResult? = decodeAction(NativeBridge.editorFoldAll(editorHandle))
+
+    fun unfoldAll(): EditorActionResult? = decodeAction(NativeBridge.editorUnfoldAll(editorHandle))
+
+    fun isLineVisible(line: Int): Boolean = NativeBridge.editorIsLineVisible(editorHandle, line)
+
     fun setLineDiagnostics(line: Int, items: List<Diagnostic>): EditorActionResult? =
         decoration(NativeDecorationOp.SET_LINE_DIAGNOSTICS, encodeSetLineDiagnosticsPayload(line, items))
 
@@ -303,6 +367,15 @@ internal class EditorCore(
 
     fun setCurrentLineRenderMode(mode: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorSetCurrentLineRenderMode(editorHandle, mode))
+
+    fun setFoldArrowMode(mode: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetFoldArrowMode(editorHandle, mode))
+
+    fun setRenderWhitespace(mode: Int): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetRenderWhitespace(editorHandle, mode))
+
+    fun setRenderLineBreaks(enabled: Boolean): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetRenderLineBreaks(editorHandle, enabled))
 
     fun setEditorRenderColors(payload: ByteArray): EditorActionResult? =
         decodeAction(NativeBridge.editorSetEditorRenderColors(editorHandle, payload))

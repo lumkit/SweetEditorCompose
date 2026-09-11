@@ -6,7 +6,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.FloatVar
 import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.UByteVar
-import kotlinx.cinterop.UShortVar
+import kotlinx.cinterop.UIntVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.cValue
@@ -36,7 +36,10 @@ import sweeteditor.cinterop.editor_clear_inlay_hints
 import sweeteditor.cinterop.editor_clear_line_spans
 import sweeteditor.cinterop.editor_clear_links
 import sweeteditor.cinterop.editor_clear_phantom_texts
+import sweeteditor.cinterop.editor_fold_all
+import sweeteditor.cinterop.editor_fold_at
 import sweeteditor.cinterop.editor_get_link_target_at
+import sweeteditor.cinterop.editor_is_line_visible
 import sweeteditor.cinterop.editor_register_batch_text_styles
 import sweeteditor.cinterop.editor_register_text_style
 import sweeteditor.cinterop.editor_set_batch_line_codelens
@@ -76,13 +79,19 @@ import sweeteditor.cinterop.editor_copy_line_up
 import sweeteditor.cinterop.editor_delete_line
 import sweeteditor.cinterop.editor_insert_line_above
 import sweeteditor.cinterop.editor_insert_line_below
+import sweeteditor.cinterop.editor_apply_text_edits
+import sweeteditor.cinterop.editor_get_cursor_position
+import sweeteditor.cinterop.editor_get_word_range_at_cursor
 import sweeteditor.cinterop.editor_insert_text
+import sweeteditor.cinterop.editor_replace_text
 import sweeteditor.cinterop.editor_move_line_down
 import sweeteditor.cinterop.editor_move_line_up
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_set_auto_closing_pairs
 import sweeteditor.cinterop.editor_set_auto_indent_mode
 import sweeteditor.cinterop.editor_set_backspace_unindent
+import sweeteditor.cinterop.editor_set_bracket_pairs
 import sweeteditor.cinterop.editor_set_current_line_render_mode
 import sweeteditor.cinterop.editor_set_document
 import sweeteditor.cinterop.editor_clear_search
@@ -94,16 +103,23 @@ import sweeteditor.cinterop.editor_replace_current_search_match
 import sweeteditor.cinterop.editor_search
 import sweeteditor.cinterop.editor_set_editor_range_effect_styles
 import sweeteditor.cinterop.editor_set_editor_render_colors
+import sweeteditor.cinterop.editor_set_fold_arrow_mode
+import sweeteditor.cinterop.editor_set_fold_regions
 import sweeteditor.cinterop.editor_set_gutter_sticky
 import sweeteditor.cinterop.editor_set_gutter_visible
 import sweeteditor.cinterop.editor_set_insert_spaces
 import sweeteditor.cinterop.editor_set_line_spacing
 import sweeteditor.cinterop.editor_set_read_only
+import sweeteditor.cinterop.editor_set_render_line_breaks
+import sweeteditor.cinterop.editor_set_render_whitespace
 import sweeteditor.cinterop.editor_set_scale
 import sweeteditor.cinterop.editor_set_tab_size
 import sweeteditor.cinterop.editor_set_viewport
 import sweeteditor.cinterop.editor_set_wrap_mode
 import sweeteditor.cinterop.editor_tick_animations
+import sweeteditor.cinterop.editor_toggle_fold
+import sweeteditor.cinterop.editor_unfold_all
+import sweeteditor.cinterop.editor_unfold_at
 import sweeteditor.cinterop.editor_update_pointer_modifiers
 import sweeteditor.cinterop.editor_undo
 import sweeteditor.cinterop.free_binary_data
@@ -268,6 +284,44 @@ internal actual object NativeBridge {
             }
         }
 
+    actual fun editorReplaceText(
+        editor: Long,
+        startLine: Int,
+        startColumn: Int,
+        endLine: Int,
+        endColumn: Int,
+        text: ByteArray,
+    ): ByteArray? = withActive(editor) {
+        adoptBinary { size ->
+            val terminated = text + 0
+            terminated.usePinned { pinned ->
+                editor_replace_text(
+                    editor,
+                    startLine.convert(),
+                    startColumn.convert(),
+                    endLine.convert(),
+                    endColumn.convert(),
+                    pinned.addressOf(0),
+                    size,
+                )
+            }
+        }
+    }
+
+    actual fun editorApplyTextEdits(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_apply_text_edits(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
     actual fun editorBackspace(editor: Long): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_backspace(editor, size) } }
 
@@ -300,6 +354,20 @@ internal actual object NativeBridge {
     actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? =
         withActive(editor) {
             adoptBinary { size -> editor_set_insert_spaces(editor, if (enabled) 1 else 0, size) }
+        }
+
+    actual fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> callCharPairs(openChars, closeChars) { opens, closes, count ->
+                editor_set_bracket_pairs(editor, opens, closes, count, size)
+            } }
+        }
+
+    actual fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> callCharPairs(openChars, closeChars) { opens, closes, count ->
+                editor_set_auto_closing_pairs(editor, opens, closes, count, size)
+            } }
         }
 
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
@@ -345,6 +413,17 @@ internal actual object NativeBridge {
     actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? =
         withActive(editor) {
             adoptBinary { size -> editor_set_current_line_render_mode(editor, mode, size) }
+        }
+
+    actual fun editorSetFoldArrowMode(editor: Long, mode: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_fold_arrow_mode(editor, mode, size) } }
+
+    actual fun editorSetRenderWhitespace(editor: Long, mode: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_set_render_whitespace(editor, mode, size) } }
+
+    actual fun editorSetRenderLineBreaks(editor: Long, enabled: Boolean): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size -> editor_set_render_line_breaks(editor, if (enabled) 1 else 0, size) }
         }
 
     actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? =
@@ -514,6 +593,37 @@ internal actual object NativeBridge {
         text.encodeToByteArray()
     }
 
+    actual fun editorGetCursorPosition(editor: Long): IntArray = withActive(editor) {
+        memScoped {
+            val line = alloc<size_tVar>()
+            val column = alloc<size_tVar>()
+            editor_get_cursor_position(editor, line.ptr, column.ptr)
+            intArrayOf(line.value.toInt(), column.value.toInt())
+        }
+    }
+
+    actual fun editorGetWordRangeAtCursor(editor: Long): IntArray = withActive(editor) {
+        memScoped {
+            val startLine = alloc<size_tVar>()
+            val startColumn = alloc<size_tVar>()
+            val endLine = alloc<size_tVar>()
+            val endColumn = alloc<size_tVar>()
+            editor_get_word_range_at_cursor(
+                editor,
+                startLine.ptr,
+                startColumn.ptr,
+                endLine.ptr,
+                endColumn.ptr,
+            )
+            intArrayOf(
+                startLine.value.toInt(),
+                startColumn.value.toInt(),
+                endLine.value.toInt(),
+                endColumn.value.toInt(),
+            )
+        }
+    }
+
     actual fun editorDecorationOp(
         editor: Long,
         op: Int,
@@ -589,6 +699,38 @@ internal actual object NativeBridge {
         text.encodeToByteArray()
     }
 
+    actual fun editorSetFoldRegions(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_fold_regions(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorToggleFold(editor: Long, line: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_toggle_fold(editor, line.toULong(), size) } }
+
+    actual fun editorFoldAt(editor: Long, line: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_fold_at(editor, line.toULong(), size) } }
+
+    actual fun editorUnfoldAt(editor: Long, line: Int): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_unfold_at(editor, line.toULong(), size) } }
+
+    actual fun editorFoldAll(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_fold_all(editor, size) } }
+
+    actual fun editorUnfoldAll(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_unfold_all(editor, size) } }
+
+    actual fun editorIsLineVisible(editor: Long, line: Int): Boolean =
+        withActive(editor) { editor_is_line_visible(editor, line.toULong()) != 0 }
+
     private inline fun <T> withActive(handle: Long, block: () -> T): T {
         val measurer = measurers[handle]
         if (measurer != null) activeStack.addLast(measurer)
@@ -607,6 +749,24 @@ internal actual object NativeBridge {
         if (bytes.isEmpty()) return block(null, 0u)
         return bytes.usePinned { pinned ->
             block(pinned.addressOf(0).reinterpret(), bytes.size.convert())
+        }
+    }
+
+    private inline fun callCharPairs(
+        openChars: IntArray,
+        closeChars: IntArray,
+        block: (CPointer<UIntVar>?, CPointer<UIntVar>?, platform.posix.size_t) -> CPointer<UByteVar>?,
+    ): CPointer<UByteVar>? {
+        val count = minOf(openChars.size, closeChars.size)
+        if (count == 0) return block(null, null, 0u)
+        return openChars.usePinned { opens ->
+            closeChars.usePinned { closes ->
+                block(
+                    opens.addressOf(0).reinterpret(),
+                    closes.addressOf(0).reinterpret(),
+                    count.convert(),
+                )
+            }
         }
     }
 
