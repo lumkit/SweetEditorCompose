@@ -140,6 +140,18 @@ internal actual object NativeBridge {
     ): ByteArray? {
         unsupported()
     }
+    actual fun editorGetCursorRect(editor: Long): FloatArray {
+        unsupported()
+    }
+    actual fun editorGetPositionRect(editor: Long, line: Int, column: Int): FloatArray {
+        unsupported()
+    }
+    actual fun editorGetVisibleLineRange(editor: Long): IntArray {
+        unsupported()
+    }
+    actual fun editorGetScrollMetrics(editor: Long): ByteArray? {
+        unsupported()
+    }
 
     private fun unsupported(): Nothing {
         throw IllegalStateException("SweetEditor native core is not wired on this target yet")

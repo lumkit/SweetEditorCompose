@@ -4,9 +4,12 @@ import androidx.compose.runtime.RememberObserver
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.github.lumkit.sweeteditor.EditorCursorRect
+import io.github.lumkit.sweeteditor.EditorScrollMetrics
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditorController
+import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.collectStateEvents
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.toRenderColors
@@ -239,6 +242,14 @@ internal class RememberedEditorSession(
     }
 
     fun documentUtf8(): String? = document?.utf8Text()
+
+    fun getCursorRect(): EditorCursorRect? = editor?.getCursorRect()
+
+    fun getPositionRect(line: Int, column: Int): EditorCursorRect? = editor?.getPositionRect(line, column)
+
+    fun getVisibleLineRange(): VisibleLineRange? = editor?.getVisibleLineRange()
+
+    fun getScrollMetrics(): EditorScrollMetrics? = editor?.getScrollMetrics()
 
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
