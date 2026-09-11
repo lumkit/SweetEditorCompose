@@ -10,10 +10,12 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     `maven-publish`
+    signing
+    alias(libs.plugins.nmcp)
 }
 
-group = "io.github.lumkit"
-version = "0.1.0-SNAPSHOT"
+group = rootProject.group
+version = rootProject.version
 description = "Compose Multiplatform code editor backed by the SweetEditor C++ core"
 
 val mavenArtifactId = "sweeteditor-compose"
@@ -330,6 +332,63 @@ prepareJvmNativeResources {
     }
 }
 
+val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
+    group = "sweeteditor"
+    description = "Fail non-SNAPSHOT publishes when packaged native binaries are incomplete"
+    val nativesPath = layout.projectDirectory.dir("natives").asFile.absolutePath
+    val versionName = providers.gradleProperty("VERSION_NAME")
+    val requireComplete = providers.gradleProperty("sweeteditor.publish.requireCompleteNatives")
+    doLast {
+        val natives = File(nativesPath)
+        val required = listOf(
+            "include/sweeteditor/c_api.h",
+            "desktop/macos-aarch64/libsweeteditor.dylib",
+            "desktop/macos-aarch64/libsweeteditor_compose.dylib",
+            "desktop/macos-x86_64/libsweeteditor.dylib",
+            "desktop/macos-x86_64/libsweeteditor_compose.dylib",
+            "desktop/linux-x86_64/libsweeteditor.so",
+            "desktop/linux-x86_64/libsweeteditor_compose.so",
+            "desktop/linux-aarch64/libsweeteditor.so",
+            "desktop/linux-aarch64/libsweeteditor_compose.so",
+            "desktop/windows-x86_64/sweeteditor.dll",
+            "desktop/windows-x86_64/sweeteditor_compose.dll",
+            "android/arm64-v8a/libsweeteditor.so",
+            "android/x86_64/libsweeteditor.so",
+            "ios/arm64/libsweeteditor.a",
+            "ios/simulator-arm64/libsweeteditor.a",
+            "web/sweeteditor_c_abi.js",
+            "web/sweeteditor_c_abi.wasm",
+        )
+        val missing = required.filter { !File(natives, it).isFile }
+        if (missing.isEmpty()) {
+            logger.lifecycle("Release natives complete under ${natives.absolutePath}")
+            return@doLast
+        }
+        val resolvedVersion = versionName.get()
+        val force = requireComplete.orNull == "true"
+        val release = !resolvedVersion.endsWith("-SNAPSHOT")
+        val message = buildString {
+            appendLine("Incomplete natives for publishing $resolvedVersion:")
+            missing.forEach { appendLine("  - natives/$it") }
+            append("Run editor/scripts/prepare-release-natives.sh on CI (or locally) before a non-SNAPSHOT release.")
+        }
+        if (release || force) {
+            error(message)
+        }
+        logger.warn(message)
+    }
+}
+
+tasks.matching { it.name.startsWith("publish") }.configureEach {
+    dependsOn(verifyReleaseNatives)
+}
+
+tasks.withType<Jar>().configureEach {
+    if (name == "jvmJar") {
+        manifest.attributes["Implementation-Version"] = version.toString()
+    }
+}
+
 tasks.configureEach {
     if (name.contains("ProcessResources")) {
         if (name.contains("jvm", ignoreCase = true)) {
@@ -422,25 +481,8 @@ publishing {
         pom {
             name.set("SweetEditor Compose")
             description.set(project.description)
-            url.set("https://github.com/lumkit/SweetEditorCompose")
-            licenses {
-                license {
-                    name.set("GNU Affero General Public License v3.0")
-                    url.set("https://www.gnu.org/licenses/agpl-3.0.html")
-                    distribution.set("repo")
-                }
-            }
-            scm {
-                url.set("https://github.com/lumkit/SweetEditorCompose")
-                connection.set("scm:git:https://github.com/lumkit/SweetEditorCompose.git")
-                developerConnection.set("scm:git:ssh://git@github.com/lumkit/SweetEditorCompose.git")
-            }
-        }
-    }
-    repositories {
-        maven {
-            name = "BuildDir"
-            url = uri(rootProject.layout.buildDirectory.dir("maven"))
         }
     }
 }
+
+apply(from = rootProject.file("gradle/maven-publishing.gradle.kts"))

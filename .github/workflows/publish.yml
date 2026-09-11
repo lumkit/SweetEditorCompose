@@ -1,0 +1,141 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_central:
+        description: Upload the aggregated deployment to Maven Central Portal
+        type: boolean
+        default: false
+      publishing_type:
+        description: USER_MANAGED (manual release in Portal) or AUTOMATIC
+        type: string
+        default: USER_MANAGED
+  push:
+    tags:
+      - "v*"
+
+env:
+  SWEETEDITOR_HOME: ${{ github.workspace }}/.deps/SweetEditor
+
+jobs:
+  natives:
+    name: natives (${{ matrix.id }})
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: macos
+            os: macos-14
+            flags: --host --macos-x86_64 --ios
+          - id: linux-x64
+            os: ubuntu-22.04
+            flags: --host --android --wasm
+          - id: linux-arm
+            os: ubuntu-24.04-arm
+            flags: --host
+          - id: windows
+            os: windows-2022
+            flags: --host
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: FinalScave/SweetEditor
+          path: .deps/SweetEditor
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install CMake and Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja
+      - name: Install CMake and Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build
+      - name: Setup Android NDK
+        if: contains(matrix.flags, '--android')
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r27c
+          add-to-path: false
+      - name: Setup Emscripten
+        if: contains(matrix.flags, '--wasm')
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+      - name: Build natives
+        env:
+          ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+        run: |
+          chmod +x editor/scripts/*.sh
+          ./editor/scripts/prepare-release-natives.sh ${{ matrix.flags }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natives-${{ matrix.id }}
+          path: editor/natives
+          if-no-files-found: error
+
+  publish:
+    name: Assemble Maven artifacts
+    needs: natives
+    runs-on: macos-14
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: FinalScave/SweetEditor
+          path: .deps/SweetEditor
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: natives-*
+          merge-multiple: true
+          path: editor/natives
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Install CMake and Ninja
+        run: brew install cmake ninja
+      - name: Verify natives and publish to build/maven
+        env:
+          ORG_GRADLE_PROJECT_sweetEditor.home: .deps/SweetEditor
+        run: |
+          ./gradlew --no-daemon \
+            -Psweeteditor.publish.requireCompleteNatives=true \
+            -PsweetEditor.home=.deps/SweetEditor \
+            :editor:verifyReleaseNatives \
+            :editor:publish \
+            :editor-android-jni:publish
+      - name: Upload Maven Central Portal deployment
+        if: ${{ github.event_name == 'push' || inputs.publish_central }}
+        env:
+          MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          MAVEN_CENTRAL_PASSWORD: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          MAVEN_CENTRAL_PUBLISHING_TYPE: ${{ inputs.publishing_type || 'USER_MANAGED' }}
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+          ORG_GRADLE_PROJECT_sweetEditor.home: .deps/SweetEditor
+        run: |
+          if [[ -z "${MAVEN_CENTRAL_USERNAME:-}" || -z "${SIGNING_KEY:-}" ]]; then
+            echo "Central secrets are missing; skip Portal upload."
+            exit 0
+          fi
+          ./gradlew --no-daemon \
+            -Psweeteditor.publish.requireCompleteNatives=true \
+            -PsweetEditor.home=.deps/SweetEditor \
+            nmcpPublishAggregationToCentralPortal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: maven-repo
+          path: build/maven
+          if-no-files-found: error
