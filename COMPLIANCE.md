@@ -126,7 +126,7 @@
 | 多光标 | — | 不做 | C API 无 |
 | 语法/LSP 引擎 | — | 不做 | 始终走宿主 Provider |
 | Perf overlay | MAY | 不做 | 调试用，未排期 |
-| Maven/XCFramework 坐标 | P3-11 | 未做 | 发布物任务 |
+| Maven/XCFramework 坐标 | P3-11 | 本地 Maven 已接线 | 见 [PUBLISHING.md](./PUBLISHING.md)；无独立 XCFramework，iOS 走 klib 内嵌 `.a` |
 
 ---
 

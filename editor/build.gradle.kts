@@ -9,14 +9,14 @@ plugins {
     alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    `maven-publish`
 }
 
 group = "io.github.lumkit"
 version = "0.1.0-SNAPSHOT"
 description = "Compose Multiplatform code editor backed by the SweetEditor C++ core"
 
-// Reserved for Maven Central wiring. Do not add publish tasks yet.
-extra["mavenArtifactId"] = "sweeteditor-compose"
+val mavenArtifactId = "sweeteditor-compose"
 
 val sweetEditorHome: File = resolveSweetEditorHome()
 val nativesRoot: File = layout.projectDirectory.dir("natives").asFile
@@ -65,6 +65,12 @@ kotlin {
             sourceSetTreeName = "test"
         }.configure {
             instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        }
+        optimization {
+            consumerKeepRules.apply {
+                publish = true
+                file("src/androidMain/consumer-rules.pro")
+            }
         }
     }
 
@@ -404,4 +410,37 @@ private fun currentDesktopResourceFolder(): String {
         else -> "x86_64"
     }
     return "$osName-$archName"
+}
+
+publishing {
+    publications.withType<MavenPublication>().configureEach {
+        artifactId = when {
+            artifactId == "editor" -> mavenArtifactId
+            artifactId.startsWith("editor-") -> mavenArtifactId + artifactId.removePrefix("editor")
+            else -> artifactId
+        }
+        pom {
+            name.set("SweetEditor Compose")
+            description.set(project.description)
+            url.set("https://github.com/lumkit/SweetEditorCompose")
+            licenses {
+                license {
+                    name.set("GNU Affero General Public License v3.0")
+                    url.set("https://www.gnu.org/licenses/agpl-3.0.html")
+                    distribution.set("repo")
+                }
+            }
+            scm {
+                url.set("https://github.com/lumkit/SweetEditorCompose")
+                connection.set("scm:git:https://github.com/lumkit/SweetEditorCompose.git")
+                developerConnection.set("scm:git:ssh://git@github.com/lumkit/SweetEditorCompose.git")
+            }
+        }
+    }
+    repositories {
+        maven {
+            name = "BuildDir"
+            url = uri(rootProject.layout.buildDirectory.dir("maven"))
+        }
+    }
 }
