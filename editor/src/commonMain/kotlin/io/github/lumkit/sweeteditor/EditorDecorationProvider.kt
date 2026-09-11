@@ -28,6 +28,8 @@ data class DecorationContext(
     val visibleLineRange: VisibleLineRange,
     val totalLineCount: Int,
     val textChanges: List<TextChange>,
+    val languageConfiguration: LanguageConfiguration? = null,
+    val editorMetadata: EditorMetadata? = null,
 )
 
 interface DecorationReceiver {
@@ -47,6 +49,7 @@ data class DecorationResult(
     val inlayHints: Map<Int, List<InlayHint>>? = null,
     val diagnostics: Map<Int, List<Diagnostic>>? = null,
     val documentHighlights: Map<Int, List<DocumentHighlight>>? = null,
+    val foldRegions: List<FoldRegion>? = null,
     val gutterIcons: Map<Int, List<GutterIcon>>? = null,
     val phantomTexts: Map<Int, List<PhantomText>>? = null,
     val codeLensItems: Map<Int, List<CodeLensItem>>? = null,
@@ -57,6 +60,7 @@ data class DecorationResult(
     val inlayHintsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
     val diagnosticsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
     val documentHighlightsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
+    val foldRegionsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
     val gutterIconsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
     val phantomTextsMode: DecorationApplyMode = DecorationApplyMode.MERGE,
     val codeLensItemsMode: DecorationApplyMode = DecorationApplyMode.MERGE,

@@ -19,9 +19,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import io.github.lumkit.sweeteditor.EditorIconProvider
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
+import io.github.lumkit.sweeteditor.core.protocol.FoldState
 import io.github.lumkit.sweeteditor.core.protocol.GuideType
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectRenderItem
@@ -29,15 +33,19 @@ import io.github.lumkit.sweeteditor.core.protocol.RangeEffectUnderlineStyle
 import io.github.lumkit.sweeteditor.core.protocol.Rect
 import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
 import io.github.lumkit.sweeteditor.core.protocol.SelectionHandle
+import io.github.lumkit.sweeteditor.core.protocol.VisualRun
 import io.github.lumkit.sweeteditor.core.protocol.VisualRunType
-import io.github.lumkit.sweeteditor.core.protocol.TextStyle as RunTextStyle
+import kotlin.math.max
+import kotlin.math.min
 
 internal fun DrawScope.drawEditor(
     model: EditorRenderModel,
     textMeasurer: TextMeasurer,
     baseStyle: TextStyle,
     fontAscent: Float,
+    fontDescent: Float,
     theme: EditorTheme,
+    iconProvider: EditorIconProvider? = null,
 ) {
     drawRect(theme.backgroundColor.toComposeColor())
 
@@ -50,15 +58,16 @@ internal fun DrawScope.drawEditor(
             for (run in line.runs) {
                 when (run.type) {
                     VisualRunType.TEXT,
-                    VisualRunType.WHITESPACE,
-                    VisualRunType.TAB,
-                    VisualRunType.NEWLINE,
                     VisualRunType.INLAY_HINT,
                     VisualRunType.PHANTOM_TEXT,
                     VisualRunType.FOLD_PLACEHOLDER,
                     VisualRunType.CODELENS,
-                    -> drawRun(run.x, run.y, run.text, run.style, textMeasurer, baseStyle, fontAscent)
-                    else -> Unit
+                    VisualRunType.LINK,
+                    -> drawTextRun(run, textMeasurer, baseStyle, fontAscent)
+                    VisualRunType.WHITESPACE,
+                    VisualRunType.TAB,
+                    VisualRunType.NEWLINE,
+                    -> drawInvisibleCharacterRun(run, textMeasurer, baseStyle, fontAscent, fontDescent, theme)
                 }
             }
         }
@@ -82,32 +91,124 @@ internal fun DrawScope.drawEditor(
 
     drawGutterOverlay(model, theme, lineHeight)
     drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
-    drawGutterIcons(model, theme)
+    drawGutterIcons(model, theme, iconProvider)
+    drawFoldMarkers(model, theme)
     drawSelectionHandles(model, theme)
     drawScrollbars(model, theme)
 }
 
-private fun DrawScope.drawRun(
-    x: Float,
-    y: Float,
-    text: String,
-    runStyle: RunTextStyle,
+private fun DrawScope.drawTextRun(
+    run: VisualRun,
     textMeasurer: TextMeasurer,
     baseStyle: TextStyle,
     fontAscent: Float,
 ) {
-    if (text.isEmpty()) return
-    val color = runStyle.color.toComposeColor().takeUnless { it == Color.Unspecified } ?: Color(0xFFD4D4D4)
+    drawRunBackground(run, fontAscent)
+    if (run.text.isEmpty()) return
+    val color = run.style.color.toComposeColor().takeUnless { it == Color.Unspecified } ?: Color(0xFFD4D4D4)
     val style = baseStyle.copy(
         color = color,
-        fontWeight = if ((runStyle.fontStyle and 1) != 0) FontWeight.Bold else FontWeight.Normal,
-        fontStyle = if ((runStyle.fontStyle and 2) != 0) FontStyle.Italic else FontStyle.Normal,
+        fontWeight = if ((run.style.fontStyle and 1) != 0) FontWeight.Bold else FontWeight.Normal,
+        fontStyle = if ((run.style.fontStyle and 2) != 0) FontStyle.Italic else FontStyle.Normal,
         fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
     )
-    val layout = textMeasurer.measure(text, style, constraints = Constraints())
+    val layout = textMeasurer.measure(run.text, style, constraints = Constraints())
     drawText(
         textLayoutResult = layout,
-        topLeft = Offset(x, y - fontAscent),
+        topLeft = Offset(run.x, run.y - fontAscent),
+    )
+    if ((run.type == VisualRunType.CODELENS || run.type == VisualRunType.LINK) && run.active) {
+        drawLine(
+            color = color,
+            start = Offset(run.x, run.y + 1f),
+            end = Offset(run.x + run.width.coerceAtLeast(layout.size.width.toFloat()), run.y + 1f),
+            strokeWidth = 1f,
+        )
+    }
+}
+
+private fun DrawScope.drawInvisibleCharacterRun(
+    run: VisualRun,
+    textMeasurer: TextMeasurer,
+    baseStyle: TextStyle,
+    fontAscent: Float,
+    fontDescent: Float,
+    theme: EditorTheme,
+) {
+    drawRunBackground(run, fontAscent, fontDescent)
+    val color = theme.invisibleCharacterColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: return
+    when (run.type) {
+        VisualRunType.WHITESPACE -> drawWhitespaceMarkerRun(run, fontAscent, fontDescent, color, baseStyle)
+        VisualRunType.TAB -> drawTabMarkerRun(run, fontAscent, fontDescent, color, baseStyle)
+        VisualRunType.NEWLINE -> drawLineBreakMarkerRun(run, textMeasurer, baseStyle, fontAscent, color)
+        else -> Unit
+    }
+}
+
+private fun DrawScope.drawRunBackground(run: VisualRun, fontAscent: Float, fontDescent: Float = fontAscent * 0.3f) {
+    val background = run.style.backgroundColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: return
+    if (run.width <= 0f) return
+    drawRect(
+        color = background,
+        topLeft = Offset(run.x, run.y - fontAscent),
+        size = Size(run.width, (fontAscent + fontDescent).coerceAtLeast(1f)),
+    )
+}
+
+private fun DrawScope.drawWhitespaceMarkerRun(
+    run: VisualRun,
+    fontAscent: Float,
+    fontDescent: Float,
+    color: Color,
+    baseStyle: TextStyle,
+) {
+    val markerCount = run.text.length
+    if (markerCount <= 0 || run.width <= 0f) return
+    val cellWidth = run.width / max(1, markerCount)
+    val centerY = run.y + (fontDescent - fontAscent) * 0.5f
+    val fontSizePx = baseStyle.fontSize.toPx()
+    val radius = max(1f, min(cellWidth, fontSizePx) * 0.08f)
+    for (i in 0 until markerCount) {
+        val centerX = run.x + cellWidth * (i + 0.5f)
+        drawCircle(color = color, radius = radius, center = Offset(centerX, centerY))
+    }
+}
+
+private fun DrawScope.drawTabMarkerRun(
+    run: VisualRun,
+    fontAscent: Float,
+    fontDescent: Float,
+    color: Color,
+    baseStyle: TextStyle,
+) {
+    if (run.text.isEmpty() || run.width <= 0f) return
+    val centerY = run.y + (fontDescent - fontAscent) * 0.5f
+    val padding = min(run.width * 0.25f, 8f)
+    val left = run.x + padding
+    val right = max(left, run.x + run.width - padding)
+    val arrow = min(5f, max(2f, (right - left) * 0.35f))
+    val stroke = max(1f, baseStyle.fontSize.toPx() * 0.06f)
+    drawLine(color, Offset(left, centerY), Offset(right, centerY), strokeWidth = stroke, cap = StrokeCap.Round)
+    drawLine(color, Offset(right, centerY), Offset(right - arrow, centerY - arrow), strokeWidth = stroke, cap = StrokeCap.Round)
+    drawLine(color, Offset(right, centerY), Offset(right - arrow, centerY + arrow), strokeWidth = stroke, cap = StrokeCap.Round)
+}
+
+private fun DrawScope.drawLineBreakMarkerRun(
+    run: VisualRun,
+    textMeasurer: TextMeasurer,
+    baseStyle: TextStyle,
+    fontAscent: Float,
+    color: Color,
+) {
+    if (run.text.isEmpty()) return
+    val style = baseStyle.copy(
+        color = color,
+        fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
+    )
+    val layout = textMeasurer.measure(run.text, style, constraints = Constraints())
+    drawText(
+        textLayoutResult = layout,
+        topLeft = Offset(run.x, run.y - fontAscent),
     )
 }
 
@@ -325,16 +426,66 @@ private fun DrawScope.drawRangeEffectUnderline(
     }
 }
 
-private fun DrawScope.drawGutterIcons(model: EditorRenderModel, theme: EditorTheme) {
+private fun DrawScope.drawGutterIcons(
+    model: EditorRenderModel,
+    theme: EditorTheme,
+    iconProvider: EditorIconProvider?,
+) {
     if (!model.gutterVisible) return
-    val color = theme.gutterIconColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: return
+    val fallback = theme.gutterIconColor.toComposeColor().takeUnless { it == Color.Unspecified }
     for (icon in model.gutterIcons) {
         val rect = icon.rect
         if (rect.width <= 0f || rect.height <= 0f) continue
+        val image = iconProvider?.getIcon(icon.iconId)
+        if (image != null) {
+            drawImage(
+                image = image,
+                dstOffset = IntOffset(rect.origin.x.toInt(), rect.origin.y.toInt()),
+                dstSize = IntSize(
+                    width = rect.width.toInt().coerceAtLeast(1),
+                    height = rect.height.toInt().coerceAtLeast(1),
+                ),
+            )
+            continue
+        }
+        if (fallback == null) continue
         val size = minOf(rect.width, rect.height) * 0.55f
         val cx = rect.origin.x + rect.width / 2f
         val cy = rect.origin.y + rect.height / 2f
-        drawCircle(color = color, radius = size / 2f, center = Offset(cx, cy))
+        drawCircle(color = fallback, radius = size / 2f, center = Offset(cx, cy))
+    }
+}
+
+private fun DrawScope.drawFoldMarkers(model: EditorRenderModel, theme: EditorTheme) {
+    if (!model.gutterVisible) return
+    val activeLogicalLine = model.cursor.textPosition.line
+    for (item in model.foldMarkers) {
+        if (item.foldState == FoldState.NONE) continue
+        val rect = item.rect
+        if (rect.width <= 0f || rect.height <= 0f) continue
+        val color = if (item.logicalLine == activeLogicalLine) {
+            theme.currentLineNumberColor
+        } else {
+            theme.lineNumberColor
+        }.toComposeColor().takeUnless { it == Color.Unspecified } ?: continue
+        val centerX = rect.origin.x + rect.width * 0.5f
+        val centerY = rect.origin.y + rect.height * 0.5f
+        val halfSize = min(rect.width, rect.height) * 0.28f
+        val path = Path()
+        if (item.foldState == FoldState.COLLAPSED) {
+            path.moveTo(centerX - halfSize * 0.5f, centerY - halfSize)
+            path.lineTo(centerX + halfSize * 0.5f, centerY)
+            path.lineTo(centerX - halfSize * 0.5f, centerY + halfSize)
+        } else {
+            path.moveTo(centerX - halfSize, centerY - halfSize * 0.5f)
+            path.lineTo(centerX, centerY + halfSize * 0.5f)
+            path.lineTo(centerX + halfSize, centerY - halfSize * 0.5f)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(width = max(1f, rect.height * 0.1f), cap = StrokeCap.Round),
+        )
     }
 }
 
