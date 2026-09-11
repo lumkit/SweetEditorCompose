@@ -12,6 +12,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -143,6 +144,7 @@ fun SweetEditor(
     Canvas(
         modifier = modifier
             .fillMaxSize()
+            .clipToBounds()
             .background(theme.backgroundColor.toComposeColor())
             .onSizeChanged { size -> session.setViewport(size.width, size.height) }
             .pointerHoverIcon(pointerIcon)

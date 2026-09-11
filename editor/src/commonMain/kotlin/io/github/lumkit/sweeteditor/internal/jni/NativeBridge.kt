@@ -43,6 +43,7 @@ internal expect object NativeBridge {
     fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
     fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
     fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
+    fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
     fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?

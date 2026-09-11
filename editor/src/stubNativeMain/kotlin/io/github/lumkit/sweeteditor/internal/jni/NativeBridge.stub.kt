@@ -122,6 +122,9 @@ internal actual object NativeBridge {
     actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? {
         unsupported()
     }
+    actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? {
         unsupported()
     }

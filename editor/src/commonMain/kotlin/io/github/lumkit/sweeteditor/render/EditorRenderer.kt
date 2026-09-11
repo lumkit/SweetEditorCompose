@@ -4,9 +4,12 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
@@ -18,8 +21,10 @@ import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.core.protocol.CurrentLineRenderMode as CoreCurrentLineRenderMode
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
+import io.github.lumkit.sweeteditor.core.protocol.RangeEffectRenderItem
 import io.github.lumkit.sweeteditor.core.protocol.Rect
 import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
+import io.github.lumkit.sweeteditor.core.protocol.SelectionHandle
 import io.github.lumkit.sweeteditor.core.protocol.VisualRunType
 import io.github.lumkit.sweeteditor.core.protocol.TextStyle as RunTextStyle
 
@@ -35,18 +40,7 @@ internal fun DrawScope.drawEditor(
     val lineHeight = model.cursor.height.takeIf { it > 0f } ?: (fontAscent * 1.4f)
     drawCurrentLine(model, theme, 0f, size.width, lineHeight)
 
-    for (effect in model.rangeEffects) {
-        if (effect.kind != RangeEffectKind.SELECTION) continue
-        val color = effect.style.backgroundColor.toComposeColor()
-            .takeUnless { it == Color.Unspecified }
-            ?: Color(0x664C9AFF)
-        drawRect(
-            color = color,
-            topLeft = Offset(effect.rect.origin.x, effect.rect.origin.y),
-            size = Size(effect.rect.width, effect.rect.height),
-        )
-    }
-
+    val drawRangeBackgrounds = { drawRangeEffectBackgrounds(model, theme) }
     val drawRuns = {
         for (line in model.lines) {
             for (run in line.runs) {
@@ -58,6 +52,7 @@ internal fun DrawScope.drawEditor(
                     VisualRunType.INLAY_HINT,
                     VisualRunType.PHANTOM_TEXT,
                     VisualRunType.FOLD_PLACEHOLDER,
+                    VisualRunType.CODELENS,
                     -> drawRun(run.x, run.y, run.text, run.style, textMeasurer, baseStyle, fontAscent)
                     else -> Unit
                 }
@@ -67,9 +62,11 @@ internal fun DrawScope.drawEditor(
 
     if (model.gutterSticky && model.splitX > 0f) {
         clipRect(left = model.splitX, top = 0f, right = size.width, bottom = size.height) {
+            drawRangeBackgrounds()
             drawRuns()
         }
     } else {
+        drawRangeBackgrounds()
         drawRuns()
     }
 
@@ -84,6 +81,7 @@ internal fun DrawScope.drawEditor(
 
     drawGutterOverlay(model, theme, lineHeight)
     drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
+    drawSelectionHandles(model, theme)
     drawScrollbars(model, theme)
 }
 
@@ -219,6 +217,70 @@ private fun DrawScope.drawScrollbar(bar: ScrollbarModel, theme: EditorTheme) {
         size = bar.thumb.toSize(),
         cornerRadius = CornerRadius(3f, 3f),
     )
+}
+
+private fun DrawScope.drawRangeEffectBackgrounds(model: EditorRenderModel, theme: EditorTheme) {
+    for (effect in model.rangeEffects) {
+        val color = effect.backgroundColor(theme) ?: continue
+        if (effect.rect.width <= 0f || effect.rect.height <= 0f) continue
+        drawRect(
+            color = color,
+            topLeft = Offset(effect.rect.origin.x, effect.rect.origin.y),
+            size = Size(effect.rect.width, effect.rect.height),
+        )
+    }
+}
+
+private fun RangeEffectRenderItem.backgroundColor(theme: EditorTheme): Color? {
+    val fromCore = style.backgroundColor.toComposeColor().takeUnless { it == Color.Unspecified }
+    if (fromCore != null) return fromCore
+    if (kind == RangeEffectKind.SELECTION) {
+        return theme.selectionColor.toComposeColor().takeUnless { it == Color.Unspecified }
+            ?: Color(0x664C9AFF)
+    }
+    return null
+}
+
+private const val SelectionHandleLineWidth = 1.5f
+private const val SelectionHandleDropRadius = 10f
+private const val SelectionHandleCenterDist = 24f
+
+private fun DrawScope.drawSelectionHandles(model: EditorRenderModel, theme: EditorTheme) {
+    val color = theme.cursorColor.toComposeColor().takeUnless { it == Color.Unspecified } ?: Color.White
+    if (model.selectionStartHandle.visible) {
+        drawSelectionHandle(model.selectionStartHandle, isStart = true, color = color)
+    }
+    if (model.selectionEndHandle.visible) {
+        drawSelectionHandle(model.selectionEndHandle, isStart = false, color = color)
+    }
+}
+
+private fun DrawScope.drawSelectionHandle(handle: SelectionHandle, isStart: Boolean, color: Color) {
+    val x = handle.position.x
+    val y = handle.position.y
+    val height = handle.height
+    if (height <= 0f) return
+    drawRect(
+        color = color,
+        topLeft = Offset(x - SelectionHandleLineWidth / 2f, y),
+        size = Size(SelectionHandleLineWidth, height),
+    )
+    val dropLength = SelectionHandleCenterDist
+    val r = SelectionHandleDropRadius
+    val k = r * 0.5522f
+    val path = Path().apply {
+        moveTo(0f, 0f)
+        cubicTo(0f, dropLength * 0.4f, -r, dropLength - r * 0.8f, -r, dropLength)
+        cubicTo(-r, dropLength + k, -k, dropLength + r, 0f, dropLength + r)
+        cubicTo(k, dropLength + r, r, dropLength + k, r, dropLength)
+        cubicTo(r, dropLength - r * 0.8f, 0f, dropLength * 0.4f, 0f, 0f)
+        close()
+    }
+    translate(left = x, top = y + height) {
+        rotate(degrees = if (isStart) 45f else -45f, pivot = Offset.Zero) {
+            drawPath(path, color)
+        }
+    }
 }
 
 private fun Rect.toOffset(): Offset = Offset(origin.x, origin.y)

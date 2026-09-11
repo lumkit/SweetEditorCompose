@@ -52,6 +52,7 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
     @JvmStatic external fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     @JvmStatic external fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     @JvmStatic external fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?
@@ -143,6 +144,8 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetCurrentLineRenderMode(editor, mode)
     actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? =
         SweetEditorJni.editorSetEditorRenderColors(editor, payload)
+    actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetEditorRangeEffectStyles(editor, payload)
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =
         SweetEditorJni.editorImeBeginSession(editor, mutationModel)
     actual fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray? =

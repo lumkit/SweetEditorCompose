@@ -85,6 +85,7 @@ import sweeteditor.cinterop.editor_set_auto_indent_mode
 import sweeteditor.cinterop.editor_set_backspace_unindent
 import sweeteditor.cinterop.editor_set_current_line_render_mode
 import sweeteditor.cinterop.editor_set_document
+import sweeteditor.cinterop.editor_set_editor_range_effect_styles
 import sweeteditor.cinterop.editor_set_editor_render_colors
 import sweeteditor.cinterop.editor_set_gutter_sticky
 import sweeteditor.cinterop.editor_set_gutter_visible
@@ -344,6 +345,20 @@ internal actual object NativeBridge {
             adoptBinary { size ->
                 payload.usePinned { pinned ->
                     editor_set_editor_render_colors(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorSetEditorRangeEffectStyles(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_editor_range_effect_styles(
                         editor,
                         pinned.addressOf(0).reinterpret(),
                         payload.size.convert(),

@@ -222,7 +222,9 @@ private fun DemoEditor(onBack: () -> Unit) {
             maxLines = 2,
         )
         SweetEditor(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             controller = controller,
             theme = theme,
             settings = settings,

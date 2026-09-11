@@ -307,6 +307,9 @@ internal class EditorCore(
     fun setEditorRenderColors(payload: ByteArray): EditorActionResult? =
         decodeAction(NativeBridge.editorSetEditorRenderColors(editorHandle, payload))
 
+    fun setEditorRangeEffectStyles(payload: ByteArray): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetEditorRangeEffectStyles(editorHandle, payload))
+
     fun beginImeSession(model: ImeMutationModel = ImeMutationModel.COMMAND): ImeState? {
         val bytes = NativeBridge.editorImeBeginSession(editorHandle, model.value) ?: return null
         return CoreProtocol.decodeImeState(bytes)

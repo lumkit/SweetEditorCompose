@@ -25,6 +25,7 @@ import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.collectStateEvents
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
+import io.github.lumkit.sweeteditor.toRangeEffectStyles
 import io.github.lumkit.sweeteditor.toRenderColors
 import io.github.lumkit.sweeteditor.core.Document
 import io.github.lumkit.sweeteditor.core.EditorCore
@@ -122,6 +123,11 @@ internal class RememberedEditorSession(
         val core = editor ?: return
         if (appliedTheme != theme) {
             dispatchActionResult(core.setEditorRenderColors(CoreProtocol.encodeEditorRenderColors(theme.toRenderColors())))
+            dispatchActionResult(
+                core.setEditorRangeEffectStyles(
+                    CoreProtocol.encodeEditorRangeEffectStyles(theme.toRangeEffectStyles()),
+                ),
+            )
             appliedTheme = theme
         }
         val previous = appliedSettings
