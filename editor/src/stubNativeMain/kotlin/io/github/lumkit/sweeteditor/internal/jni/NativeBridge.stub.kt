@@ -62,6 +62,33 @@ internal actual object NativeBridge {
     actual fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray? {
         unsupported()
     }
+    actual fun editorSetGutterVisible(editor: Long, visible: Boolean): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetWrapMode(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetScale(editor: Long, scale: Float): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? {
         unsupported()
     }

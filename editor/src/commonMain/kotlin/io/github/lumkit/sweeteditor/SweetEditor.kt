@@ -41,6 +41,7 @@ import io.github.lumkit.sweeteditor.input.mapKeyEvent
 import io.github.lumkit.sweeteditor.input.mapPointerEventType
 import io.github.lumkit.sweeteditor.input.pointerModifiers
 import io.github.lumkit.sweeteditor.render.drawEditor
+import io.github.lumkit.sweeteditor.render.toComposeColor
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 import androidx.compose.foundation.text.BasicText
 
@@ -48,6 +49,8 @@ import androidx.compose.foundation.text.BasicText
 fun SweetEditor(
     modifier: Modifier = Modifier,
     controller: SweetEditorController,
+    theme: EditorTheme = EditorTheme(),
+    settings: EditorSettings = EditorSettings(),
 ) {
     val density = LocalDensity.current
     val densityValue = density.density
@@ -61,11 +64,11 @@ fun SweetEditor(
             defaultLayoutDirection = layoutDirection,
         )
     }
-    val textStyle = remember(densityValue, fontScale) {
+    val textStyle = remember(theme, settings.fontSizeSp, settings.scale, densityValue, fontScale) {
         TextStyle(
-            color = Color(0xFFD4D4D4),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 14.sp,
+            color = theme.textColor.toComposeColor(),
+            fontFamily = theme.fontFamily,
+            fontSize = (settings.fontSizeSp * settings.scale).sp,
         )
     }
     val hostMeasurer = remember(controller) {
@@ -76,6 +79,7 @@ fun SweetEditor(
     }
     val fontMetricsChanged = hostMeasurer.bind(textMeasurer, textStyle, densityValue, fontScale)
     SideEffect {
+        session.applyAppearance(theme, settings)
         if (fontMetricsChanged) {
             session.notifyFontMetricsChanged()
         }
@@ -104,7 +108,7 @@ fun SweetEditor(
 
     val error = session.loadError
     if (error != null) {
-        Box(modifier.background(Color(0xFF1E1E1E))) {
+        Box(modifier.background(theme.backgroundColor.toComposeColor())) {
             BasicText(
                 text = error,
                 style = TextStyle(
@@ -119,7 +123,7 @@ fun SweetEditor(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF1E1E1E))
+            .background(theme.backgroundColor.toComposeColor())
             .onSizeChanged { size -> session.setViewport(size.width, size.height) }
             .pointerHoverIcon(pointerIcon)
             .editorIme(session)
@@ -205,7 +209,7 @@ fun SweetEditor(
     ) {
         val model = session.renderModel
         if (model != null) {
-            drawEditor(model, textMeasurer, textStyle, fontAscent)
+            drawEditor(model, textMeasurer, textStyle, fontAscent, theme)
         }
     }
 }

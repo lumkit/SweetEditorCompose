@@ -32,6 +32,15 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorCanUndo(editor: Long): Boolean
     @JvmStatic external fun editorCanRedo(editor: Long): Boolean
     @JvmStatic external fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray?
+    @JvmStatic external fun editorSetGutterVisible(editor: Long, visible: Boolean): ByteArray?
+    @JvmStatic external fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
+    @JvmStatic external fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    @JvmStatic external fun editorSetScale(editor: Long, scale: Float): ByteArray?
+    @JvmStatic external fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
+    @JvmStatic external fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
+    @JvmStatic external fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
+    @JvmStatic external fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     @JvmStatic external fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     @JvmStatic external fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     @JvmStatic external fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?
@@ -75,6 +84,24 @@ internal actual object NativeBridge {
     actual fun editorCanRedo(editor: Long): Boolean = SweetEditorJni.editorCanRedo(editor)
     actual fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray? =
         SweetEditorJni.editorSetGutterSticky(editor, sticky)
+    actual fun editorSetGutterVisible(editor: Long, visible: Boolean): ByteArray? =
+        SweetEditorJni.editorSetGutterVisible(editor, visible)
+    actual fun editorSetWrapMode(editor: Long, mode: Int): ByteArray? =
+        SweetEditorJni.editorSetWrapMode(editor, mode)
+    actual fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray? =
+        SweetEditorJni.editorSetTabSize(editor, tabSize)
+    actual fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray? =
+        SweetEditorJni.editorSetInsertSpaces(editor, enabled)
+    actual fun editorSetScale(editor: Long, scale: Float): ByteArray? =
+        SweetEditorJni.editorSetScale(editor, scale)
+    actual fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray? =
+        SweetEditorJni.editorSetLineSpacing(editor, add, mult)
+    actual fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray? =
+        SweetEditorJni.editorSetReadOnly(editor, readOnly)
+    actual fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray? =
+        SweetEditorJni.editorSetCurrentLineRenderMode(editor, mode)
+    actual fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetEditorRenderColors(editor, payload)
     actual fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray? =
         SweetEditorJni.editorImeBeginSession(editor, mutationModel)
     actual fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray? =

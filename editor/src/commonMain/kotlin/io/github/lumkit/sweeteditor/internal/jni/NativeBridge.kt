@@ -23,6 +23,15 @@ internal expect object NativeBridge {
     fun editorCanUndo(editor: Long): Boolean
     fun editorCanRedo(editor: Long): Boolean
     fun editorSetGutterSticky(editor: Long, sticky: Boolean): ByteArray?
+    fun editorSetGutterVisible(editor: Long, visible: Boolean): ByteArray?
+    fun editorSetWrapMode(editor: Long, mode: Int): ByteArray?
+    fun editorSetTabSize(editor: Long, tabSize: Int): ByteArray?
+    fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
+    fun editorSetScale(editor: Long, scale: Float): ByteArray?
+    fun editorSetLineSpacing(editor: Long, add: Float, mult: Float): ByteArray?
+    fun editorSetReadOnly(editor: Long, readOnly: Boolean): ByteArray?
+    fun editorSetCurrentLineRenderMode(editor: Long, mode: Int): ByteArray?
+    fun editorSetEditorRenderColors(editor: Long, payload: ByteArray): ByteArray?
     fun editorImeBeginSession(editor: Long, mutationModel: Int): ByteArray?
     fun editorImeEndSession(editor: Long, sessionId: Long): ByteArray?
     fun editorImeApplyCommands(editor: Long, payload: ByteArray): ByteArray?
