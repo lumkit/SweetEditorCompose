@@ -30,6 +30,7 @@ import sweeteditor.cinterop.editor_can_undo
 import sweeteditor.cinterop.editor_get_cursor_rect
 import sweeteditor.cinterop.editor_get_position_rect
 import sweeteditor.cinterop.editor_get_scroll_metrics
+import sweeteditor.cinterop.editor_get_selected_text
 import sweeteditor.cinterop.editor_get_visible_line_range
 import sweeteditor.cinterop.editor_handle_gesture_event
 import sweeteditor.cinterop.editor_handle_key_event
@@ -383,6 +384,13 @@ internal actual object NativeBridge {
 
     actual fun editorGetScrollMetrics(editor: Long): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_get_scroll_metrics(editor, size) } }
+
+    actual fun editorGetSelectedText(editor: Long): ByteArray = withActive(editor) {
+        val ptr = editor_get_selected_text(editor) ?: return@withActive ByteArray(0)
+        val text = ptr.toKString()
+        free_u8_string(ptr.rawValue.toLong())
+        text.encodeToByteArray()
+    }
 
     private inline fun <T> withActive(handle: Long, block: () -> T): T {
         val measurer = measurers[handle]

@@ -600,6 +600,15 @@ jbyteArray get_scroll_metrics_jni(JNIEnv* env, jclass, jlong editor) {
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray get_selected_text_jni(JNIEnv* env, jclass, jlong editor) {
+  if (editor == 0) {
+    return env->NewByteArray(0);
+  }
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const char* text = editor_get_selected_text(static_cast<intptr_t>(editor));
+  return utf8_to_bytes(env, const_cast<char*>(text));
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -648,6 +657,7 @@ const JNINativeMethod kMethods[] = {
     {"editorGetPositionRect", "(JII)[F", (void*)get_position_rect_jni},
     {"editorGetVisibleLineRange", "(J)[I", (void*)get_visible_line_range_jni},
     {"editorGetScrollMetrics", "(J)[B", (void*)get_scroll_metrics_jni},
+    {"editorGetSelectedText", "(J)[B", (void*)get_selected_text_jni},
 };
 
 }  // namespace

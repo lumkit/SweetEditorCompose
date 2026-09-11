@@ -18,6 +18,8 @@ import io.github.lumkit.sweeteditor.core.EditorCore
 import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import io.github.lumkit.sweeteditor.core.protocol.AnimationFlag
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
+import io.github.lumkit.sweeteditor.core.protocol.EditorBuiltinCommand
+import io.github.lumkit.sweeteditor.input.EditorClipboard
 import io.github.lumkit.sweeteditor.core.protocol.EditorRenderModel
 import io.github.lumkit.sweeteditor.core.protocol.EventType
 import io.github.lumkit.sweeteditor.core.protocol.GestureType
@@ -61,6 +63,7 @@ internal class RememberedEditorSession(
     private var viewportWidth = 0
     private var viewportHeight = 0
     private var imeAdapter: EditorImeAdapter? = null
+    private var clipboard: EditorClipboard? = null
     internal var onTap: (() -> Unit)? = null
     internal var imeTapHandler: (() -> Unit)? = null
     private var appliedTheme: EditorTheme? = null
@@ -251,6 +254,30 @@ internal class RememberedEditorSession(
 
     fun getScrollMetrics(): EditorScrollMetrics? = editor?.getScrollMetrics()
 
+    fun bindClipboard(next: EditorClipboard?) {
+        clipboard = next
+    }
+
+    fun getSelectedText(): String = editor?.getSelectedText().orEmpty()
+
+    fun copyToClipboard(): Boolean {
+        val text = getSelectedText()
+        if (text.isEmpty() || text.length > MaxClipboardChars) return false
+        return clipboard?.setText(text) == true
+    }
+
+    fun cutToClipboard(): Boolean {
+        if (!copyToClipboard()) return false
+        val core = editor ?: return false
+        dispatchActionResult(core.backspace())
+        return true
+    }
+
+    fun pasteFromClipboard() {
+        val text = clipboard?.getText()?.takeIf { it.isNotEmpty() } ?: return
+        insertText(text)
+    }
+
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
     }
@@ -291,6 +318,11 @@ internal class RememberedEditorSession(
         editor = null
         document?.close()
         document = null
+        clipboard = null
+    }
+
+    private companion object {
+        const val MaxClipboardChars = 1_000_000
     }
 
     private fun dispatchActionResult(result: EditorActionResult?) {
@@ -310,6 +342,11 @@ internal class RememberedEditorSession(
             pointerCursor = result.pointerCursorAfter
         }
         collectStateEvents(result).forEach { controller.events.publish(it) }
+        when (result.command) {
+            EditorBuiltinCommand.COPY.value -> copyToClipboard()
+            EditorBuiltinCommand.CUT.value -> cutToClipboard()
+            EditorBuiltinCommand.PASTE.value -> pasteFromClipboard()
+        }
         if (result.needsRedraw || renderModel == null) {
             try {
                 val model = editor?.buildRenderModel()

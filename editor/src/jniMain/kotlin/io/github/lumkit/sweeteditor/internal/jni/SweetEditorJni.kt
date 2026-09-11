@@ -66,6 +66,7 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorGetPositionRect(editor: Long, line: Int, column: Int): FloatArray
     @JvmStatic external fun editorGetVisibleLineRange(editor: Long): IntArray
     @JvmStatic external fun editorGetScrollMetrics(editor: Long): ByteArray?
+    @JvmStatic external fun editorGetSelectedText(editor: Long): ByteArray
 }
 
 internal actual object NativeBridge {
@@ -149,4 +150,5 @@ internal actual object NativeBridge {
         SweetEditorJni.editorGetPositionRect(editor, line, column)
     actual fun editorGetVisibleLineRange(editor: Long): IntArray = SweetEditorJni.editorGetVisibleLineRange(editor)
     actual fun editorGetScrollMetrics(editor: Long): ByteArray? = SweetEditorJni.editorGetScrollMetrics(editor)
+    actual fun editorGetSelectedText(editor: Long): ByteArray = SweetEditorJni.editorGetSelectedText(editor)
 }
