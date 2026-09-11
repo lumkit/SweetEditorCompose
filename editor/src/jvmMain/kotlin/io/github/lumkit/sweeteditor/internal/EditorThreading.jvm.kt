@@ -7,7 +7,7 @@ internal actual fun runOnEditorThread(block: () -> Unit) {
         if (EventQueue.isDispatchThread() || java.awt.GraphicsEnvironment.isHeadless()) {
             block()
         } else {
-            EventQueue.invokeLater(block)
+            EventQueue.invokeAndWait(block)
         }
     } catch (_: Throwable) {
         block()
