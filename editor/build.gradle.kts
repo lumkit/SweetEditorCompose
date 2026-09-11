@@ -252,6 +252,7 @@ val hostDesktopFolder: String = currentDesktopResourceFolder()
 val jniBuildScript = layout.projectDirectory.file("scripts/build-desktop-jni.sh")
 val hostCoreBuildScript = layout.projectDirectory.file("scripts/build-host-core.sh")
 val hostCoreBuildDir = File(sweetEditorHome, "build/compose-host")
+val iosStaticCoreScript = layout.projectDirectory.file("scripts/build-ios-static-core.sh")
 
 val buildHostSweetEditorCore by tasks.registering(Exec::class) {
     group = "sweeteditor"
@@ -266,6 +267,30 @@ val buildHostSweetEditorCore by tasks.registering(Exec::class) {
     outputs.dir(File(nativesRoot, "include/sweeteditor"))
     outputs.dir(hostCoreBuildDir)
     commandLine("bash", hostCoreBuildScript.asFile.absolutePath, "all")
+}
+
+private fun registerIosStaticCoreTask(taskName: String, abi: String) = tasks.register<Exec>(taskName) {
+    group = "sweeteditor"
+    description = "CMake-build SweetEditor static archive for iOS $abi into editor/natives/"
+    environment("SWEETEDITOR_HOME", sweetEditorHome.absolutePath)
+    inputs.dir(File(sweetEditorHome, "src"))
+    inputs.dir(File(sweetEditorHome, "include"))
+    inputs.dir(File(sweetEditorHome, "cmake"))
+    inputs.dir(File(sweetEditorHome, "3dparty"))
+    inputs.file(File(sweetEditorHome, "CMakeLists.txt"))
+    inputs.file(iosStaticCoreScript)
+    outputs.file(File(nativesRoot, "ios/$abi/libsweeteditor.a"))
+    commandLine("bash", iosStaticCoreScript.asFile.absolutePath, abi)
+}
+
+val buildIosSweetEditorStaticSimulatorArm64 =
+    registerIosStaticCoreTask("buildIosSweetEditorStaticSimulatorArm64", "simulator-arm64")
+val buildIosSweetEditorStaticArm64 =
+    registerIosStaticCoreTask("buildIosSweetEditorStaticArm64", "arm64")
+val buildIosSweetEditorStatic by tasks.registering {
+    group = "sweeteditor"
+    description = "Build iOS static archives for device and simulator"
+    dependsOn(buildIosSweetEditorStaticSimulatorArm64, buildIosSweetEditorStaticArm64)
 }
 
 val configureDesktopJni by tasks.registering(Exec::class) {
@@ -342,18 +367,26 @@ private fun configureSweetEditorCinterop(target: KotlinNativeTarget) {
     ).firstOrNull { it.resolve("sweeteditor/c_api.h").isFile }
         ?: error("SweetEditor headers missing (expected natives/include/sweeteditor/c_api.h or \$sweetEditor.home/include)")
 
-    val libraryDir = sequenceOf(
-        File(nativesRoot, "ios/$archDir"),
-        File(sweetEditorHome, "prebuilt/ios/$archDir"),
-    ).firstOrNull { dir ->
-        dir.resolve("libsweeteditor.a").isFile || dir.resolve("libsweeteditor.dylib").isFile
-    } ?: error("SweetEditor iOS library missing for $archDir")
+    val libraryDir = File(nativesRoot, "ios/$archDir")
+    val staticArchive = sequenceOf(
+        libraryDir.resolve("libsweeteditor.a"),
+        File(sweetEditorHome, "prebuilt/ios/$archDir/libsweeteditor.a"),
+    ).firstOrNull { it.isFile } ?: libraryDir.resolve("libsweeteditor.a")
 
     target.compilations.getByName("main").cinterops.create("sweeteditor") {
         defFile(file("src/nativeInterop/cinterop/sweeteditor.def"))
         includeDirs(includeDir)
-        linkerOpts("-L${libraryDir.absolutePath}", "-lsweeteditor")
+        extraOpts("-libraryPath", staticArchive.parentFile.absolutePath)
     }
+}
+
+tasks.matching { it.name == "cinteropSweeteditorIosSimulatorArm64" }.configureEach {
+    dependsOn(buildIosSweetEditorStaticSimulatorArm64)
+    inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweeteditor.a"))
+}
+tasks.matching { it.name == "cinteropSweeteditorIosArm64" }.configureEach {
+    dependsOn(buildIosSweetEditorStaticArm64)
+    inputs.file(File(nativesRoot, "ios/arm64/libsweeteditor.a"))
 }
 
 private fun currentDesktopResourceFolder(): String {
