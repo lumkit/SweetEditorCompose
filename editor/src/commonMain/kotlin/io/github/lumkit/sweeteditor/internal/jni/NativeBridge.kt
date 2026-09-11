@@ -48,6 +48,10 @@ internal expect object NativeBridge {
         closeColumn: Int,
     ): ByteArray?
     fun editorClearMatchedBrackets(editor: Long): ByteArray?
+    fun editorSetDiffChanges(editor: Long, payload: ByteArray): ByteArray?
+    fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray?
+    fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray?
+    fun editorClearDiff(editor: Long): ByteArray?
     fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     fun editorMoveLineUp(editor: Long): ByteArray?

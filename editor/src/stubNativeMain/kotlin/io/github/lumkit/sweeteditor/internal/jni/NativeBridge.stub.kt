@@ -111,6 +111,18 @@ internal actual object NativeBridge {
     actual fun editorClearMatchedBrackets(editor: Long): ByteArray? {
         unsupported()
     }
+    actual fun editorSetDiffChanges(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorClearDiff(editor: Long): ByteArray? {
+        unsupported()
+    }
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? {
         unsupported()
     }

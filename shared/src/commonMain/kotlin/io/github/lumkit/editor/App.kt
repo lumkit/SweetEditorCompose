@@ -294,6 +294,8 @@ private fun DemoEditor(onBack: () -> Unit) {
             },
             onMatchBrackets = { controller.setMatchedBrackets(0, 11, 81, 0) },
             onClearMatchedBrackets = controller::clearMatchedBrackets,
+            onComputeDiff = { controller.computeDiff(SampleSource.replace("Hello", "Hi")) },
+            onClearDiff = controller::clearDiff,
         )
         Text(
             text = status,
@@ -360,6 +362,8 @@ private fun DemoToolbar(
     onToggleFold: () -> Unit,
     onMatchBrackets: () -> Unit,
     onClearMatchedBrackets: () -> Unit,
+    onComputeDiff: () -> Unit,
+    onClearDiff: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -414,6 +418,8 @@ private fun DemoToolbar(
             TextButton(onClick = onToggleFold) { Text("Toggle fold") }
             TextButton(onClick = onMatchBrackets) { Text("Match {}") }
             TextButton(onClick = onClearMatchedBrackets) { Text("Clear match") }
+            TextButton(onClick = onComputeDiff) { Text("Diff") }
+            TextButton(onClick = onClearDiff) { Text("Clear diff") }
         }
     }
 }

@@ -167,6 +167,31 @@ internal fun encodeSetFlowGuidesPayload(guides: List<io.github.lumkit.sweetedito
     return writer.toByteArray()
 }
 
+internal fun encodeSetDiffChangesPayload(changes: List<io.github.lumkit.sweeteditor.DiffChange>): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeItems(changes) {
+        CoreProtocol.encodeDiffChange(
+            ProtocolDiffChange(
+                currentStartLine = it.currentStartLine,
+                currentLineCount = it.currentLineCount,
+                originalStartLine = it.originalStartLine,
+                removedLines = it.removedLines,
+            ),
+        )
+    }
+    return writer.toByteArray()
+}
+
+internal fun encodeSetBatchDiffLineSpansPayload(
+    layer: Int,
+    spansByOriginalLine: Map<Int, List<StyleSpan>>,
+): ByteArray {
+    val writer = ProtocolWriter()
+    writer.writeI32(layer)
+    writer.writeLineMap(spansByOriginalLine) { CoreProtocol.encodeStyleSpan(it.toProtocol()) }
+    return writer.toByteArray()
+}
+
 internal fun encodeSetSeparatorGuidesPayload(guides: List<io.github.lumkit.sweeteditor.SeparatorGuide>): ByteArray {
     val writer = ProtocolWriter()
     writer.writeItems(guides) {
@@ -189,6 +214,7 @@ private typealias ProtocolBracketGuide = io.github.lumkit.sweeteditor.core.proto
 private typealias ProtocolFlowGuide = io.github.lumkit.sweeteditor.core.protocol.FlowGuide
 private typealias ProtocolSeparatorGuide = io.github.lumkit.sweeteditor.core.protocol.SeparatorGuide
 private typealias ProtocolTextPosition = io.github.lumkit.sweeteditor.core.protocol.TextPosition
+private typealias ProtocolDiffChange = io.github.lumkit.sweeteditor.core.protocol.DiffChange
 
 private fun io.github.lumkit.sweeteditor.TextPosition.toProtocol() = ProtocolTextPosition(line, column)
 

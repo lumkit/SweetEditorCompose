@@ -51,6 +51,7 @@ import io.github.lumkit.sweeteditor.BracketGuide
 import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.BracketPair
+import io.github.lumkit.sweeteditor.DiffChange
 import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
@@ -531,6 +532,15 @@ internal class RememberedEditorSession(
         mutate { setMatchedBrackets(openLine, openColumn, closeLine, closeColumn) }
 
     fun clearMatchedBrackets() = mutate { clearMatchedBrackets() }
+
+    fun setDiffChanges(changes: List<DiffChange>) = mutate { setDiffChanges(changes) }
+
+    fun computeDiff(originalText: String) = mutate { computeDiff(originalText) }
+
+    fun setBatchDiffLineSpans(layer: EditorSpanLayer, spansByOriginalLine: Map<Int, List<StyleSpan>>) =
+        mutate { setBatchDiffLineSpans(layer, spansByOriginalLine) }
+
+    fun clearDiff() = mutate { clearDiff() }
 
     fun addDecorationProvider(provider: DecorationProvider) = decorations.addProvider(provider)
 

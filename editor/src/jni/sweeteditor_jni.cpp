@@ -569,6 +569,39 @@ jbyteArray clear_matched_brackets_jni(JNIEnv* env, jclass, jlong editor) {
   return adopt_binary(env, payload, size);
 }
 
+jbyteArray set_diff_changes_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_diff_changes(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray compute_diff_jni(JNIEnv* env, jclass, jlong editor, jbyteArray original_text) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const std::string utf8 = bytes_to_string(env, original_text);
+  size_t size = 0;
+  const uint8_t* payload = editor_compute_diff(static_cast<intptr_t>(editor), utf8.c_str(), &size);
+  return adopt_binary(env, payload, size);
+}
+
+jbyteArray set_batch_diff_line_spans_jni(JNIEnv* env, jclass, jlong editor, jbyteArray payload) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const uint8_t* result = editor_set_batch_diff_line_spans(
+      static_cast<intptr_t>(editor), view.ptr, static_cast<size_t>(view.len), &size);
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray clear_diff_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_clear_diff(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 jbyteArray set_auto_indent_mode_jni(JNIEnv* env, jclass, jlong editor, jint mode) {
   ActiveEditor active(static_cast<intptr_t>(editor));
   size_t size = 0;
@@ -1127,6 +1160,10 @@ const JNINativeMethod kMethods[] = {
     {"editorSetAutoClosingPairs", "(J[I[I)[B", (void*)set_auto_closing_pairs_jni},
     {"editorSetMatchedBrackets", "(JIIII)[B", (void*)set_matched_brackets_jni},
     {"editorClearMatchedBrackets", "(J)[B", (void*)clear_matched_brackets_jni},
+    {"editorSetDiffChanges", "(J[B)[B", (void*)set_diff_changes_jni},
+    {"editorComputeDiff", "(J[B)[B", (void*)compute_diff_jni},
+    {"editorSetBatchDiffLineSpans", "(J[B)[B", (void*)set_batch_diff_line_spans_jni},
+    {"editorClearDiff", "(J)[B", (void*)clear_diff_jni},
     {"editorSetAutoIndentMode", "(JI)[B", (void*)set_auto_indent_mode_jni},
     {"editorSetBackspaceUnindent", "(JZ)[B", (void*)set_backspace_unindent_jni},
     {"editorSetScale", "(JF)[B", (void*)set_scale_jni},

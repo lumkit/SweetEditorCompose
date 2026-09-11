@@ -57,6 +57,10 @@ internal object SweetEditorJni {
         closeColumn: Int,
     ): ByteArray?
     @JvmStatic external fun editorClearMatchedBrackets(editor: Long): ByteArray?
+    @JvmStatic external fun editorSetDiffChanges(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray?
+    @JvmStatic external fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorClearDiff(editor: Long): ByteArray?
     @JvmStatic external fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorMoveLineUp(editor: Long): ByteArray?
@@ -202,6 +206,13 @@ internal actual object NativeBridge {
     )
     actual fun editorClearMatchedBrackets(editor: Long): ByteArray? =
         SweetEditorJni.editorClearMatchedBrackets(editor)
+    actual fun editorSetDiffChanges(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetDiffChanges(editor, payload)
+    actual fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray? =
+        SweetEditorJni.editorComputeDiff(editor, originalUtf8)
+    actual fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetBatchDiffLineSpans(editor, payload)
+    actual fun editorClearDiff(editor: Long): ByteArray? = SweetEditorJni.editorClearDiff(editor)
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         SweetEditorJni.editorSetAutoIndentMode(editor, mode)
     actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =

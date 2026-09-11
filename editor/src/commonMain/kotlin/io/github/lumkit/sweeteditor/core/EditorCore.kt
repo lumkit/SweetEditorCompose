@@ -2,6 +2,7 @@ package io.github.lumkit.sweeteditor.core
 
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.Diagnostic
+import io.github.lumkit.sweeteditor.DiffChange
 import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
@@ -41,7 +42,9 @@ import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineInlayHintsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineLinksPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLinePhantomTextsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineSpansPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBatchDiffLineSpansPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetBracketGuidesPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetDiffChangesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetFlowGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetFoldRegionsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetIndentGuidesPayload
@@ -184,6 +187,22 @@ internal class EditorCore(
 
     fun clearMatchedBrackets(): EditorActionResult? =
         decodeAction(NativeBridge.editorClearMatchedBrackets(editorHandle))
+
+    fun setDiffChanges(changes: List<DiffChange>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetDiffChanges(editorHandle, encodeSetDiffChangesPayload(changes)))
+
+    fun computeDiff(originalText: String): EditorActionResult? =
+        decodeAction(NativeBridge.editorComputeDiff(editorHandle, originalText.encodeToByteArray()))
+
+    fun setBatchDiffLineSpans(layer: EditorSpanLayer, spansByOriginalLine: Map<Int, List<StyleSpan>>): EditorActionResult? =
+        decodeAction(
+            NativeBridge.editorSetBatchDiffLineSpans(
+                editorHandle,
+                encodeSetBatchDiffLineSpansPayload(layer.value, spansByOriginalLine),
+            ),
+        )
+
+    fun clearDiff(): EditorActionResult? = decodeAction(NativeBridge.editorClearDiff(editorHandle))
 
     fun setAutoIndentMode(mode: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorSetAutoIndentMode(editorHandle, mode))

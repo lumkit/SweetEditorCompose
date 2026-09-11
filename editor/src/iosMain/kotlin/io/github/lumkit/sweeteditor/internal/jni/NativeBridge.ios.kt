@@ -90,7 +90,11 @@ import sweeteditor.cinterop.editor_move_line_down
 import sweeteditor.cinterop.editor_move_line_up
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_clear_diff
 import sweeteditor.cinterop.editor_clear_matched_brackets
+import sweeteditor.cinterop.editor_compute_diff
+import sweeteditor.cinterop.editor_set_batch_diff_line_spans
+import sweeteditor.cinterop.editor_set_diff_changes
 import sweeteditor.cinterop.editor_set_auto_closing_pairs
 import sweeteditor.cinterop.editor_set_matched_brackets
 import sweeteditor.cinterop.editor_set_auto_indent_mode
@@ -400,6 +404,47 @@ internal actual object NativeBridge {
 
     actual fun editorClearMatchedBrackets(editor: Long): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_clear_matched_brackets(editor, size) } }
+
+    actual fun editorSetDiffChanges(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_diff_changes(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorComputeDiff(editor: Long, originalUtf8: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                val terminated = originalUtf8 + 0
+                terminated.usePinned { pinned ->
+                    editor_compute_diff(editor, pinned.addressOf(0), size)
+                }
+            }
+        }
+
+    actual fun editorSetBatchDiffLineSpans(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_batch_diff_line_spans(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorClearDiff(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_clear_diff(editor, size) } }
 
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_set_auto_indent_mode(editor, mode, size) } }
