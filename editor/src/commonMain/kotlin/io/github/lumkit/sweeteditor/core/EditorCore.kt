@@ -7,8 +7,12 @@ import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
 import io.github.lumkit.sweeteditor.EditorSpanLayer
 import io.github.lumkit.sweeteditor.EditorTextStyle
+import io.github.lumkit.sweeteditor.FlowGuide
 import io.github.lumkit.sweeteditor.FoldRegion
 import io.github.lumkit.sweeteditor.GutterIcon
+import io.github.lumkit.sweeteditor.IndentGuide
+import io.github.lumkit.sweeteditor.BracketGuide
+import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
@@ -37,7 +41,11 @@ import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineInlayHintsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineLinksPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLinePhantomTextsPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetLineSpansPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetBracketGuidesPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetFlowGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.encodeSetFoldRegionsPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetIndentGuidesPayload
+import io.github.lumkit.sweeteditor.core.protocol.encodeSetSeparatorGuidesPayload
 import io.github.lumkit.sweeteditor.core.protocol.ImeCommandBatch
 import io.github.lumkit.sweeteditor.core.protocol.ImeMutationModel
 import io.github.lumkit.sweeteditor.core.protocol.ImeState
@@ -164,6 +172,18 @@ internal class EditorCore(
 
     fun setAutoClosingPairs(openChars: IntArray, closeChars: IntArray): EditorActionResult? =
         decodeAction(NativeBridge.editorSetAutoClosingPairs(editorHandle, openChars, closeChars))
+
+    fun setMatchedBrackets(
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): EditorActionResult? = decodeAction(
+        NativeBridge.editorSetMatchedBrackets(editorHandle, openLine, openColumn, closeLine, closeColumn),
+    )
+
+    fun clearMatchedBrackets(): EditorActionResult? =
+        decodeAction(NativeBridge.editorClearMatchedBrackets(editorHandle))
 
     fun setAutoIndentMode(mode: Int): EditorActionResult? =
         decodeAction(NativeBridge.editorSetAutoIndentMode(editorHandle, mode))
@@ -302,6 +322,20 @@ internal class EditorCore(
     fun unfoldAll(): EditorActionResult? = decodeAction(NativeBridge.editorUnfoldAll(editorHandle))
 
     fun isLineVisible(line: Int): Boolean = NativeBridge.editorIsLineVisible(editorHandle, line)
+
+    fun setIndentGuides(guides: List<IndentGuide>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetIndentGuides(editorHandle, encodeSetIndentGuidesPayload(guides)))
+
+    fun setBracketGuides(guides: List<BracketGuide>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetBracketGuides(editorHandle, encodeSetBracketGuidesPayload(guides)))
+
+    fun setFlowGuides(guides: List<FlowGuide>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetFlowGuides(editorHandle, encodeSetFlowGuidesPayload(guides)))
+
+    fun setSeparatorGuides(guides: List<SeparatorGuide>): EditorActionResult? =
+        decodeAction(NativeBridge.editorSetSeparatorGuides(editorHandle, encodeSetSeparatorGuidesPayload(guides)))
+
+    fun clearGuides(): EditorActionResult? = decodeAction(NativeBridge.editorClearGuides(editorHandle))
 
     fun setLineDiagnostics(line: Int, items: List<Diagnostic>): EditorActionResult? =
         decoration(NativeDecorationOp.SET_LINE_DIAGNOSTICS, encodeSetLineDiagnosticsPayload(line, items))

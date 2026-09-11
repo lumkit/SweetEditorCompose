@@ -17,7 +17,7 @@ class EditorLanguageJniTest {
                 editor.setAutoClosingPairs(intArrayOf('('.code), intArrayOf(')'.code))?.handled == true,
             )
             assertTrue(editor.insertText("(")?.handled == true)
-            assertTrue(document.utf8Text().contains("("), document.utf8Text())
+            assertEquals("()", document.utf8Text())
         } finally {
             editor.close()
             document.close()

@@ -49,6 +49,14 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorSetInsertSpaces(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorSetBracketPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
     @JvmStatic external fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray?
+    @JvmStatic external fun editorSetMatchedBrackets(
+        editor: Long,
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): ByteArray?
+    @JvmStatic external fun editorClearMatchedBrackets(editor: Long): ByteArray?
     @JvmStatic external fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray?
     @JvmStatic external fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray?
     @JvmStatic external fun editorMoveLineUp(editor: Long): ByteArray?
@@ -109,6 +117,11 @@ internal object SweetEditorJni {
     @JvmStatic external fun editorFoldAll(editor: Long): ByteArray?
     @JvmStatic external fun editorUnfoldAll(editor: Long): ByteArray?
     @JvmStatic external fun editorIsLineVisible(editor: Long, line: Int): Boolean
+    @JvmStatic external fun editorSetIndentGuides(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorSetBracketGuides(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorSetFlowGuides(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorSetSeparatorGuides(editor: Long, payload: ByteArray): ByteArray?
+    @JvmStatic external fun editorClearGuides(editor: Long): ByteArray?
 }
 
 internal actual object NativeBridge {
@@ -174,6 +187,21 @@ internal actual object NativeBridge {
         SweetEditorJni.editorSetBracketPairs(editor, openChars, closeChars)
     actual fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? =
         SweetEditorJni.editorSetAutoClosingPairs(editor, openChars, closeChars)
+    actual fun editorSetMatchedBrackets(
+        editor: Long,
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): ByteArray? = SweetEditorJni.editorSetMatchedBrackets(
+        editor,
+        openLine,
+        openColumn,
+        closeLine,
+        closeColumn,
+    )
+    actual fun editorClearMatchedBrackets(editor: Long): ByteArray? =
+        SweetEditorJni.editorClearMatchedBrackets(editor)
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         SweetEditorJni.editorSetAutoIndentMode(editor, mode)
     actual fun editorSetBackspaceUnindent(editor: Long, enabled: Boolean): ByteArray? =
@@ -260,4 +288,13 @@ internal actual object NativeBridge {
     actual fun editorUnfoldAll(editor: Long): ByteArray? = SweetEditorJni.editorUnfoldAll(editor)
     actual fun editorIsLineVisible(editor: Long, line: Int): Boolean =
         SweetEditorJni.editorIsLineVisible(editor, line)
+    actual fun editorSetIndentGuides(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetIndentGuides(editor, payload)
+    actual fun editorSetBracketGuides(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetBracketGuides(editor, payload)
+    actual fun editorSetFlowGuides(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetFlowGuides(editor, payload)
+    actual fun editorSetSeparatorGuides(editor: Long, payload: ByteArray): ByteArray? =
+        SweetEditorJni.editorSetSeparatorGuides(editor, payload)
+    actual fun editorClearGuides(editor: Long): ByteArray? = SweetEditorJni.editorClearGuides(editor)
 }

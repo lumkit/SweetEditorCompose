@@ -99,6 +99,18 @@ internal actual object NativeBridge {
     actual fun editorSetAutoClosingPairs(editor: Long, openChars: IntArray, closeChars: IntArray): ByteArray? {
         unsupported()
     }
+    actual fun editorSetMatchedBrackets(
+        editor: Long,
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): ByteArray? {
+        unsupported()
+    }
+    actual fun editorClearMatchedBrackets(editor: Long): ByteArray? {
+        unsupported()
+    }
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? {
         unsupported()
     }
@@ -249,6 +261,21 @@ internal actual object NativeBridge {
         unsupported()
     }
     actual fun editorIsLineVisible(editor: Long, line: Int): Boolean {
+        unsupported()
+    }
+    actual fun editorSetIndentGuides(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetBracketGuides(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetFlowGuides(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorSetSeparatorGuides(editor: Long, payload: ByteArray): ByteArray? {
+        unsupported()
+    }
+    actual fun editorClearGuides(editor: Long): ByteArray? {
         unsupported()
     }
 

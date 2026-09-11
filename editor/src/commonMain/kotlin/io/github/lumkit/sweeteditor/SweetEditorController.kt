@@ -275,6 +275,42 @@ class SweetEditorController(
 
     fun isLineVisible(line: Int): Boolean = session?.isLineVisible(line) ?: true
 
+    fun setIndentGuides(guides: List<IndentGuide>) {
+        session?.setIndentGuides(guides)
+    }
+
+    fun setBracketGuides(guides: List<BracketGuide>) {
+        session?.setBracketGuides(guides)
+    }
+
+    fun setFlowGuides(guides: List<FlowGuide>) {
+        session?.setFlowGuides(guides)
+    }
+
+    fun setSeparatorGuides(guides: List<SeparatorGuide>) {
+        session?.setSeparatorGuides(guides)
+    }
+
+    fun clearGuides() {
+        session?.clearGuides()
+    }
+
+    fun setBracketPairs(pairs: List<BracketPair>) {
+        session?.setBracketPairs(pairs)
+    }
+
+    fun setAutoClosingPairs(pairs: List<BracketPair>) {
+        session?.setAutoClosingPairs(pairs)
+    }
+
+    fun setMatchedBrackets(openLine: Int, openColumn: Int, closeLine: Int, closeColumn: Int) {
+        session?.setMatchedBrackets(openLine, openColumn, closeLine, closeColumn)
+    }
+
+    fun clearMatchedBrackets() {
+        session?.clearMatchedBrackets()
+    }
+
     fun setLanguageConfiguration(config: LanguageConfiguration?) {
         languageConfiguration = config
         session?.applyLanguageConfiguration(config)

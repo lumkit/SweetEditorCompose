@@ -7,6 +7,7 @@ import kotlinx.cinterop.FloatVar
 import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.UIntVar
+import kotlinx.cinterop.UShortVar
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.cValue
@@ -26,6 +27,7 @@ import sweeteditor.cinterop.create_editor
 import sweeteditor.cinterop.editor_backspace
 import sweeteditor.cinterop.editor_build_render_model
 import sweeteditor.cinterop.editor_clear_all_decorations
+import sweeteditor.cinterop.editor_clear_guides
 import sweeteditor.cinterop.editor_clear_codelens
 import sweeteditor.cinterop.editor_clear_diagnostics
 import sweeteditor.cinterop.editor_clear_document_highlights
@@ -88,7 +90,9 @@ import sweeteditor.cinterop.editor_move_line_down
 import sweeteditor.cinterop.editor_move_line_up
 import sweeteditor.cinterop.editor_on_font_metrics_changed
 import sweeteditor.cinterop.editor_redo
+import sweeteditor.cinterop.editor_clear_matched_brackets
 import sweeteditor.cinterop.editor_set_auto_closing_pairs
+import sweeteditor.cinterop.editor_set_matched_brackets
 import sweeteditor.cinterop.editor_set_auto_indent_mode
 import sweeteditor.cinterop.editor_set_backspace_unindent
 import sweeteditor.cinterop.editor_set_bracket_pairs
@@ -104,7 +108,11 @@ import sweeteditor.cinterop.editor_search
 import sweeteditor.cinterop.editor_set_editor_range_effect_styles
 import sweeteditor.cinterop.editor_set_editor_render_colors
 import sweeteditor.cinterop.editor_set_fold_arrow_mode
+import sweeteditor.cinterop.editor_set_bracket_guides
+import sweeteditor.cinterop.editor_set_flow_guides
 import sweeteditor.cinterop.editor_set_fold_regions
+import sweeteditor.cinterop.editor_set_indent_guides
+import sweeteditor.cinterop.editor_set_separator_guides
 import sweeteditor.cinterop.editor_set_gutter_sticky
 import sweeteditor.cinterop.editor_set_gutter_visible
 import sweeteditor.cinterop.editor_set_insert_spaces
@@ -369,6 +377,29 @@ internal actual object NativeBridge {
                 editor_set_auto_closing_pairs(editor, opens, closes, count, size)
             } }
         }
+
+    actual fun editorSetMatchedBrackets(
+        editor: Long,
+        openLine: Int,
+        openColumn: Int,
+        closeLine: Int,
+        closeColumn: Int,
+    ): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                editor_set_matched_brackets(
+                    editor,
+                    openLine.toULong(),
+                    openColumn.toULong(),
+                    closeLine.toULong(),
+                    closeColumn.toULong(),
+                    size,
+                )
+            }
+        }
+
+    actual fun editorClearMatchedBrackets(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_clear_matched_brackets(editor, size) } }
 
     actual fun editorSetAutoIndentMode(editor: Long, mode: Int): ByteArray? =
         withActive(editor) { adoptBinary { size -> editor_set_auto_indent_mode(editor, mode, size) } }
@@ -730,6 +761,65 @@ internal actual object NativeBridge {
 
     actual fun editorIsLineVisible(editor: Long, line: Int): Boolean =
         withActive(editor) { editor_is_line_visible(editor, line.toULong()) != 0 }
+
+    actual fun editorSetIndentGuides(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_indent_guides(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorSetBracketGuides(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_bracket_guides(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorSetFlowGuides(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_flow_guides(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorSetSeparatorGuides(editor: Long, payload: ByteArray): ByteArray? =
+        withActive(editor) {
+            adoptBinary { size ->
+                payload.usePinned { pinned ->
+                    editor_set_separator_guides(
+                        editor,
+                        pinned.addressOf(0).reinterpret(),
+                        payload.size.convert(),
+                        size,
+                    )
+                }
+            }
+        }
+
+    actual fun editorClearGuides(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_clear_guides(editor, size) } }
 
     private inline fun <T> withActive(handle: Long, block: () -> T): T {
         val measurer = measurers[handle]

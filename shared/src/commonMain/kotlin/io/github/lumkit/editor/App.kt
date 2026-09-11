@@ -52,8 +52,14 @@ import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorDiagnosticSeverity
 import io.github.lumkit.sweeteditor.EditorDocumentHighlightKind
 import io.github.lumkit.sweeteditor.EditorFontStyle
+import io.github.lumkit.sweeteditor.FlowGuide
 import io.github.lumkit.sweeteditor.FoldRegion
+import io.github.lumkit.sweeteditor.IndentGuide
+import io.github.lumkit.sweeteditor.BracketGuide
 import io.github.lumkit.sweeteditor.EditorIconProvider
+import io.github.lumkit.sweeteditor.SeparatorGuide
+import io.github.lumkit.sweeteditor.SeparatorStyle
+import io.github.lumkit.sweeteditor.TextPosition
 import io.github.lumkit.sweeteditor.EditorInlayType
 import io.github.lumkit.sweeteditor.EditorKeyMap
 import io.github.lumkit.sweeteditor.EditorMetadata
@@ -286,6 +292,8 @@ private fun DemoEditor(onBack: () -> Unit) {
                 val line = controller.getCursorPosition()?.line ?: 0
                 controller.toggleFold(line)
             },
+            onMatchBrackets = { controller.setMatchedBrackets(0, 11, 81, 0) },
+            onClearMatchedBrackets = controller::clearMatchedBrackets,
         )
         Text(
             text = status,
@@ -350,6 +358,8 @@ private fun DemoToolbar(
     onFoldAll: () -> Unit,
     onUnfoldAll: () -> Unit,
     onToggleFold: () -> Unit,
+    onMatchBrackets: () -> Unit,
+    onClearMatchedBrackets: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -402,6 +412,8 @@ private fun DemoToolbar(
             TextButton(onClick = onFoldAll) { Text("Fold all") }
             TextButton(onClick = onUnfoldAll) { Text("Unfold") }
             TextButton(onClick = onToggleFold) { Text("Toggle fold") }
+            TextButton(onClick = onMatchBrackets) { Text("Match {}") }
+            TextButton(onClick = onClearMatchedBrackets) { Text("Clear match") }
         }
     }
 }
@@ -515,6 +527,10 @@ private class DemoDecorationProvider : DecorationProvider {
         DecorationType.DIAGNOSTIC,
         DecorationType.DOCUMENT_HIGHLIGHT,
         DecorationType.FOLD_REGION,
+        DecorationType.INDENT_GUIDE,
+        DecorationType.BRACKET_GUIDE,
+        DecorationType.FLOW_GUIDE,
+        DecorationType.SEPARATOR_GUIDE,
     )
 
     override fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver) {
@@ -548,6 +564,26 @@ private class DemoDecorationProvider : DecorationProvider {
                 documentHighlightsMode = DecorationApplyMode.REPLACE_RANGE,
                 foldRegions = listOf(FoldRegion(startLine = 0, endLine = 81, collapsed = false)),
                 foldRegionsMode = DecorationApplyMode.REPLACE_ALL,
+                indentGuides = listOf(
+                    IndentGuide(start = TextPosition(0, 4), end = TextPosition(80, 4)),
+                ),
+                indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
+                bracketGuides = listOf(
+                    BracketGuide(
+                        parent = TextPosition(0, 11),
+                        end = TextPosition(81, 0),
+                        children = listOf(TextPosition(1, 4)),
+                    ),
+                ),
+                bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
+                flowGuides = listOf(
+                    FlowGuide(start = TextPosition(1, 4), end = TextPosition(2, 4)),
+                ),
+                flowGuidesMode = DecorationApplyMode.REPLACE_ALL,
+                separatorGuides = listOf(
+                    SeparatorGuide(line = 40, style = SeparatorStyle.SINGLE, count = 2, textEndColumn = 4),
+                ),
+                separatorGuidesMode = DecorationApplyMode.REPLACE_ALL,
             ),
         )
     }
