@@ -10,3 +10,5 @@ internal interface EditorImeAdapter {
 }
 
 internal expect fun Modifier.editorIme(session: RememberedEditorSession): Modifier
+
+internal expect fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier

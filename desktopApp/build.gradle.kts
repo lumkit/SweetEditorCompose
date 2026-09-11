@@ -18,6 +18,9 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "io.github.lumkit.editor.MainKt"
+        jvmArgs += listOf(
+            "--add-opens=java.desktop/com.apple.eawt.event=ALL-UNNAMED",
+        )
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
