@@ -24,6 +24,7 @@ val sweetEditorHome: File = resolveSweetEditorHome()
 val nativesRoot: File = layout.projectDirectory.dir("natives").asFile
 val generatedNatives: Provider<Directory> = layout.buildDirectory.dir("generated/natives")
 val jvmNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmResources") }
+val jvmKeepRulesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmKeepRules") }
 val webNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webResources") }
 val androidJniLibsDir: Directory = layout.projectDirectory.dir("src/androidMain/jniLibs")
 
@@ -71,7 +72,7 @@ kotlin {
         optimization {
             consumerKeepRules.apply {
                 publish = true
-                file("src/androidMain/consumer-rules.pro")
+                file("consumer-rules.pro")
             }
         }
     }
@@ -103,6 +104,7 @@ kotlin {
         named("jvmMain") {
             dependsOn(jniMain)
             resources.srcDir(jvmNativeResourcesDir)
+            resources.srcDir(jvmKeepRulesDir)
         }
         val iosMain by creating {
             dependsOn(commonMain)
@@ -226,6 +228,20 @@ val prepareWebNativeResources by tasks.registering(Sync::class) {
     into(webNativeResourcesDir.map { it.dir("native/web") })
     from(resolveNativeSource("web", "prebuilt/wasm")) {
         include("sweeteditor_c_abi.js", "sweeteditor_c_abi.wasm")
+    }
+}
+
+val stageJvmKeepRules by tasks.registering(Sync::class) {
+    group = "sweeteditor"
+    description = "Stage JNI keep rules for Compose Desktop R8/ProGuard under META-INF."
+    into(jvmKeepRulesDir)
+    from("consumer-rules.pro") {
+        into("META-INF/proguard")
+        rename { "sweeteditor-compose.pro" }
+    }
+    from("consumer-rules.pro") {
+        into("META-INF/com.android.tools/r8")
+        rename { "sweeteditor-compose.pro" }
     }
 }
 
@@ -392,7 +408,7 @@ tasks.withType<Jar>().configureEach {
 tasks.configureEach {
     if (name.contains("ProcessResources")) {
         if (name.contains("jvm", ignoreCase = true)) {
-            dependsOn(prepareJvmNativeResources)
+            dependsOn(prepareJvmNativeResources, stageJvmKeepRules)
         }
         if (name.contains("js", ignoreCase = true) || name.contains("wasm", ignoreCase = true)) {
             dependsOn(prepareWebNativeResources)

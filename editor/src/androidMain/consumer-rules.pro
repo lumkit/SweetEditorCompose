@@ -1,3 +1,0 @@
--keep class io.github.lumkit.sweeteditor.internal.jni.SweetEditorJni { *; }
--keep class io.github.lumkit.sweeteditor.core.HostTextMeasurer { *; }
--keepclasseswithmembernames class * { native <methods>; }
