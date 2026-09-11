@@ -9,6 +9,7 @@ class SweetEditorController(
 ) {
     private var session: RememberedEditorSession? = null
     private val readyCallbacks = mutableListOf<() -> Unit>()
+    val events = EditorEventBus()
 
     val isReady: Boolean get() = session?.isReady == true
 
@@ -65,8 +66,24 @@ class SweetEditorController(
         session?.insertLineBelow()
     }
 
+    fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onCursorChanged(listener: (CursorChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onSelectionChanged(listener: (SelectionChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onScrollChanged(listener: (ScrollChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
+    fun onScaleChanged(listener: (ScaleChangedEvent) -> Unit): () -> Unit =
+        events.subscribe(listener)
+
     fun dispose() {
         readyCallbacks.clear()
+        events.clear()
     }
 
     internal fun attach(next: RememberedEditorSession) {
