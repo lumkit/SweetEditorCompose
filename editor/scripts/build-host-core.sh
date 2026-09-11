@@ -78,6 +78,10 @@ GEN_ARGS=(
   -DSWEETEDITOR_BUILD_WASM_EMBIND=OFF
   -DSWEETEDITOR_BUILD_ANDROID_JNI=OFF
 )
+# SE logging.hpp uses __FILE_NAME__ (Clang / GCC 12+). Older GCC lacks it; fall back to __FILE__.
+if ! printf '#ifndef __FILE_NAME__\n#error\n#endif\n' | "${CXX:-c++}" -x c++ -std=c++17 -fsyntax-only - 2>/dev/null; then
+  GEN_ARGS+=("-DCMAKE_CXX_FLAGS=-D__FILE_NAME__=__FILE__")
+fi
 if [[ -n "${SWEETEDITOR_OSX_ARCH:-}" ]]; then
   GEN_ARGS+=("-DCMAKE_OSX_ARCHITECTURES=$SWEETEDITOR_OSX_ARCH")
 fi
