@@ -4,4 +4,6 @@ internal actual fun runOnEditorThread(block: () -> Unit) {
     block()
 }
 
-internal actual fun editorNowMs(): Long = 0L
+private fun dateNow(): Double = js("Date.now()")
+
+internal actual fun editorNowMs(): Long = dateNow().toLong()

@@ -47,6 +47,7 @@ import io.github.lumkit.sweeteditor.input.pointerModifiers
 import io.github.lumkit.sweeteditor.input.wheelModifiersForCore
 import io.github.lumkit.sweeteditor.render.drawEditor
 import io.github.lumkit.sweeteditor.render.toComposeColor
+import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 import androidx.compose.foundation.text.BasicText
 
@@ -115,6 +116,19 @@ fun SweetEditor(
         session.onTap = { runCatching { focusRequester.requestFocus() } }
         onDispose { session.onTap = null }
     }
+    LaunchedEffect(session) {
+        var frames = 0
+        while (!NativeBridge.isAvailable) {
+            withFrameNanos { }
+            frames += 1
+            if (frames > 1_800) {
+                session.markLoadError("SweetEditor native core failed to load")
+                return@LaunchedEffect
+            }
+        }
+        session.onRemembered()
+    }
+
     LaunchedEffect(settings.readOnly) {
         if (!settings.readOnly) {
             runCatching { focusRequester.requestFocus() }

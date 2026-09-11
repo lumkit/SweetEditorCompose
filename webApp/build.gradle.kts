@@ -25,5 +25,11 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
         }
+        named("jsMain") {
+            resources.srcDir(rootProject.file("editor/natives/web"))
+        }
+        named("wasmJsMain") {
+            resources.srcDir(rootProject.file("editor/natives/web"))
+        }
     }
 }
