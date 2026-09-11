@@ -12,7 +12,7 @@ import javax.swing.JComponent
 import javax.swing.RootPaneContainer
 import javax.swing.SwingUtilities
 
-internal actual fun Modifier.editorIme(session: RememberedEditorSession): Modifier = this
+internal actual fun Modifier.editorIme(session: RememberedEditorSession, readOnly: Boolean): Modifier = this
 
 internal actual fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier {
     if (!isMacOs) return this

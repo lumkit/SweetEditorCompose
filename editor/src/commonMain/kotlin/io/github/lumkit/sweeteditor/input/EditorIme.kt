@@ -9,6 +9,6 @@ internal interface EditorImeAdapter {
     fun closeOwnedSession()
 }
 
-internal expect fun Modifier.editorIme(session: RememberedEditorSession): Modifier
+internal expect fun Modifier.editorIme(session: RememberedEditorSession, readOnly: Boolean): Modifier
 
 internal expect fun Modifier.editorHostScale(session: RememberedEditorSession): Modifier

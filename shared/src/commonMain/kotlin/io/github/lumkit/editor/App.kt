@@ -23,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.lumkit.sweeteditor.AutoIndentMode
@@ -260,7 +261,11 @@ private fun DemoToolbar(
     onApplyDecorations: () -> Unit,
     onClearDecorations: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusProperties { canFocus = false },
+    ) {
         DemoChipRow {
             FilterChip(selected = darkTheme, onClick = onToggleTheme, label = { Text(if (darkTheme) "Dark" else "Light") })
             FilterChip(selected = wrapMode != WrapMode.NONE, onClick = onCycleWrap, label = { Text("Wrap ${wrapMode.name}") })
