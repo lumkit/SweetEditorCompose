@@ -90,6 +90,7 @@ import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.EditorImeAdapter
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import io.github.lumkit.sweeteditor.platformSelectionMenuEnabled
+import io.github.lumkit.sweeteditor.platformContextMenuEnabled
 import io.github.lumkit.sweeteditor.selection.SelectionMenuAnchor
 import io.github.lumkit.sweeteditor.selection.SelectionMenuController
 import io.github.lumkit.sweeteditor.selection.toSelectionMenuSignal
@@ -98,6 +99,19 @@ import io.github.lumkit.sweeteditor.SelectionMenuItem
 import io.github.lumkit.sweeteditor.SelectionMenuItemClickEvent
 import io.github.lumkit.sweeteditor.SelectionMenuItemProvider
 import io.github.lumkit.sweeteditor.selection.SelectionMenuLifecycle
+import io.github.lumkit.sweeteditor.ContextMenuEvent
+import io.github.lumkit.sweeteditor.ContextMenuItem
+import io.github.lumkit.sweeteditor.ContextMenuItemClickEvent
+import io.github.lumkit.sweeteditor.ContextMenuItemProvider
+import io.github.lumkit.sweeteditor.ContextMenuRequest
+import io.github.lumkit.sweeteditor.ContextMenuSection
+import io.github.lumkit.sweeteditor.ContextMenuTriggerKind
+import io.github.lumkit.sweeteditor.EditorPoint
+import io.github.lumkit.sweeteditor.LinkClickEvent
+import io.github.lumkit.sweeteditor.contextmenu.ContextMenuSignal
+import io.github.lumkit.sweeteditor.contextmenu.buildContextMenuSections
+import io.github.lumkit.sweeteditor.contextmenu.contextMenuSignal
+import io.github.lumkit.sweeteditor.contextmenu.toPublicHitTarget
 
 internal class RememberedEditorSession(
     private val controller: SweetEditorController,
@@ -130,6 +144,11 @@ internal class RememberedEditorSession(
         private set
     var selectionMenuShowToken by mutableStateOf(0)
         private set
+    var contextMenuSections by mutableStateOf<List<ContextMenuSection>>(emptyList())
+        private set
+    var contextMenuLocation by mutableStateOf<EditorPoint?>(null)
+        private set
+    val isContextMenuShowing: Boolean get() = contextMenuSections.isNotEmpty()
     var iconProvider by mutableStateOf<EditorIconProvider?>(null)
         private set
     internal var lastPointer = PointF(0f, 0f)
@@ -185,6 +204,8 @@ internal class RememberedEditorSession(
     )
     private var lastCursorPosition = TextPosition(0, 0)
     private var lastSelectionRange: TextRange? = null
+    private var contextMenuProvider: ContextMenuItemProvider? = null
+    private var contextMenuRequest: ContextMenuRequest? = null
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -203,6 +224,7 @@ internal class RememberedEditorSession(
             controller.attach(this)
             decorations.requestRefresh()
             applySelectionMenuProvider(controller.selectionMenuItemProvider)
+            applyContextMenuProvider(controller.contextMenuItemProvider)
         } catch (error: Throwable) {
             loadError = error.message ?: error.toString()
         }
@@ -799,6 +821,76 @@ internal class RememberedEditorSession(
         handleKey(KeyCode.A, null, KeyModifier.CTRL)
     }
 
+    fun applyContextMenuProvider(provider: ContextMenuItemProvider?) {
+        contextMenuProvider = provider
+    }
+
+    fun hideContextMenu() {
+        contextMenuSections = emptyList()
+        contextMenuLocation = null
+        contextMenuRequest = null
+    }
+
+    fun onContextMenuItemClick(item: ContextMenuItem) {
+        if (disposed) return
+        val request = contextMenuRequest
+        hideContextMenu()
+        when (item.id) {
+            ContextMenuItem.ACTION_OPEN_LINK -> {
+                if (request != null && request.linkTarget.isNotEmpty()) {
+                    controller.events.publish(
+                        LinkClickEvent(
+                            line = request.hitTarget.line,
+                            column = request.hitTarget.column,
+                            target = request.linkTarget,
+                            locationInEditor = request.locationInEditor,
+                        ),
+                    )
+                }
+            }
+            ContextMenuItem.ACTION_COPY_LINK -> {
+                val target = request?.linkTarget.orEmpty()
+                if (target.isNotEmpty()) {
+                    clipboard?.setText(target)
+                }
+            }
+            ContextMenuItem.ACTION_CUT -> cutToClipboard()
+            ContextMenuItem.ACTION_COPY -> copyToClipboard()
+            ContextMenuItem.ACTION_PASTE -> pasteFromClipboard()
+            ContextMenuItem.ACTION_SELECT_ALL -> selectAll()
+            else -> if (request != null) {
+                controller.events.publish(ContextMenuItemClickEvent(item, request))
+            }
+        }
+    }
+
+    private fun presentContextMenu(result: EditorActionResult) {
+        hideSelectionMenu()
+        val location = EditorPoint(lastPointer.x, lastPointer.y)
+        val request = ContextMenuRequest(
+            triggerKind = ContextMenuTriggerKind.RIGHT_CLICK,
+            cursorPosition = TextPosition(result.cursorAfter.line, result.cursorAfter.column),
+            locationInEditor = location,
+            hasSelection = result.hasSelectionAfter,
+            selection = lastSelectionRange.takeIf { result.hasSelectionAfter },
+            hitTarget = result.hitTarget.toPublicHitTarget(),
+            linkTarget = if (result.hitTarget.type == HitTargetType.LINK) {
+                getLinkTargetAt(result.hitTarget.line, result.hitTarget.column)
+            } else {
+                ""
+            },
+        )
+        val sections = buildContextMenuSections(contextMenuProvider, request)
+        if (sections.isEmpty()) {
+            hideContextMenu()
+            return
+        }
+        contextMenuRequest = request
+        contextMenuSections = sections
+        contextMenuLocation = location
+        controller.events.publish(ContextMenuEvent(request.cursorPosition, location))
+    }
+
     fun bindImeAdapter(adapter: EditorImeAdapter?) {
         imeAdapter = adapter
     }
@@ -840,6 +932,7 @@ internal class RememberedEditorSession(
         selectionMenu.dispose()
         selectionMenuItems = emptyList()
         selectionMenuAnchor = null
+        hideContextMenu()
         controller.detach(this)
         editor?.close()
         editor = null
@@ -913,11 +1006,19 @@ internal class RememberedEditorSession(
         } else {
             null
         }
+        when (contextMenuSignal(platformContextMenuEnabled(), result.gestureType)) {
+            ContextMenuSignal.SHOW -> presentContextMenu(result)
+            ContextMenuSignal.DISMISS -> hideContextMenu()
+            ContextMenuSignal.IGNORE -> Unit
+        }
+        if (result.textChanges.isNotEmpty() && result.gestureType != GestureType.CONTEXT_MENU) {
+            hideContextMenu()
+        }
         selectionMenu.onEditorSignal(result.toSelectionMenuSignal())
         selectionMenuShowToken = selectionMenu.showToken
-        if (selectionMenu.lifecycle != SelectionMenuLifecycle.VISIBLE) {
+        if (isContextMenuShowing || selectionMenu.lifecycle != SelectionMenuLifecycle.VISIBLE) {
             selectionMenuItems = emptyList()
-            if (selectionMenu.lifecycle != SelectionMenuLifecycle.PENDING_SHOW) {
+            if (isContextMenuShowing || selectionMenu.lifecycle != SelectionMenuLifecycle.PENDING_SHOW) {
                 selectionMenuAnchor = null
             }
         }
@@ -932,7 +1033,7 @@ internal class RememberedEditorSession(
                 loadError = error.message ?: error.toString()
             }
         }
-        if (selectionMenu.lifecycle == SelectionMenuLifecycle.VISIBLE) {
+        if (!isContextMenuShowing && selectionMenu.lifecycle == SelectionMenuLifecycle.VISIBLE) {
             selectionMenuAnchor = selectionMenuAnchorRect()
         }
     }
