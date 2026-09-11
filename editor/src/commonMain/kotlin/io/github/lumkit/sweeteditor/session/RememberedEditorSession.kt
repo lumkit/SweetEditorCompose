@@ -31,6 +31,7 @@ import io.github.lumkit.sweeteditor.toPublic
 import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.ScrollChangedEvent
 import io.github.lumkit.sweeteditor.TextChangedEvent
+import io.github.lumkit.sweeteditor.CursorChangedEvent
 import io.github.lumkit.sweeteditor.decoration.DecorationHost
 import io.github.lumkit.sweeteditor.decoration.DecorationProviderManager
 import io.github.lumkit.sweeteditor.completion.CompletionHost
@@ -55,7 +56,11 @@ import io.github.lumkit.sweeteditor.DiffChange
 import io.github.lumkit.sweeteditor.TabStopGroup
 import io.github.lumkit.sweeteditor.LanguageConfiguration
 import io.github.lumkit.sweeteditor.LinkSpan
+import io.github.lumkit.sweeteditor.InlineSuggestion
+import io.github.lumkit.sweeteditor.InlineSuggestionListener
 import io.github.lumkit.sweeteditor.PhantomText
+import io.github.lumkit.sweeteditor.copilot.InlineSuggestionController
+import io.github.lumkit.sweeteditor.copilot.InlineSuggestionHost
 import io.github.lumkit.sweeteditor.StyleSpan
 import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.VisibleLineRange
@@ -149,6 +154,8 @@ internal class RememberedEditorSession(
     var contextMenuLocation by mutableStateOf<EditorPoint?>(null)
         private set
     val isContextMenuShowing: Boolean get() = contextMenuSections.isNotEmpty()
+    var inlineSuggestionAnchor by mutableStateOf<EditorCursorRect?>(null)
+        private set
     var iconProvider by mutableStateOf<EditorIconProvider?>(null)
         private set
     internal var lastPointer = PointF(0f, 0f)
@@ -206,6 +213,11 @@ internal class RememberedEditorSession(
     private var lastSelectionRange: TextRange? = null
     private var contextMenuProvider: ContextMenuItemProvider? = null
     private var contextMenuRequest: ContextMenuRequest? = null
+    private val inlineSuggestions = InlineSuggestionController(SessionInlineSuggestionHost())
+
+    private fun syncInlineSuggestionOverlay() {
+        inlineSuggestionAnchor = inlineSuggestions.overlay
+    }
 
     override fun onRemembered() {
         if (disposed || editor != null) return
@@ -225,6 +237,7 @@ internal class RememberedEditorSession(
             decorations.requestRefresh()
             applySelectionMenuProvider(controller.selectionMenuItemProvider)
             applyContextMenuProvider(controller.contextMenuItemProvider)
+            setInlineSuggestionListener(controller.inlineSuggestionListener)
         } catch (error: Throwable) {
             loadError = error.message ?: error.toString()
         }
@@ -411,6 +424,10 @@ internal class RememberedEditorSession(
 
     fun handleKey(keyCode: Int, text: ByteArray?, modifiers: Int) {
         val core = editor ?: return
+        if (inlineSuggestions.handleKey(keyCode, modifiers)) {
+            syncInlineSuggestionOverlay()
+            return
+        }
         if (handleCompletionKey(keyCode, modifiers)) return
         if (tryHandleNewLine(keyCode, modifiers)) return
         dispatchActionResult(core.handleKeyEvent(keyCode, text, modifiers))
@@ -825,6 +842,28 @@ internal class RememberedEditorSession(
         contextMenuProvider = provider
     }
 
+    fun setInlineSuggestionListener(listener: InlineSuggestionListener?) {
+        inlineSuggestions.listener = listener
+    }
+
+    fun showInlineSuggestion(suggestion: InlineSuggestion) {
+        if (disposed) return
+        inlineSuggestions.show(suggestion)
+        syncInlineSuggestionOverlay()
+    }
+
+    fun dismissInlineSuggestion() {
+        inlineSuggestions.dismiss()
+        syncInlineSuggestionOverlay()
+    }
+
+    fun acceptInlineSuggestion() {
+        inlineSuggestions.accept()
+        syncInlineSuggestionOverlay()
+    }
+
+    val isInlineSuggestionShowing: Boolean get() = inlineSuggestions.isShowing
+
     fun hideContextMenu() {
         contextMenuSections = emptyList()
         contextMenuLocation = null
@@ -933,6 +972,8 @@ internal class RememberedEditorSession(
         selectionMenuItems = emptyList()
         selectionMenuAnchor = null
         hideContextMenu()
+        inlineSuggestions.dispose()
+        inlineSuggestionAnchor = null
         controller.detach(this)
         editor?.close()
         editor = null
@@ -981,10 +1022,18 @@ internal class RememberedEditorSession(
                 is TextChangedEvent -> {
                     decorations.onTextChanged(event.changes)
                     onCompletionTextChanged(event)
+                    inlineSuggestions.onTextChanged()
+                    syncInlineSuggestionOverlay()
+                }
+                is CursorChangedEvent -> {
+                    inlineSuggestions.onCursorChanged()
+                    syncInlineSuggestionOverlay()
                 }
                 is ScrollChangedEvent -> {
                     decorations.onScrollChanged()
                     if (completionItems.isNotEmpty()) completions.dismiss()
+                    inlineSuggestions.onScrollChanged()
+                    syncInlineSuggestionOverlay()
                 }
                 else -> Unit
             }
@@ -1181,6 +1230,40 @@ internal class RememberedEditorSession(
         }
         override fun setSeparatorGuides(guides: List<SeparatorGuide>) {
             mutate { setSeparatorGuides(guides) }
+        }
+    }
+
+    private inner class SessionInlineSuggestionHost : InlineSuggestionHost {
+        override fun injectPhantom(suggestion: InlineSuggestion) {
+            mutate { clearPhantomTexts() }
+            mutate {
+                setBatchLinePhantomTexts(
+                    mapOf(
+                        suggestion.line to listOf(PhantomText(suggestion.column, suggestion.text)),
+                    ),
+                )
+            }
+        }
+
+        override fun clearPhantom() {
+            mutate { clearPhantomTexts() }
+        }
+
+        override fun insertSuggestion(suggestion: InlineSuggestion) {
+            val core = editor ?: return
+            dispatchActionResult(
+                core.replaceText(
+                    suggestion.line,
+                    suggestion.column,
+                    suggestion.line,
+                    suggestion.column,
+                    suggestion.text,
+                ),
+            )
+        }
+
+        override fun suggestionAnchor(suggestion: InlineSuggestion): EditorCursorRect? {
+            return getPositionRect(suggestion.line, suggestion.column) ?: getCursorRect()
         }
     }
 
