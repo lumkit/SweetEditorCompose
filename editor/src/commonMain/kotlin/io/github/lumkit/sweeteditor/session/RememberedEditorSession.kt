@@ -6,11 +6,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.lumkit.sweeteditor.EditorCursorRect
 import io.github.lumkit.sweeteditor.EditorScrollMetrics
+import io.github.lumkit.sweeteditor.CodeLensItem
+import io.github.lumkit.sweeteditor.Diagnostic
+import io.github.lumkit.sweeteditor.DocumentHighlight
 import io.github.lumkit.sweeteditor.EditorKeyBinding
 import io.github.lumkit.sweeteditor.EditorKeyChord
 import io.github.lumkit.sweeteditor.EditorKeyMap
 import io.github.lumkit.sweeteditor.EditorSettings
+import io.github.lumkit.sweeteditor.EditorSpanLayer
+import io.github.lumkit.sweeteditor.EditorTextStyle
 import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.GutterIcon
+import io.github.lumkit.sweeteditor.InlayHint
+import io.github.lumkit.sweeteditor.LinkSpan
+import io.github.lumkit.sweeteditor.PhantomText
+import io.github.lumkit.sweeteditor.StyleSpan
 import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.collectStateEvents
@@ -251,6 +261,85 @@ internal class RememberedEditorSession(
     fun insertLineBelow() {
         val core = editor ?: return
         dispatchActionResult(core.insertLineBelow())
+    }
+
+    fun registerTextStyle(styleId: Int, color: Int, backgroundColor: Int = 0, fontStyle: Int = 0) =
+        mutate { registerTextStyle(styleId, color, backgroundColor, fontStyle) }
+
+    fun registerBatchTextStyles(styles: Map<Int, EditorTextStyle>) =
+        mutate { registerBatchTextStyles(styles) }
+
+    fun setLineSpans(line: Int, layer: EditorSpanLayer, spans: List<StyleSpan>) =
+        mutate { setLineSpans(line, layer, spans) }
+
+    fun setBatchLineSpans(layer: EditorSpanLayer, spansByLine: Map<Int, List<StyleSpan>>) =
+        mutate { setBatchLineSpans(layer, spansByLine) }
+
+    fun clearLineSpans(line: Int, layer: EditorSpanLayer) = mutate { clearLineSpans(line, layer) }
+
+    fun clearHighlights() = mutate { clearHighlights() }
+
+    fun clearHighlights(layer: EditorSpanLayer) = mutate { clearHighlights(layer) }
+
+    fun setLineInlayHints(line: Int, hints: List<InlayHint>) = mutate { setLineInlayHints(line, hints) }
+
+    fun setBatchLineInlayHints(hintsByLine: Map<Int, List<InlayHint>>) =
+        mutate { setBatchLineInlayHints(hintsByLine) }
+
+    fun clearInlayHints() = mutate { clearInlayHints() }
+
+    fun setLinePhantomTexts(line: Int, phantoms: List<PhantomText>) =
+        mutate { setLinePhantomTexts(line, phantoms) }
+
+    fun setBatchLinePhantomTexts(phantomsByLine: Map<Int, List<PhantomText>>) =
+        mutate { setBatchLinePhantomTexts(phantomsByLine) }
+
+    fun clearPhantomTexts() = mutate { clearPhantomTexts() }
+
+    fun setLineGutterIcons(line: Int, icons: List<GutterIcon>) = mutate { setLineGutterIcons(line, icons) }
+
+    fun setBatchLineGutterIcons(iconsByLine: Map<Int, List<GutterIcon>>) =
+        mutate { setBatchLineGutterIcons(iconsByLine) }
+
+    fun setMaxGutterIcons(count: Int) = mutate { setMaxGutterIcons(count) }
+
+    fun clearGutterIcons() = mutate { clearGutterIcons() }
+
+    fun setLineCodeLens(line: Int, items: List<CodeLensItem>) = mutate { setLineCodeLens(line, items) }
+
+    fun setBatchLineCodeLens(itemsByLine: Map<Int, List<CodeLensItem>>) =
+        mutate { setBatchLineCodeLens(itemsByLine) }
+
+    fun clearCodeLens() = mutate { clearCodeLens() }
+
+    fun setLineLinks(line: Int, links: List<LinkSpan>) = mutate { setLineLinks(line, links) }
+
+    fun setBatchLineLinks(linksByLine: Map<Int, List<LinkSpan>>) = mutate { setBatchLineLinks(linksByLine) }
+
+    fun clearLinks() = mutate { clearLinks() }
+
+    fun getLinkTargetAt(line: Int, column: Int): String = editor?.getLinkTargetAt(line, column).orEmpty()
+
+    fun setLineDiagnostics(line: Int, items: List<Diagnostic>) = mutate { setLineDiagnostics(line, items) }
+
+    fun setBatchLineDiagnostics(itemsByLine: Map<Int, List<Diagnostic>>) =
+        mutate { setBatchLineDiagnostics(itemsByLine) }
+
+    fun clearDiagnostics() = mutate { clearDiagnostics() }
+
+    fun setLineDocumentHighlights(line: Int, items: List<DocumentHighlight>) =
+        mutate { setLineDocumentHighlights(line, items) }
+
+    fun setBatchLineDocumentHighlights(itemsByLine: Map<Int, List<DocumentHighlight>>) =
+        mutate { setBatchLineDocumentHighlights(itemsByLine) }
+
+    fun clearDocumentHighlights() = mutate { clearDocumentHighlights() }
+
+    fun clearAllDecorations() = mutate { clearAllDecorations() }
+
+    private fun mutate(block: EditorCore.() -> EditorActionResult?) {
+        val core = editor ?: return
+        dispatchActionResult(core.block())
     }
 
     fun tickAnimations() {

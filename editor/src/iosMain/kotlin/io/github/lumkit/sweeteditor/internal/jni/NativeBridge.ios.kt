@@ -25,6 +25,37 @@ import sweeteditor.cinterop.create_document_from_utf8
 import sweeteditor.cinterop.create_editor
 import sweeteditor.cinterop.editor_backspace
 import sweeteditor.cinterop.editor_build_render_model
+import sweeteditor.cinterop.editor_clear_all_decorations
+import sweeteditor.cinterop.editor_clear_codelens
+import sweeteditor.cinterop.editor_clear_diagnostics
+import sweeteditor.cinterop.editor_clear_document_highlights
+import sweeteditor.cinterop.editor_clear_gutter_icons
+import sweeteditor.cinterop.editor_clear_highlights
+import sweeteditor.cinterop.editor_clear_highlights_layer
+import sweeteditor.cinterop.editor_clear_inlay_hints
+import sweeteditor.cinterop.editor_clear_line_spans
+import sweeteditor.cinterop.editor_clear_links
+import sweeteditor.cinterop.editor_clear_phantom_texts
+import sweeteditor.cinterop.editor_get_link_target_at
+import sweeteditor.cinterop.editor_register_batch_text_styles
+import sweeteditor.cinterop.editor_register_text_style
+import sweeteditor.cinterop.editor_set_batch_line_codelens
+import sweeteditor.cinterop.editor_set_batch_line_diagnostics
+import sweeteditor.cinterop.editor_set_batch_line_document_highlights
+import sweeteditor.cinterop.editor_set_batch_line_gutter_icons
+import sweeteditor.cinterop.editor_set_batch_line_inlay_hints
+import sweeteditor.cinterop.editor_set_batch_line_links
+import sweeteditor.cinterop.editor_set_batch_line_phantom_texts
+import sweeteditor.cinterop.editor_set_batch_line_spans
+import sweeteditor.cinterop.editor_set_line_codelens
+import sweeteditor.cinterop.editor_set_line_diagnostics
+import sweeteditor.cinterop.editor_set_line_document_highlights
+import sweeteditor.cinterop.editor_set_line_gutter_icons
+import sweeteditor.cinterop.editor_set_line_inlay_hints
+import sweeteditor.cinterop.editor_set_line_links
+import sweeteditor.cinterop.editor_set_line_phantom_texts
+import sweeteditor.cinterop.editor_set_line_spans
+import sweeteditor.cinterop.editor_set_max_gutter_icons
 import sweeteditor.cinterop.editor_can_redo
 import sweeteditor.cinterop.editor_can_undo
 import sweeteditor.cinterop.editor_get_cursor_rect
@@ -407,6 +438,81 @@ internal actual object NativeBridge {
         text.encodeToByteArray()
     }
 
+    actual fun editorDecorationOp(
+        editor: Long,
+        op: Int,
+        payload: ByteArray?,
+        a: Int,
+        b: Int,
+        c: Int,
+        d: Int,
+    ): ByteArray? = withActive(editor) {
+        adoptBinary { size ->
+            when (op) {
+                NativeDecorationOp.SET_LINE_SPANS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_spans(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_SPANS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_spans(editor, ptr, n, size) }
+                NativeDecorationOp.REGISTER_BATCH_TEXT_STYLES ->
+                    callPayload(payload) { ptr, n -> editor_register_batch_text_styles(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_INLAY_HINTS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_inlay_hints(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_INLAY_HINTS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_inlay_hints(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_PHANTOM_TEXTS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_phantom_texts(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_PHANTOM_TEXTS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_phantom_texts(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_GUTTER_ICONS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_gutter_icons(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_GUTTER_ICONS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_gutter_icons(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_CODELENS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_codelens(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_CODELENS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_codelens(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_LINKS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_links(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_LINKS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_links(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_DIAGNOSTICS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_diagnostics(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_DIAGNOSTICS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_diagnostics(editor, ptr, n, size) }
+                NativeDecorationOp.SET_LINE_DOCUMENT_HIGHLIGHTS ->
+                    callPayload(payload) { ptr, n -> editor_set_line_document_highlights(editor, ptr, n, size) }
+                NativeDecorationOp.SET_BATCH_LINE_DOCUMENT_HIGHLIGHTS ->
+                    callPayload(payload) { ptr, n -> editor_set_batch_line_document_highlights(editor, ptr, n, size) }
+                NativeDecorationOp.CLEAR_HIGHLIGHTS -> editor_clear_highlights(editor, size)
+                NativeDecorationOp.CLEAR_HIGHLIGHTS_LAYER ->
+                    editor_clear_highlights_layer(editor, a.toUByte(), size)
+                NativeDecorationOp.CLEAR_LINE_SPANS ->
+                    editor_clear_line_spans(editor, a.toULong(), b.toUByte(), size)
+                NativeDecorationOp.CLEAR_INLAY_HINTS -> editor_clear_inlay_hints(editor, size)
+                NativeDecorationOp.CLEAR_PHANTOM_TEXTS -> editor_clear_phantom_texts(editor, size)
+                NativeDecorationOp.CLEAR_GUTTER_ICONS -> editor_clear_gutter_icons(editor, size)
+                NativeDecorationOp.CLEAR_CODELENS -> editor_clear_codelens(editor, size)
+                NativeDecorationOp.CLEAR_LINKS -> editor_clear_links(editor, size)
+                NativeDecorationOp.CLEAR_DIAGNOSTICS -> editor_clear_diagnostics(editor, size)
+                NativeDecorationOp.CLEAR_DOCUMENT_HIGHLIGHTS -> editor_clear_document_highlights(editor, size)
+                NativeDecorationOp.CLEAR_ALL_DECORATIONS -> editor_clear_all_decorations(editor, size)
+                NativeDecorationOp.REGISTER_TEXT_STYLE ->
+                    editor_register_text_style(editor, a.toUInt(), b, c, d, size)
+                NativeDecorationOp.SET_MAX_GUTTER_ICONS ->
+                    editor_set_max_gutter_icons(editor, a.toUInt(), size)
+                else -> null
+            }
+        }
+    }
+
+    actual fun editorGetLinkTargetAt(editor: Long, line: Int, column: Int): ByteArray = withActive(editor) {
+        val ptr = editor_get_link_target_at(editor, line.toULong(), column.toULong())
+            ?: return@withActive ByteArray(0)
+        val text = ptr.toKString()
+        free_u8_string(ptr.rawValue.toLong())
+        text.encodeToByteArray()
+    }
+
     private inline fun <T> withActive(handle: Long, block: () -> T): T {
         val measurer = measurers[handle]
         if (measurer != null) activeStack.addLast(measurer)
@@ -414,6 +520,17 @@ internal actual object NativeBridge {
             block()
         } finally {
             if (measurer != null) activeStack.removeLast()
+        }
+    }
+
+    private inline fun callPayload(
+        payload: ByteArray?,
+        block: (CPointer<UByteVar>?, platform.posix.size_t) -> CPointer<UByteVar>?,
+    ): CPointer<UByteVar>? {
+        val bytes = payload ?: return block(null, 0u)
+        if (bytes.isEmpty()) return block(null, 0u)
+        return bytes.usePinned { pinned ->
+            block(pinned.addressOf(0).reinterpret(), bytes.size.convert())
         }
     }
 

@@ -618,6 +618,136 @@ jbyteArray get_selected_text_jni(JNIEnv* env, jclass, jlong editor) {
   return utf8_to_bytes(env, const_cast<char*>(text));
 }
 
+jbyteArray decoration_op_jni(
+    JNIEnv* env,
+    jclass,
+    jlong editor,
+    jint op,
+    jbyteArray payload,
+    jint a,
+    jint b,
+    jint c,
+    jint d) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  BytesView view(env, payload);
+  size_t size = 0;
+  const intptr_t handle = static_cast<intptr_t>(editor);
+  const uint8_t* result = nullptr;
+  switch (op) {
+    case 1:
+      result = editor_set_line_spans(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 2:
+      result = editor_set_batch_line_spans(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 3:
+      result = editor_register_batch_text_styles(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 4:
+      result = editor_set_line_inlay_hints(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 5:
+      result = editor_set_batch_line_inlay_hints(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 6:
+      result = editor_set_line_phantom_texts(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 7:
+      result = editor_set_batch_line_phantom_texts(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 8:
+      result = editor_set_line_gutter_icons(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 9:
+      result = editor_set_batch_line_gutter_icons(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 10:
+      result = editor_set_line_codelens(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 11:
+      result = editor_set_batch_line_codelens(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 12:
+      result = editor_set_line_links(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 13:
+      result = editor_set_batch_line_links(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 14:
+      result = editor_set_line_diagnostics(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 15:
+      result = editor_set_batch_line_diagnostics(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 16:
+      result = editor_set_line_document_highlights(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 17:
+      result = editor_set_batch_line_document_highlights(handle, view.ptr, static_cast<size_t>(view.len), &size);
+      break;
+    case 18:
+      result = editor_clear_highlights(handle, &size);
+      break;
+    case 19:
+      result = editor_clear_highlights_layer(handle, static_cast<uint8_t>(a), &size);
+      break;
+    case 20:
+      result = editor_clear_line_spans(handle, static_cast<size_t>(a), static_cast<uint8_t>(b), &size);
+      break;
+    case 21:
+      result = editor_clear_inlay_hints(handle, &size);
+      break;
+    case 22:
+      result = editor_clear_phantom_texts(handle, &size);
+      break;
+    case 23:
+      result = editor_clear_gutter_icons(handle, &size);
+      break;
+    case 24:
+      result = editor_clear_codelens(handle, &size);
+      break;
+    case 25:
+      result = editor_clear_links(handle, &size);
+      break;
+    case 26:
+      result = editor_clear_diagnostics(handle, &size);
+      break;
+    case 27:
+      result = editor_clear_document_highlights(handle, &size);
+      break;
+    case 28:
+      result = editor_clear_all_decorations(handle, &size);
+      break;
+    case 29:
+      result = editor_register_text_style(
+          handle,
+          static_cast<uint32_t>(a),
+          b,
+          c,
+          d,
+          &size);
+      break;
+    case 30:
+      result = editor_set_max_gutter_icons(handle, static_cast<uint32_t>(a), &size);
+      break;
+    default:
+      return nullptr;
+  }
+  return adopt_binary(env, result, size);
+}
+
+jbyteArray get_link_target_at_jni(JNIEnv* env, jclass, jlong editor, jint line, jint column) {
+  if (editor == 0) {
+    return env->NewByteArray(0);
+  }
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  const char* text = editor_get_link_target_at(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(line),
+      static_cast<size_t>(column));
+  return utf8_to_bytes(env, const_cast<char*>(text));
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -668,6 +798,8 @@ const JNINativeMethod kMethods[] = {
     {"editorGetVisibleLineRange", "(J)[I", (void*)get_visible_line_range_jni},
     {"editorGetScrollMetrics", "(J)[B", (void*)get_scroll_metrics_jni},
     {"editorGetSelectedText", "(J)[B", (void*)get_selected_text_jni},
+    {"editorDecorationOp", "(JI[BIIII)[B", (void*)decoration_op_jni},
+    {"editorGetLinkTargetAt", "(JII)[B", (void*)get_link_target_at_jni},
 };
 
 }  // namespace
