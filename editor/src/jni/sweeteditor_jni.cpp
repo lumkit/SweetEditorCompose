@@ -543,6 +543,63 @@ jbyteArray ime_get_context_jni(
   return adopt_binary(env, payload, size);
 }
 
+jfloatArray get_cursor_rect_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  float x = 0;
+  float y = 0;
+  float height = 0;
+  editor_get_cursor_rect(static_cast<intptr_t>(editor), &x, &y, &height);
+  jfloatArray result = env->NewFloatArray(3);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jfloat data[3] = {x, y, height};
+  env->SetFloatArrayRegion(result, 0, 3, data);
+  return result;
+}
+
+jfloatArray get_position_rect_jni(JNIEnv* env, jclass, jlong editor, jint line, jint column) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  float x = 0;
+  float y = 0;
+  float height = 0;
+  editor_get_position_rect(
+      static_cast<intptr_t>(editor),
+      static_cast<size_t>(line),
+      static_cast<size_t>(column),
+      &x,
+      &y,
+      &height);
+  jfloatArray result = env->NewFloatArray(3);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jfloat data[3] = {x, y, height};
+  env->SetFloatArrayRegion(result, 0, 3, data);
+  return result;
+}
+
+jintArray get_visible_line_range_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  int32_t start_line = 0;
+  int32_t end_line = -1;
+  editor_get_visible_line_range(static_cast<intptr_t>(editor), &start_line, &end_line);
+  jintArray result = env->NewIntArray(2);
+  if (result == nullptr) {
+    return nullptr;
+  }
+  const jint data[2] = {static_cast<jint>(start_line), static_cast<jint>(end_line)};
+  env->SetIntArrayRegion(result, 0, 2, data);
+  return result;
+}
+
+jbyteArray get_scroll_metrics_jni(JNIEnv* env, jclass, jlong editor) {
+  ActiveEditor active(static_cast<intptr_t>(editor));
+  size_t size = 0;
+  const uint8_t* payload = editor_get_scroll_metrics(static_cast<intptr_t>(editor), &size);
+  return adopt_binary(env, payload, size);
+}
+
 const JNINativeMethod kMethods[] = {
     {"createDocumentFromUtf8", "([B)J", (void*)create_document_from_utf8},
     {"freeDocument", "(J)V", (void*)free_document_jni},
@@ -587,6 +644,10 @@ const JNINativeMethod kMethods[] = {
     {"editorImeApplyCommands", "(J[B)[B", (void*)ime_apply_commands_jni},
     {"editorImeGetState", "(JJ)[B", (void*)ime_get_state_jni},
     {"editorImeGetContext", "(JJIJJ)[B", (void*)ime_get_context_jni},
+    {"editorGetCursorRect", "(J)[F", (void*)get_cursor_rect_jni},
+    {"editorGetPositionRect", "(JII)[F", (void*)get_position_rect_jni},
+    {"editorGetVisibleLineRange", "(J)[I", (void*)get_visible_line_range_jni},
+    {"editorGetScrollMetrics", "(J)[B", (void*)get_scroll_metrics_jni},
 };
 
 }  // namespace

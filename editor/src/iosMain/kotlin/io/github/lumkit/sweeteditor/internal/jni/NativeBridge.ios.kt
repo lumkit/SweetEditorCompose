@@ -4,6 +4,7 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.FloatVar
+import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.UShortVar
 import kotlinx.cinterop.addressOf
@@ -26,6 +27,10 @@ import sweeteditor.cinterop.editor_backspace
 import sweeteditor.cinterop.editor_build_render_model
 import sweeteditor.cinterop.editor_can_redo
 import sweeteditor.cinterop.editor_can_undo
+import sweeteditor.cinterop.editor_get_cursor_rect
+import sweeteditor.cinterop.editor_get_position_rect
+import sweeteditor.cinterop.editor_get_scroll_metrics
+import sweeteditor.cinterop.editor_get_visible_line_range
 import sweeteditor.cinterop.editor_handle_gesture_event
 import sweeteditor.cinterop.editor_handle_key_event
 import sweeteditor.cinterop.editor_ime_apply_commands
@@ -339,6 +344,45 @@ internal actual object NativeBridge {
             editor_ime_get_context(editor, sessionId.toULong(), source, startUtf16, lengthUtf16, size)
         }
     }
+
+    actual fun editorGetCursorRect(editor: Long): FloatArray = withActive(editor) {
+        memScoped {
+            val x = alloc<FloatVar>()
+            val y = alloc<FloatVar>()
+            val height = alloc<FloatVar>()
+            editor_get_cursor_rect(editor, x.ptr, y.ptr, height.ptr)
+            floatArrayOf(x.value, y.value, height.value)
+        }
+    }
+
+    actual fun editorGetPositionRect(editor: Long, line: Int, column: Int): FloatArray = withActive(editor) {
+        memScoped {
+            val x = alloc<FloatVar>()
+            val y = alloc<FloatVar>()
+            val height = alloc<FloatVar>()
+            editor_get_position_rect(
+                editor,
+                line.convert(),
+                column.convert(),
+                x.ptr,
+                y.ptr,
+                height.ptr,
+            )
+            floatArrayOf(x.value, y.value, height.value)
+        }
+    }
+
+    actual fun editorGetVisibleLineRange(editor: Long): IntArray = withActive(editor) {
+        memScoped {
+            val start = alloc<IntVar>()
+            val end = alloc<IntVar>()
+            editor_get_visible_line_range(editor, start.ptr, end.ptr)
+            intArrayOf(start.value, end.value)
+        }
+    }
+
+    actual fun editorGetScrollMetrics(editor: Long): ByteArray? =
+        withActive(editor) { adoptBinary { size -> editor_get_scroll_metrics(editor, size) } }
 
     private inline fun <T> withActive(handle: Long, block: () -> T): T {
         val measurer = measurers[handle]

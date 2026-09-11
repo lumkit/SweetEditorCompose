@@ -66,6 +66,14 @@ class SweetEditorController(
         session?.insertLineBelow()
     }
 
+    fun getCursorRect(): EditorCursorRect? = session?.getCursorRect()
+
+    fun getPositionRect(line: Int, column: Int): EditorCursorRect? = session?.getPositionRect(line, column)
+
+    fun getVisibleLineRange(): VisibleLineRange? = session?.getVisibleLineRange()
+
+    fun getScrollMetrics(): EditorScrollMetrics? = session?.getScrollMetrics()
+
     fun onTextChanged(listener: (TextChangedEvent) -> Unit): () -> Unit =
         events.subscribe(listener)
 

@@ -53,4 +53,8 @@ internal expect object NativeBridge {
         startUtf16: Long,
         lengthUtf16: Long,
     ): ByteArray?
+    fun editorGetCursorRect(editor: Long): FloatArray
+    fun editorGetPositionRect(editor: Long, line: Int, column: Int): FloatArray
+    fun editorGetVisibleLineRange(editor: Long): IntArray
+    fun editorGetScrollMetrics(editor: Long): ByteArray?
 }

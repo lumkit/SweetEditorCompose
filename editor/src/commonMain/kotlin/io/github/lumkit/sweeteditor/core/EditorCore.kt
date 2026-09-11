@@ -1,5 +1,8 @@
 package io.github.lumkit.sweeteditor.core
 
+import io.github.lumkit.sweeteditor.EditorCursorRect
+import io.github.lumkit.sweeteditor.EditorScrollMetrics
+import io.github.lumkit.sweeteditor.VisibleLineRange
 import io.github.lumkit.sweeteditor.core.protocol.CoreProtocol
 import io.github.lumkit.sweeteditor.core.protocol.EditorActionResult
 import io.github.lumkit.sweeteditor.core.protocol.EditorOptions
@@ -121,6 +124,39 @@ internal class EditorCore(
 
     fun insertLineBelow(): EditorActionResult? = decodeAction(NativeBridge.editorInsertLineBelow(editorHandle))
 
+    fun getCursorRect(): EditorCursorRect =
+        NativeBridge.editorGetCursorRect(editorHandle).toCursorRect()
+
+    fun getPositionRect(line: Int, column: Int): EditorCursorRect =
+        NativeBridge.editorGetPositionRect(editorHandle, line, column).toCursorRect()
+
+    fun getVisibleLineRange(): VisibleLineRange {
+        val range = NativeBridge.editorGetVisibleLineRange(editorHandle)
+        val start = range.getOrElse(0) { 0 }
+        val end = range.getOrElse(1) { -1 }
+        return VisibleLineRange(start, end)
+    }
+
+    fun getScrollMetrics(): EditorScrollMetrics? {
+        val bytes = NativeBridge.editorGetScrollMetrics(editorHandle) ?: return null
+        val metrics = CoreProtocol.decodeScrollMetrics(bytes)
+        return EditorScrollMetrics(
+            scale = metrics.scale,
+            scrollX = metrics.scrollX,
+            scrollY = metrics.scrollY,
+            maxScrollX = metrics.maxScrollX,
+            maxScrollY = metrics.maxScrollY,
+            contentWidth = metrics.contentSize.width,
+            contentHeight = metrics.contentSize.height,
+            viewportWidth = metrics.viewportSize.width,
+            viewportHeight = metrics.viewportSize.height,
+            textAreaX = metrics.textAreaX,
+            textAreaWidth = metrics.textAreaWidth,
+            canScrollX = metrics.canScrollX,
+            canScrollY = metrics.canScrollY,
+        )
+    }
+
     fun setScale(scale: Float): EditorActionResult? =
         decodeAction(NativeBridge.editorSetScale(editorHandle, scale))
 
@@ -193,6 +229,12 @@ internal fun defaultEditorOptions(): EditorOptions = EditorOptions(
     maxUndoStackSize = 512L,
     keyChordTimeoutMs = 2000L,
     revealSelectionEndOnSelectAll = false,
+)
+
+private fun FloatArray.toCursorRect(): EditorCursorRect = EditorCursorRect(
+    x = getOrElse(0) { 0f },
+    y = getOrElse(1) { 0f },
+    height = getOrElse(2) { 0f },
 )
 
 private fun decodeAction(bytes: ByteArray?): EditorActionResult? {
