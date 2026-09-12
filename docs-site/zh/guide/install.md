@@ -3,7 +3,7 @@
 只加一个依赖。Gradle 会解析对应平台变体。
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.2")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
 ```
 
 ## 宿主版本
