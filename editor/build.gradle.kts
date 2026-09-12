@@ -487,6 +487,12 @@ private fun currentDesktopResourceFolder(): String {
     return "$osName-$archName"
 }
 
+val emptyJavadocJar by tasks.registering(Jar::class) {
+    group = "documentation"
+    description = "Empty javadoc JAR required by Maven Central for the JVM artifact"
+    archiveClassifier.set("javadoc")
+}
+
 publishing {
     publications.withType<MavenPublication>().configureEach {
         artifactId = when {
@@ -497,6 +503,9 @@ publishing {
         pom {
             name.set("SweetEditor Compose")
             description.set(project.description)
+        }
+        if (name == "jvm") {
+            artifact(emptyJavadocJar)
         }
     }
 }
