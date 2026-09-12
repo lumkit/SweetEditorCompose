@@ -10,7 +10,7 @@ Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)** — one API
 implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
-The host must use **Compose Multiplatform 1.12.0** and **Kotlin 2.4.20** (or newer matching that pair). Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
+The host must use **Compose Multiplatform 1.12.0**, **Kotlin 2.4.20**, and Android **compileSdk 37** (or newer matching that set). `targetSdk` / `minSdk` can stay lower. Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
 
 Gradle resolves the platform variant automatically:
 
@@ -71,8 +71,9 @@ controller.whenReady {
 
 ## Platform notes
 
-**Android** — minSdk 24. The AAR ships `consumer-rules.pro` keeping JNI
-entry points; no extra keep rules needed.
+**Android** — minSdk 24, compileSdk 37 (required by Compose 1.12 AAR metadata).
+The AAR ships `consumer-rules.pro` keeping JNI entry points; no extra keep
+rules needed.
 
 **Desktop** — JVM 11+. The JAR extracts Core + compose JNI to a per-user
 cache on first load. Compose Desktop R8/ProGuard reads
