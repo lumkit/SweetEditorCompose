@@ -67,7 +67,7 @@ const apiZh = [
 export default defineConfig({
   title: "SweetEditor Compose",
   description: "Code editor for Compose Multiplatform",
-  base: "/SweetEditor-Compose/",
+  base: "/SweetEditorCompose/",
   lastUpdated: true,
   ignoreDeadLinks: true,
   themeConfig: {

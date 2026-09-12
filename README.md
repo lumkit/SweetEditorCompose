@@ -117,7 +117,7 @@ Then:
 
 ## Documentation
 
-- [Usage site](https://lumkit.github.io/SweetEditor-Compose/) — install, Hello World, and public API (EN / 中文)
+- [Usage site](https://lumkit.github.io/SweetEditorCompose/) — install, Hello World, and public API (EN / 中文)
 - [PUBLISHING.md](./PUBLISHING.md) — Maven coordinates, native packaging, Central Portal setup
 - [COMPLIANCE.md](./COMPLIANCE.md) — Host API coverage vs. the SweetEditor integration standard
 
