@@ -4,7 +4,10 @@ import io.github.lumkit.sweeteditor.core.HostTextMeasurer
 
 internal actual object NativeBridge {
     actual val isAvailable: Boolean
-        get() = abi()?.ready == true
+        get() {
+            ensureWebAbiStarted()
+            return abi()?.ready == true
+        }
 
     val loadError: String?
         get() {

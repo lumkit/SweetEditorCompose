@@ -17,7 +17,7 @@ Gradle 会解析 Android / JVM / iOS / JS / Wasm 变体。Android 变体 **传�
 | `…:sweeteditor-compose-android-jni` | `libsweeteditor.so` + `libsweeteditor_compose.so`（`arm64-v8a` / `x86_64`） |
 | `…:sweeteditor-compose-jvm` | JVM 类 + `/native/<os>-<arch>/`（Core **与** compose JNI） |
 | `…:sweeteditor-compose-iosarm64` / `iosSimulatorArm64` | klib；cinterop **静态**链入 `libsweeteditor.a` |
-| `…:sweeteditor-compose-js` / `wasm-js` | `/native/web/` 下的 C ABI 模块 |
+| `…:sweeteditor-compose-js` / `wasm-js` | Compose `files/` + `/native/web/` 下的 C ABI 模块 |
 
 没有单独的 XCFramework 坐标。宿主不要再链一套 Core。
 
