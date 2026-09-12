@@ -10,7 +10,7 @@
 implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
-宿主必须使用 **Compose Multiplatform 1.12.0** 和 **Kotlin 2.4.20**（或与之匹配的更新版本）。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
+宿主必须使用 **Compose Multiplatform 1.12.0**、**Kotlin 2.4.20**，以及 Android **compileSdk 37**（或与之匹配的更新组合）。`targetSdk` / `minSdk` 可以更低。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
 
 Gradle 会自动解析对应平台变体：
 
@@ -70,7 +70,7 @@ controller.whenReady {
 
 ## 平台说明
 
-**Android** —— minSdk 24。AAR 自带 `consumer-rules.pro` 保留 JNI 入口，无需额外 keep 规则。
+**Android** —— minSdk 24，compileSdk 37（Compose 1.12 的 AAR metadata 会强制检查）。AAR 自带 `consumer-rules.pro` 保留 JNI 入口，无需额外 keep 规则。
 
 **桌面** —— JVM 11+。JAR 首次加载时把 Core 与 compose JNI 解压到用户缓存目录。Compose Desktop R8/ProGuard 会自动读 JAR 里的 `META-INF/com.android.tools/r8/`；若用自带 ProGuard 任务，把 `editor/consumer-rules.pro` 加进 `buildTypes.release.proguard.configurationFiles`。
 
