@@ -7,7 +7,7 @@
 ## 引入
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.0")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
 Gradle 会自动解析对应平台变体：

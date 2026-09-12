@@ -7,7 +7,7 @@ Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)** — one API
 ## Install
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.0")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
 Gradle resolves the platform variant automatically:
