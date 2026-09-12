@@ -3,7 +3,7 @@
 Add one dependency. Gradle resolves the platform variant.
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.2")
 ```
 
 ## Host versions
