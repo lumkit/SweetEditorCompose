@@ -10,6 +10,8 @@
 implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
+宿主必须使用 **Compose Multiplatform 1.12.0** 和 **Kotlin 2.4.20**（或与之匹配的更新版本）。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
+
 Gradle 会自动解析对应平台变体：
 
 | 平台 | 产物 | 内含 native |

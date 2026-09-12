@@ -10,6 +10,8 @@ Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)** — one API
 implementation("io.github.lumkit:sweeteditor-compose:0.1.1")
 ```
 
+The host must use **Compose Multiplatform 1.12.0** and **Kotlin 2.4.20** (or newer matching that pair). Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
+
 Gradle resolves the platform variant automatically:
 
 | Platform | Artifact | Native payload |
