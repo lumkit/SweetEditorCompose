@@ -70,6 +70,12 @@ private class EditorImeNode(
         session.imeTapHandler = onTap
     }
 
+    // Unlike the Desktop/iOS Skiko request path, the Android IME session is bound to
+    // the InputConnection returned by establishTextInputSession. Compose cancels the
+    // session (and thus invokes ComposeEditorInputConnection.closeConnection ->
+    // closeOwnedSession) automatically when the node loses focus, so there is no need
+    // to start/stop input manually here. Input is started on tap (see onTap) and on
+    // readOnly -> false is not auto-started, matching the shared lifecycle contract.
     override fun onFocusEvent(focusState: FocusState) = Unit
 
     override fun onDetach() {
