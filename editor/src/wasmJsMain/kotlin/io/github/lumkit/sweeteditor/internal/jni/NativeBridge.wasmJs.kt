@@ -5,7 +5,10 @@ import kotlin.js.JsAny
 
 internal actual object NativeBridge {
     actual val isAvailable: Boolean
-        get() = abiReady() && abiError() == null
+        get() {
+            ensureWebAbiStarted()
+            return abiReady() && abiError() == null
+        }
 
     val loadError: String?
         get() = abiError()

@@ -66,15 +66,33 @@ if [[ -z "$SDK_PATH" || ! -d "$SDK_PATH" ]]; then
   echo "xcrun could not resolve SDK path for $SDK" >&2
   exit 1
 fi
+# Pass the SDK *name* to CMake. A full path like
+# .../iPhoneSimulator26.0.sdk does not match upstream simdutf's
+# case-sensitive ".*simulator.*" regex, so the device archive is linked.
 export SDKROOT="$SDK_PATH"
 echo "Using $SDK sysroot: $SDK_PATH"
+
+SIMDUTF_CMAKE="$SE/3dparty/simdutf/sweeteditor_3p.cmake"
+if [[ -f "$SIMDUTF_CMAKE" ]] && ! grep -q '\[Ss\]imulator' "$SIMDUTF_CMAKE"; then
+  python3 - "$SIMDUTF_CMAKE" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+text = path.read_text()
+old = 'CMAKE_OSX_SYSROOT MATCHES ".*simulator.*"'
+new = 'CMAKE_OSX_SYSROOT MATCHES ".*[Ss]imulator.*"'
+if old in text:
+    path.write_text(text.replace(old, new, 1))
+    print(f"Patched {path} for case-insensitive simulator sysroot")
+PY
+fi
 
 mkdir -p "$BUILD" "$DEST_DIR" "$INCLUDE_DST"
 
 GEN_ARGS=(
   "$CMAKE" -S "$SE" -B "$BUILD"
   -DCMAKE_SYSTEM_NAME=iOS
-  -DCMAKE_OSX_SYSROOT="$SDK_PATH"
+  -DCMAKE_OSX_SYSROOT="$SDK"
   -DCMAKE_OSX_ARCHITECTURES="$ARCH"
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOY"
   -DCMAKE_BUILD_TYPE=Release
@@ -91,7 +109,12 @@ if [[ -x "${NINJA:-}" ]]; then
   GEN_ARGS+=(-G Ninja "-DCMAKE_MAKE_PROGRAM=$NINJA")
 fi
 
-"${GEN_ARGS[@]}"
+"${GEN_ARGS[@]}" 2>&1 | tee "$BUILD/configure.log"
+if [[ "$SDK" == "iphonesimulator" ]] && ! grep -q "simulator-${ARCH}" "$BUILD/configure.log"; then
+  echo "simdutf did not select lib/ios/simulator-${ARCH} (see $BUILD/configure.log)" >&2
+  grep -E "Add third-party library|simdutf" "$BUILD/configure.log" || true
+  exit 1
+fi
 "$CMAKE" --build "$BUILD" --target sweeteditor_static --config Release
 
 ARCHIVE=""

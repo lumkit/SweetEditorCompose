@@ -83,7 +83,10 @@ built-in ProGuard task, add `editor/consumer-rules.pro` to
 **iOS** — cinterop statically links `libsweeteditor.a`; the host Xcode project
 must **not** add `-lsweeteditor` or link any SweetEditor dylib.
 
-**Web** — JS and Wasm targets load the C ABI module from JAR resources.
+**Web** — JS and Wasm load the C ABI module automatically (Compose resources
+under `/composeResources/…/files/`). Host `index.html` does not need a
+manual `<script src="sweeteditor_web_abi.js">`. Use Compose Multiplatform
+1.12.0 so Skiko matches the library.
 
 ## Building from source
 

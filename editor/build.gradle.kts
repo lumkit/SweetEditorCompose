@@ -26,6 +26,7 @@ val generatedNatives: Provider<Directory> = layout.buildDirectory.dir("generated
 val jvmNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmResources") }
 val jvmKeepRulesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmKeepRules") }
 val webNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webResources") }
+val webComposeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webComposeResources") }
 val androidJniLibsDir: Directory = layout.projectDirectory.dir("src/androidMain/jniLibs")
 
 kotlin {
@@ -83,6 +84,7 @@ kotlin {
                 api(libs.compose.runtime)
                 api(libs.compose.foundation)
                 api(libs.compose.ui)
+                implementation(libs.compose.components.resources)
             }
         }
         commonTest.dependencies {
@@ -118,10 +120,12 @@ kotlin {
         named("jsMain") {
             dependsOn(stubNativeMain)
             resources.srcDir(webNativeResourcesDir)
+            resources.srcDir("src/webResources")
         }
         named("wasmJsMain") {
             dependsOn(stubNativeMain)
             resources.srcDir(webNativeResourcesDir)
+            resources.srcDir("src/webResources")
         }
         named("jvmTest") {
             dependencies {
@@ -229,6 +233,16 @@ val prepareWebNativeResources by tasks.registering(Sync::class) {
     from(resolveNativeSource("web", "prebuilt/wasm")) {
         include("sweeteditor_c_abi.js", "sweeteditor_c_abi.wasm")
     }
+}
+
+val prepareWebComposeResources by tasks.registering(Sync::class) {
+    group = "sweeteditor"
+    description = "Stage C ABI + loader so Compose copies them into the webpack output."
+    into(webComposeResourcesDir.map { it.dir("files") })
+    from(resolveNativeSource("web", "prebuilt/wasm")) {
+        include("sweeteditor_c_abi.js", "sweeteditor_c_abi.wasm")
+    }
+    from(layout.projectDirectory.file("src/webResources/sweeteditor_web_abi.js"))
 }
 
 val stageJvmKeepRules by tasks.registering(Sync::class) {
@@ -400,7 +414,10 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
         if (isMac && File("/usr/bin/xcrun").isFile) {
             fun platformOf(archive: File): String? {
                 if (!archive.isFile) return null
-                val tmp = java.nio.file.Files.createTempDirectory("se-ios-ar-").toFile()
+                val tmp = File.createTempFile("se-ios-ar-", "").also { scratch ->
+                    scratch.delete()
+                    scratch.mkdirs()
+                }
                 return try {
                     ProcessBuilder("ar", "-x", archive.absolutePath, "simdutf.cpp.o")
                         .directory(tmp)
@@ -452,7 +469,7 @@ tasks.configureEach {
             dependsOn(prepareJvmNativeResources, stageJvmKeepRules)
         }
         if (name.contains("js", ignoreCase = true) || name.contains("wasm", ignoreCase = true)) {
-            dependsOn(prepareWebNativeResources)
+            dependsOn(prepareWebNativeResources, prepareWebComposeResources)
         }
     }
 }
@@ -549,6 +566,33 @@ publishing {
             artifact(emptyJavadocJar)
         }
     }
+}
+
+compose {
+    resources {
+        packageOfResClass = "io.github.lumkit.sweeteditor.generated.resources"
+        customDirectory(
+            sourceSetName = "jsMain",
+            directoryProvider = webComposeResourcesDir,
+        )
+        customDirectory(
+            sourceSetName = "wasmJsMain",
+            directoryProvider = webComposeResourcesDir,
+        )
+    }
+}
+
+tasks.matching {
+    val n = it.name
+    n != "prepareWebComposeResources" &&
+        (
+            n.contains("ComposeResource", ignoreCase = true) ||
+                n.contains("generateResource", ignoreCase = true) ||
+                n.contains("NonXmlValueResources", ignoreCase = true) ||
+                n.contains("prepareComposeResources", ignoreCase = true)
+            )
+}.configureEach {
+    dependsOn(prepareWebComposeResources)
 }
 
 apply(from = rootProject.file("gradle/maven-publishing.gradle.kts"))

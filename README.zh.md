@@ -76,7 +76,9 @@ controller.whenReady {
 
 **iOS** —— cinterop 静态链 `libsweeteditor.a`；宿主 Xcode 工程**不得**加 `-lsweeteditor` 或链任何 SweetEditor dylib。
 
-**Web** —— JS 与 Wasm 从 JAR 资源加载 C ABI 模块。
+**Web** —— JS / Wasm 会自动加载 C ABI（Compose 资源目录
+`/composeResources/…/files/`），宿主 `index.html` **不必**再手写
+`<script src="sweeteditor_web_abi.js">`。Compose 必须是 1.12.0，否则 Skiko 对不上。
 
 ## 从源码构建
 
