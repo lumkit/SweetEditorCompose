@@ -107,7 +107,7 @@ SweetEditorCompose/     # 本仓库
 
 ## 文档
 
-- [使用文档站](https://lumkit.github.io/SweetEditor-Compose/) —— 安装、快速开始与 public API（中 / 英）
+- [使用文档站](https://lumkit.github.io/SweetEditorCompose/) —— 安装、快速开始与 public API（中 / 英）
 - [PUBLISHING.md](./PUBLISHING.md) —— Maven 坐标、native 打包、Central Portal 配置
 - [COMPLIANCE.md](./COMPLIANCE.md) —— 宿主 API 对照 SE 接入标准的覆盖情况
 
