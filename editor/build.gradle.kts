@@ -378,7 +378,6 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
         val missing = required.filter { !File(natives, it).isFile }
         if (missing.isEmpty()) {
             logger.lifecycle("Release natives complete under ${natives.absolutePath}")
-            return@doLast
         }
         val resolvedVersion = versionName.get()
         val force = requireComplete.orNull == "true"
@@ -388,10 +387,52 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
             missing.forEach { appendLine("  - natives/$it") }
             append("Run editor/scripts/prepare-release-natives.sh on CI (or locally) before a non-SNAPSHOT release.")
         }
-        if (release || force) {
-            error(message)
+        if (missing.isNotEmpty()) {
+            if (release || force) {
+                error(message)
+            }
+            logger.warn(message)
         }
-        logger.warn(message)
+
+        val isMac = System.getProperty("os.name").orEmpty().lowercase().let {
+            it.contains("mac") || it.contains("darwin")
+        }
+        if (isMac && File("/usr/bin/xcrun").isFile) {
+            fun platformOf(archive: File): String? {
+                if (!archive.isFile) return null
+                val tmp = java.nio.file.Files.createTempDirectory("se-ios-ar-").toFile()
+                return try {
+                    ProcessBuilder("ar", "-x", archive.absolutePath, "simdutf.cpp.o")
+                        .directory(tmp)
+                        .redirectErrorStream(true)
+                        .start()
+                        .waitFor()
+                    val obj = tmp.resolve("simdutf.cpp.o").takeIf { it.isFile }
+                        ?: tmp.listFiles()?.firstOrNull { it.extension == "o" }
+                        ?: return null
+                    val out = ProcessBuilder("xcrun", "vtool", "-show-build", obj.absolutePath)
+                        .redirectErrorStream(true)
+                        .start()
+                        .inputStream
+                        .bufferedReader()
+                        .readText()
+                    Regex("""platform\s+(\S+)""").find(out)?.groupValues?.get(1)
+                } finally {
+                    tmp.deleteRecursively()
+                }
+            }
+            val device = platformOf(File(natives, "ios/arm64/libsweeteditor.a"))
+            val simulator = platformOf(File(natives, "ios/simulator-arm64/libsweeteditor.a"))
+            if (device != null && device != "IOS") {
+                error("natives/ios/arm64/libsweeteditor.a is $device, expected IOS")
+            }
+            if (simulator != null && simulator != "IOSSIMULATOR") {
+                error("natives/ios/simulator-arm64/libsweeteditor.a is $simulator, expected IOSSIMULATOR")
+            }
+            if (device != null && simulator != null) {
+                logger.lifecycle("iOS archives: device=$device simulator=$simulator")
+            }
+        }
     }
 }
 

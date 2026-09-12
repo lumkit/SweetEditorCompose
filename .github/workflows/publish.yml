@@ -32,15 +32,31 @@ jobs:
           - id: macos
             os: macos-14
             flags: --host --macos-x86_64 --ios
+            artifact_paths: |
+              editor/natives/desktop/macos-aarch64/**
+              editor/natives/desktop/macos-x86_64/**
+              editor/natives/ios/**
+              editor/natives/include/**
           - id: linux-x64
             os: ubuntu-22.04
             flags: --host --android --wasm
+            artifact_paths: |
+              editor/natives/desktop/linux-x86_64/**
+              editor/natives/android/**
+              editor/natives/web/**
+              editor/natives/include/**
           - id: linux-arm
             os: ubuntu-24.04-arm
             flags: --host
+            artifact_paths: |
+              editor/natives/desktop/linux-aarch64/**
+              editor/natives/include/**
           - id: windows
             os: windows-2022
             flags: --host
+            artifact_paths: |
+              editor/natives/desktop/windows-x86_64/**
+              editor/natives/include/**
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -78,7 +94,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: natives-${{ matrix.id }}
-          path: editor/natives
+          path: ${{ matrix.artifact_paths }}
           if-no-files-found: error
 
   publish:

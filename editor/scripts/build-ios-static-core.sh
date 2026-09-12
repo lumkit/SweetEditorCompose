@@ -61,12 +61,20 @@ if [[ ! -x "${CMAKE:-}" ]]; then
   exit 1
 fi
 
+SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path)"
+if [[ -z "$SDK_PATH" || ! -d "$SDK_PATH" ]]; then
+  echo "xcrun could not resolve SDK path for $SDK" >&2
+  exit 1
+fi
+export SDKROOT="$SDK_PATH"
+echo "Using $SDK sysroot: $SDK_PATH"
+
 mkdir -p "$BUILD" "$DEST_DIR" "$INCLUDE_DST"
 
 GEN_ARGS=(
   "$CMAKE" -S "$SE" -B "$BUILD"
   -DCMAKE_SYSTEM_NAME=iOS
-  -DCMAKE_OSX_SYSROOT="$SDK"
+  -DCMAKE_OSX_SYSROOT="$SDK_PATH"
   -DCMAKE_OSX_ARCHITECTURES="$ARCH"
   -DCMAKE_OSX_DEPLOYMENT_TARGET="$DEPLOY"
   -DCMAKE_BUILD_TYPE=Release
@@ -109,4 +117,30 @@ fi
 cp -f "$ARCHIVE" "$DEST_DIR/libsweeteditor.a"
 mkdir -p "$INCLUDE_DST"
 cp -R "$INCLUDE_SRC/." "$INCLUDE_DST/"
-echo "Installed $ARCHIVE -> $DEST_DIR/libsweeteditor.a"
+
+EXPECT_PLATFORM="IOS"
+if [[ "$SDK" == "iphonesimulator" ]]; then
+  EXPECT_PLATFORM="IOSSIMULATOR"
+fi
+TMP="$(mktemp -d)"
+(cd "$TMP" && ar -x "$DEST_DIR/libsweeteditor.a" simdutf.cpp.o 2>/dev/null || ar -x "$DEST_DIR/libsweeteditor.a")
+OBJ=""
+if [[ -f "$TMP/simdutf.cpp.o" ]]; then
+  OBJ="$TMP/simdutf.cpp.o"
+else
+  OBJ="$(find "$TMP" -name '*.o' | head -n 1 || true)"
+fi
+if [[ -z "$OBJ" || ! -f "$OBJ" ]]; then
+  echo "Could not extract an object from $DEST_DIR/libsweeteditor.a to verify platform" >&2
+  rm -rf "$TMP"
+  exit 1
+fi
+PLATFORM="$(xcrun vtool -show-build "$OBJ" 2>/dev/null | awk '/platform/{print $2; exit}')"
+rm -rf "$TMP"
+if [[ "$PLATFORM" != "$EXPECT_PLATFORM" ]]; then
+  echo "iOS archive platform mismatch: $DEST_DIR/libsweeteditor.a is $PLATFORM, expected $EXPECT_PLATFORM" >&2
+  echo "A device slice in the simulator klib causes: linking object built for iOS while targeting iOS-simulator." >&2
+  exit 1
+fi
+
+echo "Installed $ARCHIVE -> $DEST_DIR/libsweeteditor.a ($PLATFORM)"
