@@ -1,4 +1,9 @@
 (function (global) {
+  // Idempotent: if a SweetEditor Web ABI loader is already running/ready, do not
+  // clobber it. Both the host page (via <script src="sweeteditor_web_abi.js">)
+  // and the library's WebAbiBootstrap may load this file; the first one wins.
+  if (global.SweetEditorWebAbi) return;
+
   const abi = {
     ready: false,
     error: null,
