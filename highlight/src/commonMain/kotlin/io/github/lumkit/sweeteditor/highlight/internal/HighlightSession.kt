@@ -22,13 +22,15 @@ internal class HighlightSession(
     private val tabSize: Int = 4,
     descriptor: HighlightDocumentDescriptor = HighlightDocumentDescriptor(),
     var features: HighlightFeatureFlags = HighlightFeatureFlags(),
+    theme: HighlightTheme = HighlightTheme.dark(),
 ) {
     private val mirror = TextMirror()
     private val mapping = PositionMapping(mirror)
     private val patches = ArrayDeque<PendingPatch>()
     private val subscriptions = ArrayList<() -> Unit>()
     private val analyzeQueue = SerialAnalyzeQueue { generation }
-    private val styleRegistry = StyleRegistry(HighlightTheme.dark())
+    private val styleRegistry = StyleRegistry(theme)
+    private var descriptor: HighlightDocumentDescriptor = descriptor
 
     private var controller: SweetEditorController? = null
     private var closed = false
@@ -135,6 +137,28 @@ internal class HighlightSession(
         registerStylesIfNeeded()
         native.compileJson(engine, json)
     }
+
+    fun compileSyntaxFile(path: String) {
+        if (closed || !native.isAvailable) return
+        ensureEngine()
+        registerStylesIfNeeded()
+        native.compileFile(engine, path)
+    }
+
+    fun updateDocument(descriptor: HighlightDocumentDescriptor) {
+        if (closed) return
+        releaseDocument()
+        this.descriptor = descriptor
+        uri = uriFor(descriptor)
+        rebuildOnLoad(controller?.getDocument()?.text.orEmpty())
+    }
+
+    fun updateTheme(theme: HighlightTheme) {
+        if (closed) return
+        styleRegistry.updateTheme(theme)
+    }
+
+    fun batchTextStyles() = styleRegistry.batchTextStyles()
 
     fun drainPatches(visibleStartLine: Int, visibleLineCount: Int): IntArray? {
         if (analyzer == 0L) {

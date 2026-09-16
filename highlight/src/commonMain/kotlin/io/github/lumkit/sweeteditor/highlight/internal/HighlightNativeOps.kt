@@ -14,6 +14,7 @@ internal interface HighlightNativeOps {
     fun freeDocumentAnalyzer(analyzer: Long)
     fun registerStyleName(engine: Long, name: String, styleId: Int)
     fun compileJson(engine: Long, json: String)
+    fun compileFile(engine: Long, path: String)
     fun analyzeLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
     fun getHighlightSlice(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
     fun analyzeIncrementalInLineRange(
@@ -58,6 +59,9 @@ internal object DefaultHighlightNative : HighlightNativeOps {
 
     override fun compileJson(engine: Long, json: String) =
         NativeBridge.compileJson(engine, json)
+
+    override fun compileFile(engine: Long, path: String) =
+        NativeBridge.compileFile(engine, path)
 
     override fun analyzeLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? =
         NativeBridge.analyzeLineRange(analyzer, startLine, lineCount)

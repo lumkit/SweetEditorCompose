@@ -21,6 +21,8 @@ internal class SyntaxCatalog(
 
     fun isCompiled(name: String): Boolean = name in compiled
 
+    fun registeredJson(name: String): String? = extras[name]
+
     suspend fun loadJson(name: String): String? {
         extras[name]?.let { return it }
         if (!loadBuiltins) return null

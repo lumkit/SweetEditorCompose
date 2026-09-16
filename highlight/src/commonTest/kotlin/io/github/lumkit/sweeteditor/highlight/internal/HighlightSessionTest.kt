@@ -97,6 +97,8 @@ internal class RecordingHighlightNative : HighlightNativeOps {
 
     override fun compileJson(engine: Long, json: String) {}
 
+    override fun compileFile(engine: Long, path: String) {}
+
     override fun analyzeLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = null
 
     override fun getHighlightSlice(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = null
