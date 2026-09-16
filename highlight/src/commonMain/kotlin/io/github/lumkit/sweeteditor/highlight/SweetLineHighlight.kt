@@ -6,8 +6,16 @@ import io.github.lumkit.sweeteditor.highlight.internal.HighlightDecorationProvid
 import io.github.lumkit.sweeteditor.highlight.internal.HighlightSession
 import io.github.lumkit.sweeteditor.highlight.internal.LanguageIdTable
 import io.github.lumkit.sweeteditor.highlight.internal.SyntaxCatalog
-import io.github.lumkit.sweeteditor.highlight.internal.runHighlightBlocking
+import io.github.lumkit.sweeteditor.highlight.internal.runOnHighlightHostThread
 import io.github.lumkit.sweeteditor.highlight.internal.syntaxNameOfJson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class SweetLineHighlight(
     private val config: SweetLineHighlightConfig = SweetLineHighlightConfig(),
@@ -68,6 +76,7 @@ internal class HighlightBindingImpl(
     private val catalog: SyntaxCatalog,
 ) : HighlightBinding {
     private val bindingId: String = nextBindingId()
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Unconfined)
     private val session: HighlightSession
     private val provider: HighlightDecorationProvider
     private var closed = false
@@ -78,7 +87,6 @@ internal class HighlightBindingImpl(
         val tabSize = config.tabSize
             ?: controller.getLanguageConfiguration()?.tabSize
             ?: controller.getSettings().tabSize
-            ?: 4
         session = HighlightSession(
             native = DefaultHighlightNative,
             requestRefresh = { controller.requestDecorationRefresh() },
@@ -96,19 +104,26 @@ internal class HighlightBindingImpl(
         controller.whenReady {
             if (closed || started) return@whenReady
             started = true
-            startReady()
+            scope.launch {
+                startReady()
+            }
         }
     }
 
-    private fun startReady() {
-        controller.registerBatchTextStyles(session.batchTextStyles())
-        compileConfiguredSyntax()
-        session.start()
-        if (!session.disabled) {
-            controller.addDecorationProvider(provider)
-            providerRegistered = true
+    private suspend fun startReady() {
+        if (closed) return
+        val payloads = loadSyntaxPayloads()
+        awaitHost {
+            if (closed) return@awaitHost
+            controller.registerBatchTextStyles(session.batchTextStyles())
+            payloads.forEach { (name, json) -> compileLoaded(json, name) }
+            session.start()
+            if (!session.disabled) {
+                controller.addDecorationProvider(provider)
+                providerRegistered = true
+            }
+            controller.requestDecorationRefresh()
         }
-        controller.requestDecorationRefresh()
     }
 
     fun compileJson(json: String) {
@@ -127,8 +142,13 @@ internal class HighlightBindingImpl(
 
     fun updateDocument(descriptor: HighlightDocumentDescriptor) {
         session.updateDocument(descriptor)
-        compileConfiguredSyntax(descriptor)
-        controller.requestDecorationRefresh()
+        scope.launch {
+            val payloads = loadSyntaxPayloads(descriptor)
+            awaitHost {
+                payloads.forEach { (name, json) -> compileLoaded(json, name) }
+                if (!closed) controller.requestDecorationRefresh()
+            }
+        }
     }
 
     fun updateTheme(theme: HighlightTheme) {
@@ -148,6 +168,7 @@ internal class HighlightBindingImpl(
     override fun close() {
         if (closed) return
         closed = true
+        scope.cancel()
         if (providerRegistered) {
             controller.removeDecorationProvider(provider)
             providerRegistered = false
@@ -155,19 +176,27 @@ internal class HighlightBindingImpl(
         session.close()
     }
 
-    private fun compileConfiguredSyntax(
+    private suspend fun loadSyntaxPayloads(
         descriptor: HighlightDocumentDescriptor = config.document,
-    ) {
+    ): List<Pair<String, String>> {
+        val payloads = ArrayList<Pair<String, String>>()
         syntaxNamesToCompile(descriptor).forEach { name ->
             if (catalog.isCompiled(name)) return@forEach
-            val extra = catalog.registeredJson(name)
-            if (extra != null) {
-                compileLoaded(extra, name)
-                return@forEach
-            }
-            runHighlightBlocking {
-                val json = catalog.loadJson(name) ?: return@runHighlightBlocking
-                compileLoaded(json, name)
+            val json = catalog.registeredJson(name) ?: catalog.loadJson(name) ?: return@forEach
+            payloads += name to json
+        }
+        return payloads
+    }
+
+    private suspend fun awaitHost(block: () -> Unit) {
+        suspendCancellableCoroutine { continuation ->
+            runOnHighlightHostThread {
+                try {
+                    block()
+                    if (continuation.isActive) continuation.resume(Unit)
+                } catch (error: Throwable) {
+                    if (continuation.isActive) continuation.resumeWithException(error)
+                }
             }
         }
     }

@@ -18,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,8 +55,6 @@ import io.github.lumkit.sweeteditor.EditorDocumentHighlightKind
 import io.github.lumkit.sweeteditor.EditorFontStyle
 import io.github.lumkit.sweeteditor.FlowGuide
 import io.github.lumkit.sweeteditor.FoldRegion
-import io.github.lumkit.sweeteditor.IndentGuide
-import io.github.lumkit.sweeteditor.BracketGuide
 import io.github.lumkit.sweeteditor.EditorIconProvider
 import io.github.lumkit.sweeteditor.SeparatorGuide
 import io.github.lumkit.sweeteditor.SeparatorStyle
@@ -75,12 +74,15 @@ import io.github.lumkit.sweeteditor.GutterIcon
 import io.github.lumkit.sweeteditor.InlayHint
 import io.github.lumkit.sweeteditor.LinkSpan
 import io.github.lumkit.sweeteditor.PhantomText
-import io.github.lumkit.sweeteditor.StyleSpan
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.WhitespaceRenderMode
 import io.github.lumkit.sweeteditor.WrapMode
 import io.github.lumkit.sweeteditor.rememberSweetEditorController
+import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+import io.github.lumkit.sweeteditor.highlight.HighlightTheme
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
 
 private val SampleSource = buildString {
     appendLine("fun main() {")
@@ -122,10 +124,10 @@ private fun DemoHome(onOpenEditor: () -> Unit) {
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text("SweetEditor demo", style = MaterialTheme.typography.headlineSmall)
+        Text("SweetEditor + SweetLine demo", style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Editor page creates the native session and releases it on Back. " +
-                "The toolbar exercises settings, keymap, clipboard, line commands, events, and decoration writes.",
+            "Editor page binds SweetLine for Kotlin syntax, indent guides, bracket guides, rainbow brackets, and matched braces. " +
+                "The toolbar still exercises settings, keymap, clipboard, line commands, and extra decoration types.",
             style = MaterialTheme.typography.bodyMedium,
         )
         Button(onClick = onOpenEditor) {
@@ -148,10 +150,20 @@ private fun DemoEditor(onBack: () -> Unit) {
     var keyMapPreset by remember { mutableStateOf(KeyMapPreset.Vscode) }
     var status by remember { mutableStateOf("waiting for editor…") }
     val decorationProvider = remember { DemoDecorationProvider() }
+    val highlight = remember {
+        SweetLineHighlight(
+            SweetLineHighlightConfig(
+                document = HighlightDocumentDescriptor(fileName = "sample.kt", languageId = "kotlin"),
+            ),
+        )
+    }
     val completionProvider = remember { DemoCompletionProvider() }
     val newLineProvider = remember { DemoNewLineProvider() }
 
     val theme = if (darkTheme) EditorTheme.dark() else EditorTheme.light()
+    LaunchedEffect(darkTheme) {
+        highlight.updateTheme(if (darkTheme) HighlightTheme.dark() else HighlightTheme.light())
+    }
     val settings = EditorSettings(
         wrapMode = wrapMode,
         scale = scale,
@@ -193,6 +205,13 @@ private fun DemoEditor(onBack: () -> Unit) {
         onDispose {
             unsubs.forEach { it() }
             controller.dispose()
+        }
+    }
+
+    DisposableEffect(controller, highlight) {
+        val binding = highlight.bind(controller)
+        onDispose {
+            binding.close()
         }
     }
 
@@ -536,7 +555,6 @@ private class DemoCompletionProvider : CompletionProvider {
 
 private class DemoDecorationProvider : DecorationProvider {
     override fun capabilities(): Set<DecorationType> = setOf(
-        DecorationType.SYNTAX_HIGHLIGHT,
         DecorationType.INLAY_HINT,
         DecorationType.PHANTOM_TEXT,
         DecorationType.GUTTER_ICON,
@@ -545,8 +563,6 @@ private class DemoDecorationProvider : DecorationProvider {
         DecorationType.DIAGNOSTIC,
         DecorationType.DOCUMENT_HIGHLIGHT,
         DecorationType.FOLD_REGION,
-        DecorationType.INDENT_GUIDE,
-        DecorationType.BRACKET_GUIDE,
         DecorationType.FLOW_GUIDE,
         DecorationType.SEPARATOR_GUIDE,
     )
@@ -554,14 +570,6 @@ private class DemoDecorationProvider : DecorationProvider {
     override fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver) {
         receiver.accept(
             DecorationResult(
-                syntaxSpans = mapOf(
-                    0 to listOf(StyleSpan(column = 0, length = 3, styleId = 1)),
-                    1 to listOf(
-                        StyleSpan(column = 4, length = 7, styleId = 1),
-                        StyleSpan(column = 12, length = 26, styleId = 2),
-                    ),
-                ),
-                syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
                 inlayHints = mapOf(0 to listOf(InlayHint(type = EditorInlayType.TEXT, column = 11, text = ": Unit"))),
                 inlayHintsMode = DecorationApplyMode.REPLACE_RANGE,
                 phantomTexts = mapOf(0 to listOf(PhantomText(column = 13, text = " // entry"))),
@@ -582,18 +590,6 @@ private class DemoDecorationProvider : DecorationProvider {
                 documentHighlightsMode = DecorationApplyMode.REPLACE_RANGE,
                 foldRegions = listOf(FoldRegion(startLine = 0, endLine = 81, collapsed = false)),
                 foldRegionsMode = DecorationApplyMode.REPLACE_ALL,
-                indentGuides = listOf(
-                    IndentGuide(start = TextPosition(0, 4), end = TextPosition(80, 4)),
-                ),
-                indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
-                bracketGuides = listOf(
-                    BracketGuide(
-                        parent = TextPosition(0, 11),
-                        end = TextPosition(81, 0),
-                        children = listOf(TextPosition(1, 4)),
-                    ),
-                ),
-                bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
                 flowGuides = listOf(
                     FlowGuide(start = TextPosition(1, 4), end = TextPosition(2, 4)),
                 ),
