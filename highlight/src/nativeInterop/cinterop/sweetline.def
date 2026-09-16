@@ -1,0 +1,6 @@
+headers = sweetline/c_sweetline.h
+headerFilter = sweetline/**
+package = sweetline.cinterop
+compilerOpts = -DSWEETLINE_STATIC
+staticLibraries = libsweetline.a
+linkerOpts = -lc++

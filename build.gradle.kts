@@ -31,10 +31,13 @@ nmcpAggregation {
 dependencies {
     nmcpAggregation(project(":editor"))
     nmcpAggregation(project(":editor-android-jni"))
+    nmcpAggregation(project(":highlight"))
+    nmcpAggregation(project(":highlight-android-jni"))
 }
 
 tasks.matching {
     it.name.startsWith("nmcpPublishAggregation") || it.name == "publishAggregationToCentralPortal"
 }.configureEach {
     dependsOn(":editor:verifyReleaseNatives")
+    dependsOn(":highlight:verifyReleaseNatives")
 }
