@@ -76,13 +76,16 @@ The AAR ships `consumer-rules.pro` keeping JNI entry points; no extra keep
 rules needed.
 
 **Desktop** — JVM 11+. The JAR extracts Core + compose JNI to a per-user
-cache on first load. Compose Desktop R8/ProGuard reads
-`META-INF/com.android.tools/r8/` from the JAR automatically; if you use the
-built-in ProGuard task, add `editor/consumer-rules.pro` to
-`buildTypes.release.proguard.configurationFiles`.
+cache on first load. JNI keep rules ship in the JAR under
+`META-INF/proguard/` and `META-INF/com.android.tools/r8/`. Android R8
+merges them automatically. Compose Desktop's built-in ProGuard task does
+**not** scan dependency JARs; if you enable release minification, add those
+`.pro` files to `configurationFiles` (this repo's `desktopApp` harvests them
+from the runtime classpath).
 
-**iOS** — cinterop statically links `libsweeteditor.a`; the host Xcode project
-must **not** add `-lsweeteditor` or link any SweetEditor dylib.
+**iOS** — cinterop statically links `libsweeteditor.a` / `libsweetline.a`.
+The SweetLine archive embeds `LC_LINKER_OPTION -liconv`, so the host Xcode
+project must **not** add `-liconv` or `-lsweeteditor`.
 
 **Web** — JS and Wasm load the C ABI module automatically (Compose resources
 under `/composeResources/…/files/`). Host `index.html` does not need a

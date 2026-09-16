@@ -96,9 +96,9 @@ CI 在 macOS / Linux / Linux ARM / Windows 上分别构建后汇合，再在 mac
 - 用 JNA / FFM 直调 `c_api.h`
 - 混用不同一次构建的 header 与 so
 
-Android minify 时 AAR 带 `consumer-rules.pro`。JVM 坐标在 JAR 里带同一套规则：
+Android minify 时 AAR 与 `*-android-jni` AAR 都带 `consumer-rules.pro`。JVM 坐标在 JAR 里带同一套规则：
 
-- `META-INF/com.android.tools/r8/sweeteditor-compose.pro`（Compose Desktop / R8 会读）
-- `META-INF/proguard/sweeteditor-compose.pro`（ProGuard 约定路径）
+- `META-INF/com.android.tools/r8/sweeteditor-compose.pro`（以及 highlight 的 `sweetline-compose.pro`）
+- `META-INF/proguard/sweeteditor-compose.pro`
 
-若宿主用 Compose Desktop 自带的 ProGuard 任务（不会自动扫依赖 JAR），把 `editor/consumer-rules.pro` 加进 `buildTypes.release.proguard.configurationFiles`。
+Android R8 会自动合并。Compose Desktop 自带的 ProGuard 任务不会扫描依赖 JAR；若开启混淆，把这些文件加进 `configurationFiles`。

@@ -80,3 +80,5 @@ internal actual object NativeBridge {
     actual fun analyzeBracketPairsInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? =
         if (isAvailable) SweetLineJni.analyzeBracketPairsInLineRange(analyzer, startLine, lineCount) else null
 }
+
+internal actual suspend fun awaitHighlightNativeReady() {}

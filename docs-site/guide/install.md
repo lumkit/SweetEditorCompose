@@ -29,7 +29,7 @@ Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGet
 | iOS | `iosarm64` / `iosSimulatorArm64` | cinterop statically links `libsweeteditor.a` |
 | Web | `js` / `wasm-js` | C ABI module under Compose resources |
 
-You do not add an XCFramework, JNA, or extra native link flags.
+You do not add an XCFramework, JNA, extra native link flags, or `-liconv`.
 
 ## Repositories
 

@@ -19,6 +19,7 @@ android {
 
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+        consumerProguardFiles(rootProject.file("highlight/consumer-rules.pro"))
         ndk {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }

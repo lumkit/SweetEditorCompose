@@ -72,9 +72,9 @@ controller.whenReady {
 
 **Android** —— minSdk 24，compileSdk 37（Compose 1.12 的 AAR metadata 会强制检查）。AAR 自带 `consumer-rules.pro` 保留 JNI 入口，无需额外 keep 规则。
 
-**桌面** —— JVM 11+。JAR 首次加载时把 Core 与 compose JNI 解压到用户缓存目录。Compose Desktop R8/ProGuard 会自动读 JAR 里的 `META-INF/com.android.tools/r8/`；若用自带 ProGuard 任务，把 `editor/consumer-rules.pro` 加进 `buildTypes.release.proguard.configurationFiles`。
+**桌面** —— JVM 11+。JAR 首次加载时把 Core 与 compose JNI 解压到用户缓存目录。JNI keep 规则打在 JAR 的 `META-INF/proguard/` 与 `META-INF/com.android.tools/r8/`。Android R8 会自动合并；Compose Desktop 自带的 ProGuard **不会**扫描依赖 JAR，若开启 release 混淆，把这些 `.pro` 加进 `configurationFiles`（或像本仓库 `desktopApp` 一样从 runtime classpath 收集）。
 
-**iOS** —— cinterop 静态链 `libsweeteditor.a`；宿主 Xcode 工程**不得**加 `-lsweeteditor` 或链任何 SweetEditor dylib。
+**iOS** —— cinterop 静态链 `libsweeteditor.a` / `libsweetline.a`。SweetLine 的静态库已带 `LC_LINKER_OPTION -liconv`，宿主 Xcode **不必**再加 `-liconv` 或 `-lsweeteditor`。
 
 **Web** —— JS / Wasm 会自动加载 C ABI（Compose 资源目录
 `/composeResources/…/files/`），宿主 `index.html` **不必**再手写

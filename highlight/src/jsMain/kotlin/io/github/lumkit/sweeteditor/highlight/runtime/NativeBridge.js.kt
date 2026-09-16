@@ -2,6 +2,7 @@ package io.github.lumkit.sweeteditor.highlight.runtime
 
 import io.github.lumkit.sweeteditor.highlight.HighlightException
 import io.github.lumkit.sweeteditor.highlight.internal.jni.ensureWebAbiStarted
+import kotlinx.coroutines.delay
 
 internal actual object NativeBridge {
     actual val isAvailable: Boolean
@@ -108,8 +109,20 @@ internal actual object NativeBridge {
 
 private fun abi(): dynamic = js("globalThis.SweetLineWebAbi")
 
+internal actual suspend fun awaitHighlightNativeReady() {
+    ensureWebAbiStarted()
+    repeat(200) {
+        if (abiReady()) return
+        if (abiFailed()) return
+        delay(50)
+    }
+}
+
 private fun abiReady(): Boolean =
     js("!!(globalThis.SweetLineWebAbi && globalThis.SweetLineWebAbi.ready)")
+
+private fun abiFailed(): Boolean =
+    js("!!(globalThis.SweetLineWebAbi && globalThis.SweetLineWebAbi.error)")
 
 private fun throwIfCompileFailed(codeValue: dynamic) {
     val code = (codeValue as Number).toInt()

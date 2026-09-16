@@ -156,4 +156,5 @@ if [[ "$PLATFORM" != "$EXPECT_PLATFORM" ]]; then
   exit 1
 fi
 
+"$ROOT/scripts/merge-ios-iconv-autolink.sh" "$TARGET"
 echo "Installed $ARCHIVE -> $DEST_DIR/libsweetline.a ($PLATFORM)"

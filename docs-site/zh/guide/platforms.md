@@ -5,17 +5,19 @@
 - `minSdk` 24，`compileSdk` 37（Compose 1.12 与本库 AAR metadata 会检查）。
 - JNI 打在 AAR 里。`consumer-rules.pro` 保留 JNI 入口。
 - 不要再打一份 `libsweeteditor.so`。
+- minify 时 AAR / JNI AAR 的 `consumer-rules.pro` 会自动合并，不必在应用里再 keep JNI 类。
 
 ## 桌面（JVM）
 
 - JVM 11+。
 - 首次加载把 JAR 资源里的 Core 与 compose JNI 解到用户缓存，再 `System.load`。
-- Compose Desktop R8/ProGuard 会读 JAR 里的 `META-INF/com.android.tools/r8/`。
+- Compose Desktop 的 ProGuard 任务**不会**自动读依赖 JAR。若开启混淆，把 JAR 内 `META-INF/proguard/` 与 `META-INF/com.android.tools/r8/` 加进 `configurationFiles`。
 
 ## iOS
 
-- `iosArm64` / `iosSimulatorArm64` 由 cinterop 静态链 `libsweeteditor.a`。
-- 宿主 Xcode 工程**不得**加 `-lsweeteditor`，也不得再链 SweetEditor 的 dylib / XCFramework。
+- `iosArm64` / `iosSimulatorArm64` 由 cinterop 静态链 `libsweeteditor.a`（highlight 则是 `libsweetline.a`）。
+- 宿主 Xcode 工程**不得**加 `-lsweeteditor` / `-lsweetline`，也不得再链对应 dylib / XCFramework。
+- SweetLine 静态库带有 `LC_LINKER_OPTION -liconv`，不必在 xcconfig 里写 `-liconv`。
 - 真机与模拟器是两份归档。模拟器 klib 里若混进真机 object，链接会报 “built for iOS while targeting iOS-simulator”。
 
 ## Web（JS 与 Wasm）

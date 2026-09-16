@@ -30,3 +30,5 @@ internal expect object NativeBridge {
     fun analyzeIndentGuidesInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
     fun analyzeBracketPairsInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
 }
+
+internal expect suspend fun awaitHighlightNativeReady()

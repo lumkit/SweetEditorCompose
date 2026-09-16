@@ -205,11 +205,15 @@
   );
 
   function loadFromBase(base) {
-    return import(base + "sweetline_c_abi.js").then((factory) =>
-      factory.default({
+    return import(base + "sweetline_c_abi.js").then((mod) => {
+      const factory = mod && (mod.default || mod);
+      if (typeof factory !== "function") {
+        throw new Error("SweetLine C ABI module has no factory export");
+      }
+      return factory({
         locateFile: (path) => base + path,
-      }),
-    );
+      });
+    });
   }
 
   (async function load() {

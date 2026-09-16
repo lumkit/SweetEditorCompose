@@ -3,19 +3,19 @@
 ## Android
 
 - `minSdk` 24, `compileSdk` 37 (AAR metadata from Compose 1.12 and this library).
-- JNI libraries ship inside the AAR. `consumer-rules.pro` keeps JNI entry points.
+- JNI libraries ship inside the AAR. `consumer-rules.pro` on the KMP AAR and the JNI AAR keeps JNI entry points; the app does not add extra keep rules.
 - Do not add a second copy of `libsweeteditor.so`.
 
 ## Desktop (JVM)
 
 - JVM 11+.
 - First load extracts Core + compose JNI from JAR resources into a per-user cache, then `System.load`.
-- Compose Desktop R8/ProGuard reads `META-INF/com.android.tools/r8/` from the JAR.
+- Keep rules ship in the JAR under `META-INF/proguard/` and `META-INF/com.android.tools/r8/`. Compose Desktop's ProGuard task does not scan dependency JARs; include those files if you enable release minification.
 
 ## iOS
 
-- cinterop statically links `libsweeteditor.a` for `iosArm64` and `iosSimulatorArm64`.
-- The host Xcode project must **not** add `-lsweeteditor` or link any SweetEditor dylib / XCFramework.
+- cinterop statically links `libsweeteditor.a` (and `libsweetline.a` for highlight) for `iosArm64` and `iosSimulatorArm64`.
+- The host Xcode project must **not** add `-lsweeteditor`, `-lsweetline`, or `-liconv`. SweetLine embeds `LC_LINKER_OPTION -liconv`.
 - Device and simulator slices are different archives. A device object in the simulator klib fails with “built for iOS while targeting iOS-simulator”.
 
 ## Web (JS and Wasm)

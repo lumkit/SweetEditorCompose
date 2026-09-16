@@ -15,6 +15,28 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
 }
 
+val harvestedProguardDir = layout.buildDirectory.dir("generated/proguard-from-deps")
+val harvestProguardFromDeps by tasks.registering {
+    description = "Collect META-INF ProGuard/R8 consumer rules from runtime JARs"
+    val classpath = configurations.named("runtimeClasspath")
+    inputs.files(classpath)
+    outputs.dir(harvestedProguardDir)
+    doLast {
+        val dest = harvestedProguardDir.get().asFile
+        dest.deleteRecursively()
+        dest.mkdirs()
+        classpath.get().forEach { jar ->
+            if (jar.extension != "jar" || !jar.isFile) return@forEach
+            zipTree(jar).matching {
+                include("META-INF/proguard/*.pro")
+                include("META-INF/com.android.tools/r8/*.pro")
+            }.forEach { rule ->
+                dest.resolve("${jar.nameWithoutExtension}-${rule.name}").writeText(rule.readText())
+            }
+        }
+    }
+}
+
 compose.desktop {
     application {
         mainClass = "io.github.lumkit.editor.MainKt"
@@ -29,7 +51,7 @@ compose.desktop {
         }
 
         buildTypes.release.proguard {
-            configurationFiles.from(rootProject.file("editor/consumer-rules.pro"))
+            configurationFiles.from(harvestProguardFromDeps.map { it.outputs.files.asFileTree })
         }
     }
 }

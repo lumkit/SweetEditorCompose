@@ -8,6 +8,7 @@ import io.github.lumkit.sweeteditor.highlight.internal.LanguageIdTable
 import io.github.lumkit.sweeteditor.highlight.internal.SyntaxCatalog
 import io.github.lumkit.sweeteditor.highlight.internal.runOnHighlightHostThread
 import io.github.lumkit.sweeteditor.highlight.internal.syntaxNameOfJson
+import io.github.lumkit.sweeteditor.highlight.runtime.awaitHighlightNativeReady
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -111,6 +112,8 @@ internal class HighlightBindingImpl(
     }
 
     private suspend fun startReady() {
+        if (closed) return
+        awaitHighlightNativeReady()
         if (closed) return
         val payloads = loadSyntaxPayloads()
         awaitHost {

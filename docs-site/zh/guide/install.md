@@ -29,7 +29,7 @@ implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
 | iOS | `iosarm64` / `iosSimulatorArm64` | cinterop 静态链入 `libsweeteditor.a` |
 | Web | `js` / `wasm-js` | Compose 资源里的 C ABI 模块 |
 
-不需要 XCFramework、JNA，也不要再手动加 native 链接参数。
+不需要 XCFramework、JNA，也不要再手动加 native 链接参数或 `-liconv`。
 
 ## 仓库
 

@@ -346,6 +346,31 @@ val buildIosSweetLineStatic by tasks.registering {
     dependsOn(buildIosSweetLineStaticSimulatorArm64, buildIosSweetLineStaticArm64)
 }
 
+private fun registerIosIconvAutolinkTask(taskName: String, abi: String, coreTask: TaskProvider<*>) =
+    tasks.register<Exec>(taskName) {
+        group = "sweetline"
+        description = "Embed LC_LINKER_OPTION -liconv into iOS $abi static archive"
+        val archive = File(nativesRoot, "ios/$abi/libsweetline.a")
+        val script = layout.projectDirectory.file("scripts/merge-ios-iconv-autolink.sh")
+        val src = layout.projectDirectory.file("src/nativeInterop/iconv_autolink.c")
+        dependsOn(coreTask)
+        onlyIf { archive.isFile }
+        inputs.file(archive)
+        inputs.file(script)
+        inputs.file(src)
+        outputs.file(archive)
+        commandLine("bash", script.asFile.absolutePath, abi)
+    }
+
+val mergeIosIconvAutolinkSimulatorArm64 =
+    registerIosIconvAutolinkTask(
+        "mergeIosIconvAutolinkSimulatorArm64",
+        "simulator-arm64",
+        buildIosSweetLineStaticSimulatorArm64,
+    )
+val mergeIosIconvAutolinkArm64 =
+    registerIosIconvAutolinkTask("mergeIosIconvAutolinkArm64", "arm64", buildIosSweetLineStaticArm64)
+
 val configureDesktopJni by tasks.registering(Exec::class) {
     group = "sweetline"
     description = "Configure CMake for libsweetline_compose on the current desktop host"
@@ -520,7 +545,8 @@ private fun resolveSweetLineHome(): File {
 
 private fun resolveNativeSource(vendoredRelative: String, prebuiltRelative: String): File {
     val vendored = File(nativesRoot, vendoredRelative)
-    return if (vendored.exists()) vendored else File(sweetLineHome, prebuiltRelative)
+    val hasPayload = vendored.isDirectory && vendored.walkTopDown().any { it.isFile && it.name != ".gitkeep" }
+    return if (hasPayload) vendored else File(sweetLineHome, prebuiltRelative)
 }
 
 private fun configureSweetLineCinterop(target: KotlinNativeTarget) {
@@ -550,12 +576,12 @@ private fun configureSweetLineCinterop(target: KotlinNativeTarget) {
 }
 
 tasks.matching { it.name == "cinteropSweetlineIosSimulatorArm64" }.configureEach {
-    dependsOn(buildIosSweetLineStaticSimulatorArm64)
+    dependsOn(buildIosSweetLineStaticSimulatorArm64, mergeIosIconvAutolinkSimulatorArm64)
     mustRunAfter(buildHostSweetLineCore)
     inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweetline.a"))
 }
 tasks.matching { it.name == "cinteropSweetlineIosArm64" }.configureEach {
-    dependsOn(buildIosSweetLineStaticArm64)
+    dependsOn(buildIosSweetLineStaticArm64, mergeIosIconvAutolinkArm64)
     mustRunAfter(buildHostSweetLineCore)
     inputs.file(File(nativesRoot, "ios/arm64/libsweetline.a"))
 }

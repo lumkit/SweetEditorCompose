@@ -212,3 +212,5 @@ private fun indentBufferLength(buffer: CPointer<IntVar>): Int {
     }
     return index + lineStateCount * 4
 }
+
+internal actual suspend fun awaitHighlightNativeReady() {}
