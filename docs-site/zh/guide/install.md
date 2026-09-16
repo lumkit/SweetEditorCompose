@@ -1,10 +1,13 @@
 # 安装
 
-只加一个依赖。Gradle 会解析对应平台变体。
+先加编辑器。需要 SweetLine 语法高亮时再加第二项。
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
+implementation("io.github.lumkit:sweetline-compose:0.1.4") // 可选
 ```
+
+Gradle 会解析每个坐标对应的平台变体。
 
 ## 宿主版本
 
@@ -22,12 +25,23 @@ implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
 
 ## 各平台产物
 
+### `sweeteditor-compose`
+
 | 平台 | 产物 | 内含 native |
 |---|---|---|
 | Android | `sweeteditor-compose-android`（传递 `…-android-jni`） | 各 ABI 的 `libsweeteditor.so` + `libsweeteditor_compose.so` |
 | 桌面 JVM | `sweeteditor-compose-jvm` | `/native/<os>-<arch>/` 下的 Core 与 compose JNI |
 | iOS | `iosarm64` / `iosSimulatorArm64` | cinterop 静态链入 `libsweeteditor.a` |
 | Web | `js` / `wasm-js` | Compose 资源里的 C ABI 模块 |
+
+### `sweetline-compose`
+
+| 平台 | 产物 | 内含 native |
+|---|---|---|
+| Android | `sweetline-compose-android`（传递 `…-android-jni`） | `libsweetline.so` + `libsweetline_compose.so` + 语法 JSON |
+| 桌面 JVM | `sweetline-compose-jvm` | `/native/<os>-<arch>/` 下的 Core 与 compose JNI |
+| iOS | `iosarm64` / `iosSimulatorArm64` | cinterop 静态链入 `libsweetline.a` |
+| Web | `js` / `wasm-js` | Compose `files/` 下的 C ABI 与加载脚本 |
 
 不需要 XCFramework、JNA，也不要再手动加 native 链接参数或 `-liconv`。
 
@@ -37,4 +51,4 @@ Maven Central。若使用 `-SNAPSHOT` 版本，走 Central Portal 的 snapshots 
 
 ## 下一步
 
-[快速开始](./quick-start.md)
+[快速开始](./quick-start.md) · [SweetLine 高亮](./sweetline.md)

@@ -1,6 +1,6 @@
 # 语法高亮
 
-库没有内置词法器。先注册样式，再按行、按层写入 `StyleSpan`。
+库没有内置词法器。要用 SweetLine 请加 [`sweetline-compose`](./sweetline.md)。下面是自己推 span 的 API。
 
 ```kotlin
 controller.whenReady {

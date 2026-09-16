@@ -48,4 +48,4 @@ val controller = remember { SweetEditorController(initialText = "") }
 
 ## 下一步
 
-[架构约定](./architecture.md) · [SweetEditor API](/zh/api/sweet-editor)
+[架构约定](./architecture.md) · [SweetLine 高亮](./sweetline.md) · [SweetEditor API](/zh/api/sweet-editor)

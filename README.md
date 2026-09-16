@@ -1,13 +1,14 @@
 # SweetEditor Compose
 
-A Compose Multiplatform code editor backed by the [SweetEditor](https://github.com/FinalScave/SweetEditor) C++ core.
+A Compose Multiplatform code editor backed by the [SweetEditor](https://github.com/FinalScave/SweetEditor) C++ core. Optional syntax highlighting uses [SweetLine](https://github.com/FinalScave/SweetLine).
 
-Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)** — one API, one dependency.
+Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)**.
 
 ## Install
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
+implementation("io.github.lumkit:sweetline-compose:0.1.4") // optional, SweetLine highlighting
 ```
 
 The host must use **Compose Multiplatform 1.12.0**, **Kotlin 2.4.20**, and Android **compileSdk 37** (or newer matching that set). `targetSdk` / `minSdk` can stay lower. Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
@@ -21,7 +22,7 @@ Gradle resolves the platform variant automatically:
 | iOS | `sweeteditor-compose-iosarm64` / `iosSimulatorArm64` | cinterop statically links `libsweeteditor.a` |
 | Web | `sweeteditor-compose-js` / `wasm-js` | `/native/web/` C ABI module |
 
-No XCFramework, no JNA, no manual native linking — the artifacts are self-contained.
+`sweetline-compose` uses the same layout (`libsweetline` / `sweetline_c_abi`, plus 18 syntax JSON files). No XCFramework, no JNA, no host `index.html` script, no `-liconv` in Xcode.
 
 ## Quick start
 
@@ -56,9 +57,32 @@ controller.whenReady {
 }
 ```
 
+## SweetLine highlight
+
+```kotlin
+import androidx.compose.runtime.DisposableEffect
+import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+
+val highlight = remember {
+    SweetLineHighlight(
+        SweetLineHighlightConfig(
+            document = HighlightDocumentDescriptor(fileName = "Main.kt"),
+        ),
+    )
+}
+DisposableEffect(controller, highlight) {
+    val binding = highlight.bind(controller)
+    onDispose { binding.close() }
+}
+```
+
+`bind` once per instance. Details: [docs site — SweetLine](https://lumkit.github.io/SweetEditorCompose/guide/sweetline).
+
 ## Features
 
-- Syntax highlighting, bracket matching, auto-closing pairs
+- Syntax highlighting via optional `sweetline-compose` (or push `StyleSpan`s yourself)
 - Search & replace, diff rendering, fold regions
 - IME composition (Android, iOS, Desktop, Web)
 - Snippet insertion with linked editing (tab stops)
@@ -99,23 +123,23 @@ The C++ core lives in a sibling checkout of
 
 ```
 SweetEditor/            # C++ core (sibling)
+SweetLine/              # highlight C++ core (sibling)
 SweetEditorCompose/     # this repo
 ```
 
 Build native libraries for the current host:
 
 ```bash
-./editor/scripts/prepare-release-natives.sh --host          # current OS+arch
-./editor/scripts/prepare-release-natives.sh --macos-x86_64   # macOS cross-arch
-./editor/scripts/prepare-release-natives.sh --ios            # iOS static archives
-./editor/scripts/prepare-release-natives.sh --android        # Android .so (needs NDK)
-./editor/scripts/prepare-release-natives.sh --wasm          # Wasm C ABI (needs emsdk)
+./editor/scripts/prepare-release-natives.sh --host
+./highlight/scripts/prepare-release-natives.sh --host
 ```
 
 Then:
 
 ```bash
-./gradlew :editor:publishToMavenLocal :editor-android-jni:publishToMavenLocal
+./gradlew \
+  :editor:publishToMavenLocal :editor-android-jni:publishToMavenLocal \
+  :highlight:publishToMavenLocal :highlight-android-jni:publishToMavenLocal
 ```
 
 ## Documentation

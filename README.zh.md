@@ -1,13 +1,14 @@
 # SweetEditor Compose
 
-基于 [SweetEditor](https://github.com/FinalScave/SweetEditor) C++ 核心的 Compose Multiplatform 代码编辑器。
+基于 [SweetEditor](https://github.com/FinalScave/SweetEditor) C++ 核心的 Compose Multiplatform 代码编辑器。语法高亮是可选模块，内核是 [SweetLine](https://github.com/FinalScave/SweetLine)。
 
-支持 **Android**、**iOS**、**桌面（JVM）**、**Web（JS + Wasm）** —— 一套 API，一个依赖。
+支持 **Android**、**iOS**、**桌面（JVM）**、**Web（JS + Wasm）**。
 
 ## 引入
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.3")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
+implementation("io.github.lumkit:sweetline-compose:0.1.4") // 可选，SweetLine 高亮
 ```
 
 宿主必须使用 **Compose Multiplatform 1.12.0**、**Kotlin 2.4.20**，以及 Android **compileSdk 37**（或与之匹配的更新组合）。`targetSdk` / `minSdk` 可以更低。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
@@ -21,7 +22,7 @@ Gradle 会自动解析对应平台变体：
 | iOS | `sweeteditor-compose-iosarm64` / `iosSimulatorArm64` | cinterop 静态链入 `libsweeteditor.a` |
 | Web | `sweeteditor-compose-js` / `wasm-js` | `/native/web/` 下的 C ABI 模块 |
 
-不需要 XCFramework、不需要 JNA、不需要手动链 native —— 产物自带。
+`sweetline-compose` 布局相同（`libsweetline` / `sweetline_c_abi`，外加 18 份语法 JSON）。不需要 XCFramework、JNA、宿主 `index.html` 脚本，也不需要在 Xcode 里加 `-liconv`。
 
 ## 快速开始
 
@@ -55,9 +56,32 @@ controller.whenReady {
 }
 ```
 
+## SweetLine 高亮
+
+```kotlin
+import androidx.compose.runtime.DisposableEffect
+import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+
+val highlight = remember {
+    SweetLineHighlight(
+        SweetLineHighlightConfig(
+            document = HighlightDocumentDescriptor(fileName = "Main.kt"),
+        ),
+    )
+}
+DisposableEffect(controller, highlight) {
+    val binding = highlight.bind(controller)
+    onDispose { binding.close() }
+}
+```
+
+每个实例只能 `bind` 一次。说明见 [文档站 — SweetLine](https://lumkit.github.io/SweetEditorCompose/zh/guide/sweetline)。
+
 ## 功能
 
-- 语法高亮、括号匹配、自动闭合配对
+- 语法高亮：可选 `sweetline-compose`，或自己推 `StyleSpan`
 - 搜索替换、差异渲染、折叠区域
 - IME 输入法合成（Android、iOS、桌面、Web）
 - 代码片段插入与联动编辑（Tab Stop）
@@ -82,27 +106,27 @@ controller.whenReady {
 
 ## 从源码构建
 
-C++ 核心在同级的 [FinalScave/SweetEditor](https://github.com/FinalScave/SweetEditor) 检出里：
+C++ 核心在同级目录：
 
 ```
-SweetEditor/            # C++ 核心（同级目录）
+SweetEditor/            # 编辑器 C++ 核心
+SweetLine/              # 高亮 C++ 核心
 SweetEditorCompose/     # 本仓库
 ```
 
 为当前宿主构建 native 库：
 
 ```bash
-./editor/scripts/prepare-release-natives.sh --host          # 当前 OS+架构
-./editor/scripts/prepare-release-natives.sh --macos-x86_64   # macOS 跨架构
-./editor/scripts/prepare-release-natives.sh --ios            # iOS 静态库
-./editor/scripts/prepare-release-natives.sh --android        # Android .so（需 NDK）
-./editor/scripts/prepare-release-natives.sh --wasm          # Wasm C ABI（需 emsdk）
+./editor/scripts/prepare-release-natives.sh --host
+./highlight/scripts/prepare-release-natives.sh --host
 ```
 
 然后：
 
 ```bash
-./gradlew :editor:publishToMavenLocal :editor-android-jni:publishToMavenLocal
+./gradlew \
+  :editor:publishToMavenLocal :editor-android-jni:publishToMavenLocal \
+  :highlight:publishToMavenLocal :highlight-android-jni:publishToMavenLocal
 ```
 
 ## 文档

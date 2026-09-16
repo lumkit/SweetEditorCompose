@@ -4,9 +4,6 @@ hero:
   name: SweetEditor
   text: 面向 Compose Multiplatform 的代码编辑器
   tagline: C++17 原生内核，由 Kotlin Multiplatform 与 Compose 封装，适合 IDE、AI 编程工具与云工作区。
-  image:
-    src: /snapshot/Screenshot_Desktop.png
-    alt: SweetEditor Desktop Screenshot
   actions:
     - theme: brand
       text: 开始使用
@@ -19,7 +16,7 @@ hero:
       link: https://github.com/lumkit/SweetEditorCompose
 features:
   - title: 快速接入
-    details: 一个 Maven 坐标。Controller、Provider、IME 与平台桥已覆盖 Android、iOS、桌面、JS 与 Wasm。
+    details: 先加 `sweeteditor-compose`。语法高亮再加可选的 `sweetline-compose`（SweetLine），覆盖全部目标平台。
   - title: 顺滑编辑
     details: 光标、选区、折叠、补全、输入法合成、菜单与手势路由已接入编辑管线。
   - title: 丰富装饰
@@ -29,20 +26,5 @@ features:
   - title: 可插拔
     details: 补全、装饰、图标、语言配置、元数据，以及 Copilot 风格内联建议。
   - title: 开放内核
-    details: 原生编辑器来自 OpenSweetEditor。本站只讲 Compose Multiplatform 的 public API。
+    details: 原生编辑器来自 OpenSweetEditor。语法高亮是可选的 SweetLine 模块（`sweetline-compose`）。
 ---
-
-## 截图
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><b>Android</b><br/><img src="/snapshot/Screenshot_Android.jpg" alt="Android screenshot" width="360"/></td>
-      <td align="center"><b>iOS</b><br/><img src="/snapshot/Screenshot_IOS.png" alt="iOS screenshot" width="360"/></td>
-    </tr>
-    <tr>
-      <td align="center"><b>Desktop</b><br/><img src="/snapshot/Screenshot_Desktop.png" alt="Desktop screenshot" width="360"/></td>
-      <td align="center"><b>Web</b><br/>敬请期待</td>
-    </tr>
-  </table>
-</div>

@@ -48,4 +48,4 @@ Do not attach the same controller instance to two `SweetEditor` composables. `at
 
 ## Next
 
-[Architecture](./architecture.md) · [SweetEditor API](/api/sweet-editor)
+[Architecture](./architecture.md) · [SweetLine highlight](./sweetline.md) · [SweetEditor API](/api/sweet-editor)

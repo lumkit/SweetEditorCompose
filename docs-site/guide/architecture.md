@@ -33,6 +33,6 @@ Every document mutation goes through a single session `dispatchActionResult`. Qu
 
 ## What the library does not do
 
-- No built-in LSP or syntax engine. You push spans / completions via providers.
+- No built-in LSP. Syntax highlighting is optional via [`sweetline-compose`](./sweetline.md), or you push spans / completions via providers.
 - No multi-cursor (C API has none).
 - Web has no `create_document_from_file`.

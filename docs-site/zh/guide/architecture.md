@@ -33,6 +33,6 @@ flowchart LR
 
 ## 库不做的事
 
-- 没有内置 LSP / 语法引擎。Span 和补全由宿主 Provider 推入。
+- 没有内置 LSP。语法高亮是可选模块 [`sweetline-compose`](./sweetline.md)，或由宿主 Provider 推 span / 补全。
 - 没有多光标（C API 无）。
 - Web 没有 `create_document_from_file`。

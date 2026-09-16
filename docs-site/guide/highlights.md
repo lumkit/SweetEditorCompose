@@ -1,6 +1,6 @@
 # Syntax highlights
 
-The library has no built-in lexer. You register styles, then push `StyleSpan`s onto a line and layer.
+The library has no built-in lexer. For SweetLine-backed highlighting add [`sweetline-compose`](./sweetline.md). The APIs below push spans yourself.
 
 ```kotlin
 controller.whenReady {

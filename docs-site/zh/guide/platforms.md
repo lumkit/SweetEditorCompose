@@ -22,7 +22,7 @@
 
 ## Web（JS 与 Wasm）
 
-- 库会注入 `sweeteditor_web_abi.js`，并从 Compose 资源 `files/` 加载 `sweeteditor_c_abi.{js,wasm}`。
+- 库会注入 `sweeteditor_web_abi.js` / `sweetline_web_abi.js`，并从 Compose 资源 `files/` 加载 `*_c_abi.{js,wasm}`。
 - 宿主 `index.html` **不必**再手写 script（0.1.1+）。
 - C ABI 就绪后 `NativeBridge.isAvailable` 为 true。`SweetEditor` 最多等约 1800 帧，超时显示加载错误。
 - Compose 必须是 1.12.0，否则 Skiko 没有 `nGetUnresolvedCodepointsCount`。
