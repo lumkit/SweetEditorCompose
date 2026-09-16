@@ -1,4 +1,8 @@
+@file:OptIn(ExperimentalWasmJsInterop::class)
+
 package io.github.lumkit.sweeteditor.highlight.internal
+
+import kotlin.js.ExperimentalWasmJsInterop
 
 internal actual class SerialAnalyzeQueue actual constructor(
     private val currentGeneration: () -> Int,
