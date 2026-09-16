@@ -68,9 +68,15 @@ export default defineConfig({
   title: "SweetEditor Compose",
   description: "Code editor for Compose Multiplatform",
   base: "/SweetEditorCompose/",
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/sweeteditor_favicon_no_bg.svg" }],
+    ["meta", { property: "og:image", content: "/snapshot/Screenshot_Desktop.png" }],
+    ["meta", { name: "twitter:image", content: "/snapshot/Screenshot_Desktop.png" }],
+  ],
   lastUpdated: true,
   ignoreDeadLinks: true,
   themeConfig: {
+    logo: "/sweeteditor_favicon_no_bg.svg",
     socialLinks: [
       { icon: "github", link: "https://github.com/lumkit/SweetEditorCompose" },
     ],

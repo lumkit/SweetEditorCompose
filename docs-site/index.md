@@ -4,6 +4,9 @@ hero:
   name: SweetEditor
   text: Code editor for Compose Multiplatform
   tagline: A native C++17 editor core wrapped by Kotlin Multiplatform and Compose, for IDEs, AI coding tools, and cloud workspaces.
+  image:
+    src: /snapshot/Screenshot_Desktop.png
+    alt: SweetEditor Desktop Screenshot
   actions:
     - theme: brand
       text: Getting Started
@@ -28,3 +31,18 @@ features:
   - title: Open core
     details: The native editor is OpenSweetEditor. This site documents the Compose Multiplatform public API only.
 ---
+
+## Screenshots
+
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>Android</b><br/><img src="/snapshot/Screenshot_Android.jpg" alt="Android screenshot" width="360"/></td>
+      <td align="center"><b>iOS</b><br/><img src="/snapshot/Screenshot_IOS.png" alt="iOS screenshot" width="360"/></td>
+    </tr>
+    <tr>
+      <td align="center"><b>Desktop</b><br/><img src="/snapshot/Screenshot_Desktop.png" alt="Desktop screenshot" width="360"/></td>
+      <td align="center"><b>Web</b><br/>Coming soon</td>
+    </tr>
+  </table>
+</div>
