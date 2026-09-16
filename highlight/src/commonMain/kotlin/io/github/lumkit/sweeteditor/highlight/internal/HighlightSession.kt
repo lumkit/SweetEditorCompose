@@ -11,6 +11,8 @@ import io.github.lumkit.sweeteditor.TextChangedEvent
 import io.github.lumkit.sweeteditor.TextPosition
 import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
 import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
+import io.github.lumkit.sweeteditor.highlight.HighlightTheme
+import io.github.lumkit.sweeteditor.highlight.runtime.NativeBufferParser
 
 internal class HighlightSession(
     private val native: HighlightNativeOps,
@@ -25,6 +27,7 @@ internal class HighlightSession(
     private val patches = ArrayDeque<PendingPatch>()
     private val subscriptions = ArrayList<() -> Unit>()
     private val analyzeQueue = SerialAnalyzeQueue { generation }
+    private val styleRegistry = StyleRegistry(HighlightTheme.dark())
 
     private var controller: SweetEditorController? = null
     private var closed = false
@@ -32,6 +35,8 @@ internal class HighlightSession(
     private var document = 0L
     private var analyzer = 0L
     private var userDisabled = false
+    private var stylesRegistered = false
+    private var syntaxDirty = true
 
     var generation: Int = 0
         private set
@@ -71,6 +76,7 @@ internal class HighlightSession(
             mapping.invalidateFrom(dirtyFrom)
         }
         generation += 1
+        syntaxDirty = true
         requestRefresh()
     }
 
@@ -91,12 +97,21 @@ internal class HighlightSession(
         mirror.setText(text)
         mapping.invalidateFrom(0)
         generation += 1
+        syntaxDirty = true
         if (!native.isAvailable) return
         ensureEngine()
+        registerStylesIfNeeded()
         releaseDocument()
         val created = native.createDocument(uri, text)
         document = created
         analyzer = if (created == 0L) 0L else native.loadDocument(engine, created)
+    }
+
+    fun compileSyntaxJson(json: String) {
+        if (closed || !native.isAvailable) return
+        ensureEngine()
+        registerStylesIfNeeded()
+        native.compileJson(engine, json)
     }
 
     fun drainPatches(visibleStartLine: Int, visibleLineCount: Int): IntArray? {
@@ -142,10 +157,33 @@ internal class HighlightSession(
     fun buildDecorationResult(context: DecorationContext): DecorationResult {
         decorationOverride?.let { return it }
         val vis = context.visibleLineRange
+        val start = vis.startLine
         val count = if (vis.isEmpty) 0 else vis.endLine - vis.startLine + 1
-        drainPatches(vis.startLine, count)
+        val queueWasEmpty = patches.isEmpty()
+        val incremental = drainPatches(start, count)
+        val buffer = when {
+            analyzer == 0L -> null
+            incremental != null -> {
+                syntaxDirty = false
+                incremental
+            }
+            !syntaxDirty && queueWasEmpty -> {
+                val slice = native.getHighlightSlice(analyzer, start, count)
+                val parsed = NativeBufferParser.parseHighlightSlice(slice)
+                if (parsed.lines.size < count) {
+                    native.analyzeLineRange(analyzer, start, count)
+                } else {
+                    slice
+                }
+            }
+            else -> {
+                syntaxDirty = false
+                native.analyzeLineRange(analyzer, start, count)
+            }
+        }
+        val spans = mapSyntaxSpans(NativeBufferParser.parseHighlightSlice(buffer), mapping)
         return DecorationResult(
-            syntaxSpans = emptyMap(),
+            syntaxSpans = spans,
             syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
             indentGuides = emptyList(),
             indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
@@ -173,6 +211,14 @@ internal class HighlightSession(
         if (engine == 0L) {
             engine = native.createEngine(tabSize)
         }
+    }
+
+    private fun registerStylesIfNeeded() {
+        if (stylesRegistered || engine == 0L) return
+        styleRegistry.namesToRegister().forEach { (name, id) ->
+            native.registerStyleName(engine, name, id)
+        }
+        stylesRegistered = true
     }
 
     private fun releaseDocument() {

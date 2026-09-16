@@ -93,6 +93,14 @@ internal class RecordingHighlightNative : HighlightNativeOps {
 
     override fun freeDocumentAnalyzer(analyzer: Long) {}
 
+    override fun registerStyleName(engine: Long, name: String, styleId: Int) {}
+
+    override fun compileJson(engine: Long, json: String) {}
+
+    override fun analyzeLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = null
+
+    override fun getHighlightSlice(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = null
+
     override fun analyzeIncrementalInLineRange(
         analyzer: Long,
         startLine: Int,
