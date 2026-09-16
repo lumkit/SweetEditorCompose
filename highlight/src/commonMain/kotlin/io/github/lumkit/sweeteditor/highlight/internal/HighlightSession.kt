@@ -2,10 +2,15 @@ package io.github.lumkit.sweeteditor.highlight.internal
 
 import io.github.lumkit.sweeteditor.CursorChangedEvent
 import io.github.lumkit.sweeteditor.DocumentLoadedEvent
+import io.github.lumkit.sweeteditor.DecorationApplyMode
+import io.github.lumkit.sweeteditor.DecorationContext
+import io.github.lumkit.sweeteditor.DecorationResult
+import io.github.lumkit.sweeteditor.DecorationType
 import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.TextChangedEvent
 import io.github.lumkit.sweeteditor.TextPosition
 import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 
 internal class HighlightSession(
     private val native: HighlightNativeOps,
@@ -13,6 +18,7 @@ internal class HighlightSession(
     private val bindingId: String,
     private val tabSize: Int = 4,
     descriptor: HighlightDocumentDescriptor = HighlightDocumentDescriptor(),
+    var features: HighlightFeatureFlags = HighlightFeatureFlags(),
 ) {
     private val mirror = TextMirror()
     private val mapping = PositionMapping(mirror)
@@ -116,6 +122,39 @@ internal class HighlightSession(
     }
 
     fun pendingPatches(): List<PendingPatch> = patches.toList()
+
+    var decorationOverride: DecorationResult? = null
+
+    fun decorationCapabilities(): Set<DecorationType> {
+        if (disabled) return emptySet()
+        val types = mutableSetOf<DecorationType>()
+        if (features.syntaxHighlight) types += DecorationType.SYNTAX_HIGHLIGHT
+        if (features.indentGuides) types += DecorationType.INDENT_GUIDE
+        if (features.bracketGuides) types += DecorationType.BRACKET_GUIDE
+        if (features.rainbowBrackets) types += DecorationType.OVERLAY_HIGHLIGHT
+        return types
+    }
+
+    fun submitAnalyze(generation: Int, block: () -> Unit) {
+        analyzeQueue.submit(generation, block)
+    }
+
+    fun buildDecorationResult(context: DecorationContext): DecorationResult {
+        decorationOverride?.let { return it }
+        val vis = context.visibleLineRange
+        val count = if (vis.isEmpty) 0 else vis.endLine - vis.startLine + 1
+        drainPatches(vis.startLine, count)
+        return DecorationResult(
+            syntaxSpans = emptyMap(),
+            syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
+            indentGuides = emptyList(),
+            indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
+            bracketGuides = emptyList(),
+            bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
+            overlaySpans = emptyMap(),
+            overlaySpansMode = DecorationApplyMode.REPLACE_RANGE,
+        )
+    }
 
     fun close() {
         if (closed) return
