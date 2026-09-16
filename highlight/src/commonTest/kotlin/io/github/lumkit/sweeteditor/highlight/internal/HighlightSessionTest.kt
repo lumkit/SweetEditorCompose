@@ -114,4 +114,10 @@ internal class RecordingHighlightNative : HighlightNativeOps {
         incrementals += IncrementalCall(startLine, startColumn, endLine, endColumn, newText)
         return intArrayOf()
     }
+
+    override fun analyzeIndentGuidesInLineRange(
+        analyzer: Long,
+        startLine: Int,
+        lineCount: Int,
+    ): IntArray? = null
 }

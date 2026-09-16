@@ -26,6 +26,8 @@ internal interface HighlightNativeOps {
         visibleStartLine: Int,
         visibleLineCount: Int,
     ): IntArray?
+
+    fun analyzeIndentGuidesInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
 }
 
 internal object DefaultHighlightNative : HighlightNativeOps {
@@ -81,4 +83,10 @@ internal object DefaultHighlightNative : HighlightNativeOps {
         visibleStartLine,
         visibleLineCount,
     )
+
+    override fun analyzeIndentGuidesInLineRange(
+        analyzer: Long,
+        startLine: Int,
+        lineCount: Int,
+    ): IntArray? = NativeBridge.analyzeIndentGuidesInLineRange(analyzer, startLine, lineCount)
 }

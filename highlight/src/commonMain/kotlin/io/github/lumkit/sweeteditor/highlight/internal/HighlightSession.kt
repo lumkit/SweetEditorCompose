@@ -181,11 +181,27 @@ internal class HighlightSession(
                 native.analyzeLineRange(analyzer, start, count)
             }
         }
-        val spans = mapSyntaxSpans(NativeBufferParser.parseHighlightSlice(buffer), mapping)
+        val spans = if (features.syntaxHighlight) {
+            mapSyntaxSpans(NativeBufferParser.parseHighlightSlice(buffer), mapping)
+        } else {
+            emptyMap()
+        }
+        val indentGuides = if (features.indentGuides && analyzer != 0L && count > 0) {
+            GuideAssembler.assemble(
+                guides = NativeBufferParser.parseIndentGuides(
+                    native.analyzeIndentGuidesInLineRange(analyzer, start, count),
+                ),
+                mapping = mapping,
+                visibleStartLine = vis.startLine,
+                visibleEndLine = vis.endLine,
+            )
+        } else {
+            emptyList()
+        }
         return DecorationResult(
             syntaxSpans = spans,
             syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
-            indentGuides = emptyList(),
+            indentGuides = indentGuides,
             indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
             bracketGuides = emptyList(),
             bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
