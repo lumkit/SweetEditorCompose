@@ -13,6 +13,7 @@ import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
 import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.runtime.NativeBufferParser
+import io.github.lumkit.sweeteditor.highlight.runtime.SlBracketToken
 
 internal class HighlightSession(
     private val native: HighlightNativeOps,
@@ -47,6 +48,12 @@ internal class HighlightSession(
     var lastCursor: TextPosition? = null
         private set
 
+    var matchedHost: MatchedBracketHost? = null
+
+    private var cachedBrackets: List<SlBracketToken> = emptyList()
+    private var cachedBracketStart = 0
+    private var cachedBracketEnd = -1
+
     var disabled: Boolean
         get() = userDisabled || closed || !native.isAvailable
         set(value) {
@@ -60,6 +67,9 @@ internal class HighlightSession(
         subscriptions += controller.onTextChanged(::onTextChanged)
         subscriptions += controller.onDocumentLoaded(::onDocumentLoaded)
         subscriptions += controller.onCursorChanged(::onCursorChanged)
+        if (matchedHost == null) {
+            matchedHost = ControllerMatchedHost(controller)
+        }
     }
 
     fun start() {
@@ -89,6 +99,18 @@ internal class HighlightSession(
     fun onCursorChanged(event: CursorChangedEvent) {
         if (closed) return
         lastCursor = event.cursorPosition
+        if (!features.matchedBrackets) return
+        val line = event.cursorPosition.line
+        if (line !in cachedBracketStart..cachedBracketEnd) {
+            requestRefresh()
+        }
+    }
+
+    fun updateFeatures(features: HighlightFeatureFlags) {
+        if (closed) return
+        this.features = features
+        generation += 1
+        requestRefresh()
     }
 
     fun rebuildOnLoad(text: String) {
@@ -198,16 +220,66 @@ internal class HighlightSession(
         } else {
             emptyList()
         }
+        val needBrackets =
+            features.bracketGuides || features.rainbowBrackets || features.matchedBrackets
+        if (needBrackets && analyzer != 0L && count > 0) {
+            cachedBrackets = BracketAssembler.flatten(
+                NativeBufferParser.parseBracketSlice(
+                    native.analyzeBracketPairsInLineRange(analyzer, start, count),
+                ),
+            )
+            cachedBracketStart = vis.startLine
+            cachedBracketEnd = vis.endLine
+        } else if (!needBrackets) {
+            cachedBrackets = emptyList()
+            cachedBracketStart = 0
+            cachedBracketEnd = -1
+        }
+        val bracketGuides = if (features.bracketGuides) {
+            BracketAssembler.assembleGuides(
+                tokens = cachedBrackets,
+                mapping = mapping,
+                visibleStartLine = vis.startLine,
+                visibleEndLine = vis.endLine,
+            )
+        } else {
+            emptyList()
+        }
+        val overlaySpans = if (features.rainbowBrackets) {
+            BracketAssembler.rainbowSpans(cachedBrackets, mapping)
+        } else {
+            emptyMap()
+        }
         return DecorationResult(
             syntaxSpans = spans,
             syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
             indentGuides = indentGuides,
             indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
-            bracketGuides = emptyList(),
+            bracketGuides = bracketGuides,
             bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
-            overlaySpans = emptyMap(),
+            overlaySpans = overlaySpans,
             overlaySpansMode = DecorationApplyMode.REPLACE_RANGE,
         )
+    }
+
+    fun clearingResult(): DecorationResult = DecorationResult(
+        syntaxSpans = emptyMap(),
+        syntaxSpansMode = DecorationApplyMode.REPLACE_RANGE,
+        indentGuides = emptyList(),
+        indentGuidesMode = DecorationApplyMode.REPLACE_ALL,
+        bracketGuides = emptyList(),
+        bracketGuidesMode = DecorationApplyMode.REPLACE_ALL,
+        overlaySpans = emptyMap(),
+        overlaySpansMode = DecorationApplyMode.REPLACE_RANGE,
+    )
+
+    fun applyMatchedBrackets() {
+        val host = matchedHost ?: return
+        if (!features.matchedBrackets) {
+            host.clearMatchedBrackets()
+            return
+        }
+        BracketAssembler.applyMatched(cachedBrackets, lastCursor, mapping, host)
     }
 
     fun close() {
@@ -258,4 +330,16 @@ internal class HighlightSession(
 
     private fun uriFor(descriptor: HighlightDocumentDescriptor): String =
         descriptor.fileName ?: "sweetline-compose://session/$bindingId"
+}
+
+private class ControllerMatchedHost(
+    private val controller: SweetEditorController,
+) : MatchedBracketHost {
+    override fun setMatchedBrackets(openLine: Int, openColumn: Int, closeLine: Int, closeColumn: Int) {
+        controller.setMatchedBrackets(openLine, openColumn, closeLine, closeColumn)
+    }
+
+    override fun clearMatchedBrackets() {
+        controller.clearMatchedBrackets()
+    }
 }

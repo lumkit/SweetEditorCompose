@@ -74,4 +74,50 @@ class HighlightDecorationProviderTest {
             session.close()
         }
     }
+
+    @Test
+    fun allFlagsOffClearsOverlayAndHasEmptyCapabilities() {
+        var refreshed = 0
+        val native = RecordingHighlightNative()
+        val session = HighlightSession(
+            native,
+            requestRefresh = { refreshed += 1 },
+            bindingId = "flags",
+        )
+        val provider = HighlightDecorationProvider(session)
+        try {
+            session.updateFeatures(
+                HighlightFeatureFlags(
+                    syntaxHighlight = false,
+                    indentGuides = false,
+                    bracketGuides = false,
+                    matchedBrackets = false,
+                    rainbowBrackets = false,
+                ),
+            )
+            assertEquals(1, refreshed)
+            assertEquals(emptySet(), provider.capabilities())
+            var accepted: DecorationResult? = null
+            provider.provideDecorations(
+                DecorationContext(
+                    visibleLineRange = VisibleLineRange(0, 0),
+                    totalLineCount = 1,
+                    textChanges = emptyList(),
+                ),
+                object : DecorationReceiver {
+                    override val isCancelled: Boolean = false
+                    override fun accept(result: DecorationResult): Boolean {
+                        accepted = result
+                        return true
+                    }
+                },
+            )
+            assertEquals(DecorationApplyMode.REPLACE_RANGE, accepted?.overlaySpansMode)
+            assertEquals(emptyMap(), accepted?.overlaySpans)
+            assertEquals(DecorationApplyMode.REPLACE_RANGE, accepted?.syntaxSpansMode)
+            assertEquals(DecorationApplyMode.REPLACE_ALL, accepted?.indentGuidesMode)
+        } finally {
+            session.close()
+        }
+    }
 }

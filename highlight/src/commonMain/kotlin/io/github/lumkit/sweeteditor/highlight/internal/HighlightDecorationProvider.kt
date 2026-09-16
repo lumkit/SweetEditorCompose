@@ -12,6 +12,14 @@ internal class HighlightDecorationProvider(
 
     override fun provideDecorations(context: DecorationContext, receiver: DecorationReceiver) {
         if (session.disabled || receiver.isCancelled) return
+        if (capabilities().isEmpty()) {
+            runOnHighlightHostThread {
+                if (receiver.isCancelled) return@runOnHighlightHostThread
+                receiver.accept(session.clearingResult())
+                session.applyMatchedBrackets()
+            }
+            return
+        }
         val gen = session.generation
         session.submitAnalyze(gen) {
             if (receiver.isCancelled || gen != session.generation) return@submitAnalyze
@@ -19,6 +27,7 @@ internal class HighlightDecorationProvider(
             runOnHighlightHostThread {
                 if (receiver.isCancelled || gen != session.generation) return@runOnHighlightHostThread
                 receiver.accept(result)
+                session.applyMatchedBrackets()
             }
         }
     }

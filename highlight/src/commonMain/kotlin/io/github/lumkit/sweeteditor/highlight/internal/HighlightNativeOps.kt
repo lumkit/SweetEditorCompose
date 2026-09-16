@@ -28,6 +28,7 @@ internal interface HighlightNativeOps {
     ): IntArray?
 
     fun analyzeIndentGuidesInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
+    fun analyzeBracketPairsInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray?
 }
 
 internal object DefaultHighlightNative : HighlightNativeOps {
@@ -89,4 +90,10 @@ internal object DefaultHighlightNative : HighlightNativeOps {
         startLine: Int,
         lineCount: Int,
     ): IntArray? = NativeBridge.analyzeIndentGuidesInLineRange(analyzer, startLine, lineCount)
+
+    override fun analyzeBracketPairsInLineRange(
+        analyzer: Long,
+        startLine: Int,
+        lineCount: Int,
+    ): IntArray? = NativeBridge.analyzeBracketPairsInLineRange(analyzer, startLine, lineCount)
 }

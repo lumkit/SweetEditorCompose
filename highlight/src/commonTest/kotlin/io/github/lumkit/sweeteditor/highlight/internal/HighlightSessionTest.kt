@@ -120,4 +120,10 @@ internal class RecordingHighlightNative : HighlightNativeOps {
         startLine: Int,
         lineCount: Int,
     ): IntArray? = null
+
+    override fun analyzeBracketPairsInLineRange(
+        analyzer: Long,
+        startLine: Int,
+        lineCount: Int,
+    ): IntArray? = null
 }
