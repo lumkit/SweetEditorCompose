@@ -41,10 +41,15 @@ set(SWEETLINE_C_ABI_EXPORTS
   _sl_document_analyze_indent_guides_in_line_range
   _sl_document_analyze_bracket_pairs_in_line_range
   _sl_free_buffer
+  _sl_web_compile_json
+  _sl_web_compile_file
 )
 string(JOIN "','" SWEETLINE_C_ABI_EXPORTS_JOINED ${SWEETLINE_C_ABI_EXPORTS})
 
-add_executable(sweetline_c_abi "${SWEETLINE_HOME}/src/c_sweetline.cpp")
+add_executable(sweetline_c_abi
+  "${SWEETLINE_HOME}/src/c_sweetline.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/sl_web_status.cpp"
+)
 set_target_properties(sweetline_c_abi PROPERTIES
   OUTPUT_NAME "sweetline_c_abi"
   SUFFIX ".js"
