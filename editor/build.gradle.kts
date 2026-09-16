@@ -64,6 +64,9 @@ kotlin {
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }
+        androidResources {
+            enable = true
+        }
         withHostTest {}
         withDeviceTestBuilder {
             sourceSetTreeName = "test"

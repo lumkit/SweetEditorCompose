@@ -1,23 +1,27 @@
 # 发布物与 Maven 坐标
 
-坐标：`io.github.lumkit:sweeteditor-compose`。版本见根目录 `gradle.properties` 的 `VERSION_NAME`（当前 SNAPSHOT 可发到 Central Snapshots；正式版必须去掉 `-SNAPSHOT`）。许可证：AGPL-3.0。
+坐标：`io.github.lumkit:sweeteditor-compose` 与 `io.github.lumkit:sweetline-compose`。版本见根目录 `gradle.properties` 的 `VERSION_NAME`（当前 SNAPSHOT 可发到 Central Snapshots；正式版必须去掉 `-SNAPSHOT`）。许可证：AGPL-3.0。
 
 接入方只声明 **KMP 元数据坐标**：
 
 ```kotlin
 implementation("io.github.lumkit:sweeteditor-compose:<version>")
+implementation("io.github.lumkit:sweetline-compose:<version>")
 ```
 
-Gradle 会解析 Android / JVM / iOS / JS / Wasm 变体。Android 变体 **传递依赖** `sweeteditor-compose-android-jni`（Core `.so` + `libsweeteditor_compose.so`）。不要再拆开只引某一个平台 JAR/AAR。
+Gradle 会解析 Android / JVM / iOS / JS / Wasm 变体。Android 变体 **传递依赖** 对应的 `*-android-jni` AAR。不要再拆开只引某一个平台 JAR/AAR。
 
 | 坐标 | 内容 |
 |---|---|
-| `io.github.lumkit:sweeteditor-compose` | KMP metadata |
+| `io.github.lumkit:sweeteditor-compose` | Editor KMP metadata |
 | `…:sweeteditor-compose-android` | Android Kotlin + 传递 JNI AAR |
 | `…:sweeteditor-compose-android-jni` | `libsweeteditor.so` + `libsweeteditor_compose.so`（`arm64-v8a` / `x86_64`） |
 | `…:sweeteditor-compose-jvm` | JVM 类 + `/native/<os>-<arch>/`（Core **与** compose JNI） |
 | `…:sweeteditor-compose-iosarm64` / `iosSimulatorArm64` | klib；cinterop **静态**链入 `libsweeteditor.a` |
 | `…:sweeteditor-compose-js` / `wasm-js` | Compose `files/` + `/native/web/` 下的 C ABI 模块 |
+| `io.github.lumkit:sweetline-compose` | Highlight KMP metadata |
+| `…:sweetline-compose-android-jni` | `libsweetline.so` + `libsweetline_compose.so` |
+| `…:sweetline-compose-jvm` | JVM 类 + `/native/<os>-<arch>/`（SweetLine Core **与** compose JNI） |
 
 没有单独的 XCFramework 坐标。宿主不要再链一套 Core。
 
@@ -27,14 +31,20 @@ Gradle 会解析 Android / JVM / iOS / JS / Wasm 变体。Android 变体 **传�
 
 ```bash
 export SWEETEDITOR_HOME=../SweetEditor   # 默认也是这个相对路径
+export SWEETLINE_HOME=../SweetLine
 ./editor/scripts/prepare-release-natives.sh --host   # 本机 Core + compose JNI
-./gradlew :editor:publishToMavenLocal :editor-android-jni:publishToMavenLocal
+./highlight/scripts/prepare-release-natives.sh --host
+./gradlew \
+  :editor:publishToMavenLocal \
+  :editor-android-jni:publishToMavenLocal \
+  :highlight:publishToMavenLocal \
+  :highlight-android-jni:publishToMavenLocal
 ```
 
-- `./gradlew :editor:publish :editor-android-jni:publish` → `build/maven/`
-- SNAPSHOT 在 natives 不齐时 **警告** 仍可发到 local；非 SNAPSHOT 或缺 `-Psweeteditor.publish.requireCompleteNatives=true` 时 `verifyReleaseNatives` **失败**
+- `./gradlew :editor:publish :editor-android-jni:publish :highlight:publish :highlight-android-jni:publish` → `build/maven/`
+- SNAPSHOT 在 natives 不齐时 **警告** 仍可发到 local；非 SNAPSHOT 或缺 `-Psweeteditor.publish.requireCompleteNatives=true` / `-Psweetline.publish.requireCompleteNatives=true` 时 `verifyReleaseNatives` **失败**
 
-Android JNI AAR 需要 `editor/natives/android/<abi>/libsweeteditor.so`。本机没有 NDK 时不要发 Android 变体，或先跑 `prepare-release-natives.sh --android`。
+Android JNI AAR 需要 `editor/natives/android/<abi>/libsweeteditor.so` 与 `highlight/natives/android/<abi>/libsweetline.so`。本机没有 NDK 时不要发 Android 变体，或先跑 `prepare-release-natives.sh --android`。
 
 ## Maven Central
 
@@ -52,29 +62,30 @@ Android JNI AAR 需要 `editor/natives/android/<abi>/libsweeteditor.so`。本机
 | `SIGNING_PASSWORD` | 私钥口令 |
 
 ```bash
-# 先用 CI 或矩阵机把 editor/natives 凑齐，再：
-./gradlew :editor:verifyReleaseNatives
+# 先用 CI 或矩阵机把 editor/natives 与 highlight/natives 凑齐，再：
+./gradlew :editor:verifyReleaseNatives :highlight:verifyReleaseNatives
 ./gradlew nmcpPublishAggregationToCentralPortal
 ```
 
 SNAPSHOT 走 `nmcpPublishAggregationToCentralPortalSnapshots`。
 
-GitHub Actions：`.github/workflows/publish.yml`（`workflow_dispatch` 或 tag `v*`）。仓库 Secrets：`MAVEN_CENTRAL_USERNAME`、`MAVEN_CENTRAL_PASSWORD`、`SIGNING_KEY`、`SIGNING_PASSWORD`。勾选 “Publish to Maven Central” 才会上传；否则只构建并上传 `build/maven` artifact。
+GitHub Actions：`.github/workflows/publish.yml`（`workflow_dispatch` 或 tag `v*`）。仓库 Secrets：`MAVEN_CENTRAL_USERNAME`、`MAVEN_CENTRAL_PASSWORD`、`SIGNING_KEY`、`SIGNING_PASSWORD`。勾选 “Publish to Maven Central” 才会上传；否则只构建并上传 `build/maven` artifact。流水线会同时编 SweetEditor 与 SweetLine natives，并发布两组 Maven 坐标。
 
 ## 二进制从哪来
 
-`editor/natives/` 是打包源（Core 预编译 + 本仓库 compose JNI）。脚本：
+`editor/natives/` 与 `highlight/natives/` 是打包源（Core 预编译 + 本仓库 compose JNI）。脚本：
 
 | 脚本 | 作用 |
 |---|---|
-| `editor/scripts/prepare-release-natives.sh` | 按本机能力编排（`--host` / `--macos-x86_64` / `--ios` / `--android` / `--wasm`） |
+| `editor/scripts/prepare-release-natives.sh` | 按本机能力编排 Editor（`--host` / `--macos-x86_64` / `--ios` / `--android` / `--wasm`） |
+| `highlight/scripts/prepare-release-natives.sh` | 同样编排 SweetLine |
 | `build-host-core.sh` | 当前桌面 Core → `natives/desktop/<os>-<arch>/` |
-| `build-desktop-jni.sh` | `libsweeteditor_compose` 安装到同一目录 |
-| `build-ios-static-core.sh` | `natives/ios/*/libsweeteditor.a` |
-| `build-android-core.sh` | `natives/android/<abi>/libsweeteditor.so` |
-| `build-web-c-abi.sh` | `natives/web/sweeteditor_c_abi.{js,wasm}` |
+| `build-desktop-jni.sh` | `lib*_compose` 安装到同一目录 |
+| `build-ios-static-core.sh` | `natives/ios/*/*.a` |
+| `build-android-core.sh` | `natives/android/<abi>/*.so` |
+| `build-web-c-abi.sh` | `natives/web/*_c_abi.{js,wasm}` |
 
-CI 在 macOS / Linux / Linux ARM / Windows 上分别构建后汇合，再在 macOS 上跑 KMP `publish`（iOS cinterop 需要 Xcode）。
+CI 在 macOS / Linux / Linux ARM / Windows 上分别构建后汇合，再在 macOS 上跑 KMP `publish`（iOS cinterop 需要 Xcode）。CI checkout `FinalScave/SweetEditor` 与 `FinalScave/SweetLine`。
 
 ## 禁止
 

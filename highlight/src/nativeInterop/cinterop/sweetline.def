@@ -3,4 +3,4 @@ headerFilter = sweetline/**
 package = sweetline.cinterop
 compilerOpts = -DSWEETLINE_STATIC
 staticLibraries = libsweetline.a
-linkerOpts = -lc++
+linkerOpts = -lc++ -liconv

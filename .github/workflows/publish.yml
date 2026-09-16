@@ -17,6 +17,7 @@ on:
 
 env:
   SWEETEDITOR_HOME: ${{ github.workspace }}/.deps/SweetEditor
+  SWEETLINE_HOME: ${{ github.workspace }}/.deps/SweetLine
 
 jobs:
   natives:
@@ -32,37 +33,57 @@ jobs:
           - id: macos
             os: macos-14
             flags: --host --macos-x86_64 --ios
-            artifact_paths: |
+            editor_paths: |
               editor/natives/desktop/macos-aarch64/**
               editor/natives/desktop/macos-x86_64/**
               editor/natives/ios/**
               editor/natives/include/**
+            highlight_paths: |
+              highlight/natives/desktop/macos-aarch64/**
+              highlight/natives/desktop/macos-x86_64/**
+              highlight/natives/ios/**
+              highlight/natives/include/**
           - id: linux-x64
             os: ubuntu-22.04
             flags: --host --android --wasm
-            artifact_paths: |
+            editor_paths: |
               editor/natives/desktop/linux-x86_64/**
               editor/natives/android/**
               editor/natives/web/**
               editor/natives/include/**
+            highlight_paths: |
+              highlight/natives/desktop/linux-x86_64/**
+              highlight/natives/android/**
+              highlight/natives/web/**
+              highlight/natives/include/**
           - id: linux-arm
             os: ubuntu-24.04-arm
             flags: --host
-            artifact_paths: |
+            editor_paths: |
               editor/natives/desktop/linux-aarch64/**
               editor/natives/include/**
+            highlight_paths: |
+              highlight/natives/desktop/linux-aarch64/**
+              highlight/natives/include/**
           - id: windows
             os: windows-2022
             flags: --host
-            artifact_paths: |
+            editor_paths: |
               editor/natives/desktop/windows-x86_64/**
               editor/natives/include/**
+            highlight_paths: |
+              highlight/natives/desktop/windows-x86_64/**
+              highlight/natives/include/**
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           repository: FinalScave/SweetEditor
           path: .deps/SweetEditor
+      - uses: actions/checkout@v4
+        with:
+          repository: FinalScave/SweetLine
+          path: .deps/SweetLine
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -89,12 +110,18 @@ jobs:
         env:
           ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          chmod +x editor/scripts/*.sh
+          chmod +x editor/scripts/*.sh highlight/scripts/*.sh
           ./editor/scripts/prepare-release-natives.sh ${{ matrix.flags }}
+          ./highlight/scripts/prepare-release-natives.sh ${{ matrix.flags }}
       - uses: actions/upload-artifact@v4
         with:
-          name: natives-${{ matrix.id }}
-          path: ${{ matrix.artifact_paths }}
+          name: natives-editor-${{ matrix.id }}
+          path: ${{ matrix.editor_paths }}
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: natives-highlight-${{ matrix.id }}
+          path: ${{ matrix.highlight_paths }}
           if-no-files-found: error
 
   publish:
@@ -110,11 +137,20 @@ jobs:
         with:
           repository: FinalScave/SweetEditor
           path: .deps/SweetEditor
+      - uses: actions/checkout@v4
+        with:
+          repository: FinalScave/SweetLine
+          path: .deps/SweetLine
       - uses: actions/download-artifact@v4
         with:
-          pattern: natives-*
+          pattern: natives-editor-*
           merge-multiple: true
           path: editor/natives
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: natives-highlight-*
+          merge-multiple: true
+          path: highlight/natives
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -125,13 +161,19 @@ jobs:
       - name: Verify natives and publish to build/maven
         env:
           ORG_GRADLE_PROJECT_sweetEditor.home: .deps/SweetEditor
+          ORG_GRADLE_PROJECT_sweetLine.home: .deps/SweetLine
         run: |
           ./gradlew --no-daemon \
             -Psweeteditor.publish.requireCompleteNatives=true \
+            -Psweetline.publish.requireCompleteNatives=true \
             -PsweetEditor.home=.deps/SweetEditor \
+            -PsweetLine.home=.deps/SweetLine \
             :editor:verifyReleaseNatives \
+            :highlight:verifyReleaseNatives \
             :editor:publish \
-            :editor-android-jni:publish
+            :editor-android-jni:publish \
+            :highlight:publish \
+            :highlight-android-jni:publish
       - name: Upload Maven Central Portal deployment
         if: ${{ github.event_name == 'push' || inputs.publish_central }}
         env:
@@ -141,6 +183,7 @@ jobs:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
           ORG_GRADLE_PROJECT_sweetEditor.home: .deps/SweetEditor
+          ORG_GRADLE_PROJECT_sweetLine.home: .deps/SweetLine
         run: |
           if [[ -z "${MAVEN_CENTRAL_USERNAME:-}" || -z "${SIGNING_KEY:-}" ]]; then
             echo "Central secrets are missing; skip Portal upload."
@@ -155,7 +198,9 @@ jobs:
           fi
           ./gradlew --no-daemon \
             -Psweeteditor.publish.requireCompleteNatives=true \
+            -Psweetline.publish.requireCompleteNatives=true \
             -PsweetEditor.home=.deps/SweetEditor \
+            -PsweetLine.home=.deps/SweetLine \
             "$TASK"
       - uses: actions/upload-artifact@v4
         with:
