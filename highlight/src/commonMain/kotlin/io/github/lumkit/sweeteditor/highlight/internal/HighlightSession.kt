@@ -1,0 +1,160 @@
+package io.github.lumkit.sweeteditor.highlight.internal
+
+import io.github.lumkit.sweeteditor.CursorChangedEvent
+import io.github.lumkit.sweeteditor.DocumentLoadedEvent
+import io.github.lumkit.sweeteditor.SweetEditorController
+import io.github.lumkit.sweeteditor.TextChangedEvent
+import io.github.lumkit.sweeteditor.TextPosition
+import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+
+internal class HighlightSession(
+    private val native: HighlightNativeOps,
+    private val requestRefresh: () -> Unit = {},
+    private val bindingId: String,
+    private val tabSize: Int = 4,
+    descriptor: HighlightDocumentDescriptor = HighlightDocumentDescriptor(),
+) {
+    private val mirror = TextMirror()
+    private val mapping = PositionMapping(mirror)
+    private val patches = ArrayDeque<PendingPatch>()
+    private val subscriptions = ArrayList<() -> Unit>()
+    private val analyzeQueue = SerialAnalyzeQueue { generation }
+
+    private var controller: SweetEditorController? = null
+    private var closed = false
+    private var engine = 0L
+    private var document = 0L
+    private var analyzer = 0L
+    private var userDisabled = false
+
+    var generation: Int = 0
+        private set
+
+    var uri: String = uriFor(descriptor)
+        private set
+
+    var lastCursor: TextPosition? = null
+        private set
+
+    var disabled: Boolean
+        get() = userDisabled || closed || !native.isAvailable
+        set(value) {
+            userDisabled = value
+        }
+
+    fun bind(controller: SweetEditorController) {
+        check(!closed) { "HighlightSession is closed" }
+        unbindEvents()
+        this.controller = controller
+        subscriptions += controller.onTextChanged(::onTextChanged)
+        subscriptions += controller.onDocumentLoaded(::onDocumentLoaded)
+        subscriptions += controller.onCursorChanged(::onCursorChanged)
+    }
+
+    fun start() {
+        if (closed) return
+        rebuildOnLoad(controller?.getDocument()?.text.orEmpty())
+    }
+
+    fun onTextChanged(event: TextChangedEvent) {
+        if (closed) return
+        for (change in event.changes) {
+            patches += mirror.encodePatch(change, mapping)
+            val dirtyFrom = change.range.start.line
+            mirror.apply(change)
+            mapping.invalidateFrom(dirtyFrom)
+        }
+        generation += 1
+        requestRefresh()
+    }
+
+    fun onDocumentLoaded(@Suppress("UNUSED_PARAMETER") event: DocumentLoadedEvent) {
+        if (closed) return
+        rebuildOnLoad(controller?.getDocument()?.text.orEmpty())
+        requestRefresh()
+    }
+
+    fun onCursorChanged(event: CursorChangedEvent) {
+        if (closed) return
+        lastCursor = event.cursorPosition
+    }
+
+    fun rebuildOnLoad(text: String) {
+        if (closed) return
+        patches.clear()
+        mirror.setText(text)
+        mapping.invalidateFrom(0)
+        generation += 1
+        if (!native.isAvailable) return
+        ensureEngine()
+        releaseDocument()
+        val created = native.createDocument(uri, text)
+        document = created
+        analyzer = if (created == 0L) 0L else native.loadDocument(engine, created)
+    }
+
+    fun drainPatches(visibleStartLine: Int, visibleLineCount: Int): IntArray? {
+        if (analyzer == 0L) {
+            patches.clear()
+            return null
+        }
+        var last: IntArray? = null
+        while (patches.isNotEmpty()) {
+            val patch = patches.removeFirst()
+            last = native.analyzeIncrementalInLineRange(
+                analyzer,
+                patch.slStartLine,
+                patch.slStartColumn,
+                patch.slEndLine,
+                patch.slEndColumn,
+                patch.newText,
+                visibleStartLine,
+                visibleLineCount,
+            )
+        }
+        return last
+    }
+
+    fun pendingPatches(): List<PendingPatch> = patches.toList()
+
+    fun close() {
+        if (closed) return
+        closed = true
+        unbindEvents()
+        patches.clear()
+        releaseDocument()
+        if (engine != 0L) {
+            native.freeEngine(engine)
+            engine = 0L
+        }
+        analyzeQueue.close()
+    }
+
+    private fun ensureEngine() {
+        if (engine == 0L) {
+            engine = native.createEngine(tabSize)
+        }
+    }
+
+    private fun releaseDocument() {
+        if (analyzer != 0L) {
+            native.freeDocumentAnalyzer(analyzer)
+            analyzer = 0L
+        }
+        if (uri.isNotEmpty() && engine != 0L) {
+            native.removeDocument(engine, uri)
+        }
+        if (document != 0L) {
+            native.freeDocument(document)
+            document = 0L
+        }
+    }
+
+    private fun unbindEvents() {
+        subscriptions.forEach { unsubscribe -> unsubscribe() }
+        subscriptions.clear()
+    }
+
+    private fun uriFor(descriptor: HighlightDocumentDescriptor): String =
+        descriptor.fileName ?: "sweetline-compose://session/$bindingId"
+}
