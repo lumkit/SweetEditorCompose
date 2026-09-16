@@ -1,0 +1,287 @@
+{
+  "name": "python",
+  "fileSuffixes": [".py", ".pyi", ".pyw"],
+  "variables": {
+    "identifier": "[a-zA-Z_]\\w*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "fragments": {
+    "urlRule": [
+      {
+        "pattern": "(?:(?:https?|ftp)://|www\\.)[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]*[A-Za-z0-9_~/#@%=+-]",
+        "style": "url"
+      }
+    ],
+    "doubleQuotedStringRule": [
+      {
+        "pattern": "([rRbBuU]{0,2}\")((?:[^\"\\\\]|\\\\.)*)(\")",
+        "styles": [1, "string", 3, "string"],
+        "subStates": [2, "shortStringContent"]
+      }
+    ],
+    "singleQuotedStringRule": [
+      {
+        "pattern": "([rRbBuU]{0,2}')((?:[^'\\\\]|\\\\.)*)(')",
+        "styles": [1, "string", 3, "string"],
+        "subStates": [2, "shortStringContent"]
+      }
+    ],
+    "lineCommentRule": [
+      {
+        "pattern": "(#)(.*)",
+        "styles": [1, "comment", 2, "comment"],
+        "subStates": [2, "lineCommentContent"]
+      }
+    ],
+    "stringEscapeRule": [
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      }
+    ],
+    "stringInterpolationExprRule": [
+      {
+        "pattern": "\\{[^}]*\\}",
+        "style": "annotation"
+      }
+    ],
+    "stringAnyCharRule": [
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "\\b(class)\\b${whiteSpace}+(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "keyword", 2, "class", 3, "punctuation"]
+      },
+      {
+        "pattern": "\\b(class)\\b${whiteSpace}+(${identifier})",
+        "styles": [1, "keyword", 2, "class"]
+      },
+      {
+        "pattern": "\\b(async)\\b${whiteSpace}+(def)\\b${whiteSpace}+(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "keyword", 2, "keyword", 3, "method", 4, "punctuation"],
+        "state": "funcParams"
+      },
+      {
+        "pattern": "\\b(def)\\b${whiteSpace}+(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "keyword", 2, "method", 3, "punctuation"],
+        "state": "funcParams"
+      },
+      {
+        "pattern": "\\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(True|False|None)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "\\b(int|float|str|bool|list|dict|tuple|set|frozenset|bytes|bytearray|memoryview|complex|range|type|object)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "\\b(super|print|len|enumerate|zip|map|filter|sorted|reversed|isinstance|issubclass|hasattr|getattr|setattr|delattr|property|staticmethod|classmethod|abs|all|any|bin|hex|oct|chr|ord|format|id|input|iter|next|open|pow|repr|round|slice|vars|dir|help|hash|callable|compile|eval|exec)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "(@)(${identifier}(?:\\.${identifier})*)",
+        "styles": [1, "punctuation", 2, "annotation"]
+      },
+      {
+        "pattern": "(${identifier})(\\.)(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "variable", 2, "punctuation", 3, "method", 4, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})(\\.)(${identifier})",
+        "styles": [1, "variable", 2, "punctuation", 3, "variable"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "method", 2, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(:)${whiteSpace}*(${identifier})",
+        "styles": [1, "variable", 2, "punctuation", 3, "class"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*([=])(?!=)",
+        "styles": [1, "variable", 2, "punctuation"]
+      },
+      {
+        "pattern": "\"\"\"",
+        "style": "string",
+        "state": "tripleDoubleString"
+      },
+      {
+        "pattern": "'''",
+        "style": "string",
+        "state": "tripleSingleString"
+      },
+      {
+        "pattern": "[fF]\"",
+        "style": "string",
+        "state": "fDoubleString"
+      },
+      {
+        "pattern": "[fF]'",
+        "style": "string",
+        "state": "fSingleString"
+      },
+      {
+        "includes": ["doubleQuotedStringRule", "singleQuotedStringRule"]
+      },
+      {
+        "pattern": "\\b0[xX][0-9a-fA-F_]+[jJ]?\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b0[oO][0-7_]+\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b0[bB][01_]+\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b(?:[0-9][0-9_]*\\.?[0-9_]*(?:[eE][+-]?[0-9_]+)?[jJ]?)\\b",
+        "style": "number"
+      },
+      {
+        "include": "lineCommentRule"
+      },
+      {
+        "pattern": "->|\\*\\*|//|<<|>>|<=|>=|==|!=|:=|[.()\\[\\]@%^&|+\\-*/<>=,{};:~]",
+        "style": "punctuation"
+      }
+    ],
+    "funcParams": [
+      {
+        "pattern": "\\)",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "(\\*\\*|\\*)${whiteSpace}*(${identifier})",
+        "styles": [1, "punctuation", 2, "variable"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(:)${whiteSpace}*(${identifier})",
+        "styles": [1, "variable", 2, "punctuation", 3, "class"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*([=])",
+        "styles": [1, "variable", 2, "punctuation"]
+      },
+      {
+        "pattern": "\\b(True|False|None)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "\\b(?:[0-9][0-9_]*\\.?[0-9_]*(?:[eE][+-]?[0-9_]+)?[jJ]?)\\b",
+        "style": "number"
+      },
+      {
+        "includes": ["doubleQuotedStringRule", "singleQuotedStringRule"]
+      },
+      {
+        "pattern": "${identifier}",
+        "style": "variable"
+      },
+      {
+        "pattern": "[,\\[\\]()=*]",
+        "style": "punctuation"
+      },
+      {
+        "onLineEndState": "default"
+      }
+    ],
+    "tripleDoubleString": [
+      {
+        "pattern": "\"\"\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "includes": ["urlRule", "stringEscapeRule", "stringInterpolationExprRule", "stringAnyCharRule"]
+      }
+    ],
+    "tripleSingleString": [
+      {
+        "pattern": "'''",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "includes": ["urlRule", "stringEscapeRule", "stringInterpolationExprRule", "stringAnyCharRule"]
+      }
+    ],
+    "fDoubleString": [
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "includes": ["urlRule", "stringInterpolationExprRule", "stringEscapeRule", "stringAnyCharRule"]
+      },
+      {
+        "onLineEndState": "default"
+      }
+    ],
+    "fSingleString": [
+      {
+        "pattern": "'",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "includes": ["urlRule", "stringInterpolationExprRule", "stringEscapeRule", "stringAnyCharRule"]
+      },
+      {
+        "onLineEndState": "default"
+      }
+    ],
+    "shortStringContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "include": "stringAnyCharRule"
+      }
+    ],
+    "lineCommentContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ]
+  },
+  "scopeRules": {
+    "skips": [
+      { "kind": "lineComment", "start": "#" },
+      { "kind": "string", "start": "\"\"\"", "end": "\"\"\"", "multiLine": true },
+      { "kind": "string", "start": "'''", "end": "'''", "multiLine": true },
+      { "kind": "string", "start": "\"", "end": "\"", "escape": "\\" },
+      { "kind": "string", "start": "'", "end": "'", "escape": "\\" }
+    ],
+    "rules": [
+      { "kind": "indentStart", "start": ":" }
+    ]
+  },
+  "bracketRules": {
+    "pairs": [
+      { "start": "(", "end": ")" },
+      { "start": "[", "end": "]" },
+      { "start": "{", "end": "}" }
+    ]
+  }
+}

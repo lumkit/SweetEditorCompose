@@ -1,0 +1,143 @@
+{
+  "name": "html",
+  "fileSuffixes": [".html", ".htm", ".xhtml"],
+  "variables": {
+    "identifier": "[a-zA-Z_][a-zA-Z0-9_\\-]*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "(<!)(DOCTYPE)([^>]*)(>)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "string", 4, "punctuation"]
+      },
+      {
+        "pattern": "<!--",
+        "style": "comment",
+        "state": "htmlComment"
+      },
+      {
+        "pattern": "(<)(script)((?:\\s[^>]*)?)(>)",
+        "styles": [1, "punctuation", 2, "keyword", 4, "punctuation"],
+        "state": "scriptContent"
+      },
+      {
+        "pattern": "(<)(style)((?:\\s[^>]*)?)(>)",
+        "styles": [1, "punctuation", 2, "keyword", 4, "punctuation"],
+        "state": "styleContent"
+      },
+      {
+        "pattern": "(</?)(${identifier})",
+        "styles": [1, "punctuation", 2, "keyword"],
+        "state": "tagInner"
+      },
+      {
+        "pattern": "&[a-zA-Z]+;|&#[0-9]+;|&#x[0-9a-fA-F]+;",
+        "style": "annotation"
+      }
+    ],
+    "tagInner": [
+      {
+        "pattern": "(${identifier})${whiteSpace}*(=)${whiteSpace}*(\"[^\"]*\")",
+        "styles": [1, "annotation", 2, "punctuation", 3, "string"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(=)${whiteSpace}*('[^']*')",
+        "styles": [1, "annotation", 2, "punctuation", 3, "string"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(=)",
+        "styles": [1, "annotation", 2, "punctuation"]
+      },
+      {
+        "pattern": "${identifier}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "/?>",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "onLineEndState": "tagInner"
+      }
+    ],
+    "scriptContent": [
+      {
+        "pattern": "(</)${whiteSpace}*(script)${whiteSpace}*(>)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "punctuation"],
+        "state": "default"
+      },
+      {
+        "importSyntax": "javascript"
+      }
+    ],
+    "styleContent": [
+      {
+        "pattern": "(</)${whiteSpace}*(style)${whiteSpace}*(>)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "punctuation"],
+        "state": "default"
+      },
+      {
+        "pattern": "\"(?:[^\"\\\\]|\\\\.)*\"",
+        "style": "string"
+      },
+      {
+        "pattern": "'(?:[^'\\\\]|\\\\.)*'",
+        "style": "string"
+      },
+      {
+        "pattern": "/\\*",
+        "style": "comment",
+        "state": "cssComment"
+      },
+      {
+        "pattern": "(#[0-9a-fA-F]{3,8})\\b",
+        "styles": [1, "number"]
+      },
+      {
+        "pattern": "\\b([0-9]+\\.?[0-9]*)(px|em|rem|%|vh|vw|vmin|vmax|pt|cm|mm|in|pc|ex|ch|fr|deg|rad|grad|turn|s|ms|Hz|kHz|dpi|dpcm|dppx)?\\b",
+        "styles": [1, "number", 2, "keyword"]
+      },
+      {
+        "pattern": "([a-zA-Z\\-]+)${whiteSpace}*(:)",
+        "styles": [1, "variable", 2, "punctuation"]
+      },
+      {
+        "pattern": "[.#]${identifier}",
+        "style": "selector"
+      },
+      {
+        "pattern": "[{}();:,]",
+        "style": "punctuation"
+      },
+      {
+        "pattern": "${any}",
+        "style": "variable"
+      }
+    ],
+    "htmlComment": [
+      {
+        "pattern": "-->",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "cssComment": [
+      {
+        "pattern": "\\*/",
+        "style": "comment",
+        "state": "styleContent"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ]
+  }
+}

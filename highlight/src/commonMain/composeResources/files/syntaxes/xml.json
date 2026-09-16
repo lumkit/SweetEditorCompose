@@ -1,0 +1,104 @@
+{
+  "name": "xml",
+  "fileSuffixes": [".xml", ".xsl", ".xslt", ".xsd", ".dtd", ".plist", ".wsdl", ".rss", ".atom", ".xaml", ".csproj", ".fsproj", ".vbproj", ".props", ".targets", ".nuspec", ".resx", ".axml", ".storyboard", ".xib"],
+  "variables": {
+    "identifier": "[a-zA-Z_][a-zA-Z0-9_\\-:.]*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "(<\\?)(xml)((?:\\s[^?]*)?)(\\?>)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "annotation", 4, "punctuation"]
+      },
+      {
+        "pattern": "<!--",
+        "style": "comment",
+        "state": "xmlComment"
+      },
+      {
+        "pattern": "(<!)\\[CDATA\\[",
+        "styles": [1, "punctuation"],
+        "state": "cdata"
+      },
+      {
+        "pattern": "(<!)(DOCTYPE)",
+        "styles": [1, "punctuation", 2, "keyword"],
+        "state": "doctype"
+      },
+      {
+        "pattern": "(</?)(${identifier})",
+        "styles": [1, "punctuation", 2, "keyword"],
+        "state": "tagInner"
+      },
+      {
+        "pattern": "&[a-zA-Z]+;|&#[0-9]+;|&#x[0-9a-fA-F]+;",
+        "style": "annotation"
+      }
+    ],
+    "tagInner": [
+      {
+        "pattern": "(${identifier})${whiteSpace}*(=)${whiteSpace}*(\"[^\"]*\")",
+        "styles": [1, "annotation", 2, "punctuation", 3, "string"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(=)${whiteSpace}*('[^']*')",
+        "styles": [1, "annotation", 2, "punctuation", 3, "string"]
+      },
+      {
+        "pattern": "${identifier}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "/?>",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "onLineEndState": "tagInner"
+      }
+    ],
+    "xmlComment": [
+      {
+        "pattern": "-->",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "cdata": [
+      {
+        "pattern": "\\]\\]>",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "doctype": [
+      {
+        "pattern": ">",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "\"[^\"]*\"",
+        "style": "string"
+      },
+      {
+        "pattern": "'[^']*'",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "keyword"
+      }
+    ]
+  }
+}

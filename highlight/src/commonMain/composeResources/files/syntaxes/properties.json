@@ -1,0 +1,127 @@
+{
+  "name": "properties",
+  "fileSuffixes": [".properties"],
+  "variables": {
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "fragments": {
+    "urlRule": [
+      {
+        "pattern": "(?:(?:https?|ftp)://|www\\.)[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]*[A-Za-z0-9_~/#@%=+-]",
+        "style": "url"
+      }
+    ],
+    "placeholderRule": [
+      {
+        "pattern": "(\\$\\{)([^}]+)(\\})",
+        "styles": [1, "punctuation", 2, "variable", 3, "punctuation"]
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "^${whiteSpace}*([#!])(.*)$",
+        "styles": [1, "comment", 2, "comment"],
+        "subStates": [2, "lineCommentContent"]
+      },
+      {
+        "pattern": "^${whiteSpace}*((?:\\\\.|[^:=\\s\\\\])(?:\\\\.|[^:=])*)(${whiteSpace}*[=:])(.*)$",
+        "styles": [1, "keyword", 2, "punctuation"],
+        "subStates": [1, "keyContent", 3, "valueContent"]
+      },
+      {
+        "pattern": "^${whiteSpace}*((?:\\\\.|[^:=\\s\\\\])(?:\\\\.|[^:=])*)(${whiteSpace}+)([^#!].*)$",
+        "styles": [1, "keyword"],
+        "subStates": [1, "keyContent", 3, "valueContent"]
+      }
+    ],
+    "keyContent": [
+      {
+        "pattern": "\\\\u[0-9a-fA-F]{4}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "keyword"
+      },
+      {
+        "pattern": "${any}",
+        "style": "keyword"
+      }
+    ],
+    "lineCommentContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "valueContent": [
+      {
+        "includes": ["placeholderRule", "urlRule"]
+      },
+      {
+        "pattern": "\\\\u[0-9a-fA-F]{4}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\b(true|false|on|off|yes|no)\\b",
+        "style": "builtin"
+      },
+      {
+        "pattern": "[-+]?(?:0[xX][0-9A-Fa-f]+|\\d+\\.\\d+|\\d+)",
+        "style": "number"
+      },
+      {
+        "pattern": "\\\\$",
+        "style": "annotation",
+        "state": "continuedValue"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "continuedValue": [
+      {
+        "includes": ["placeholderRule", "urlRule"]
+      },
+      {
+        "pattern": "\\\\u[0-9a-fA-F]{4}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\b(true|false|on|off|yes|no)\\b",
+        "style": "builtin"
+      },
+      {
+        "pattern": "[-+]?(?:0[xX][0-9A-Fa-f]+|\\d+\\.\\d+|\\d+)",
+        "style": "number"
+      },
+      {
+        "pattern": "\\\\$",
+        "style": "annotation",
+        "state": "continuedValue"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      },
+      {
+        "onLineEndState": "default"
+      }
+    ]
+  }
+}

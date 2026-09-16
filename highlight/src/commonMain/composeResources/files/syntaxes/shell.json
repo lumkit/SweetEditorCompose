@@ -1,0 +1,340 @@
+{
+  "name": "shell",
+  "fileSuffixes": [".sh", ".bash", ".zsh", ".ksh", ".csh", ".fish"],
+  "variables": {
+    "identifier": "[a-zA-Z_]\\w*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "fragments": {
+    "urlRule": [
+      {
+        "pattern": "(?:(?:https?|ftp)://|www\\.)[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]*[A-Za-z0-9_~/#@%=+-]",
+        "style": "url"
+      }
+    ],
+    "bracedVariableRule": [
+      {
+        "pattern": "(\\$\\{)([^}]*)(\\})",
+        "styles": [1, "punctuation", 2, "variable", 3, "punctuation"]
+      }
+    ],
+    "simpleVariableRule": [
+      {
+        "pattern": "(\\$)(${identifier})",
+        "styles": [1, "punctuation", 2, "variable"]
+      }
+    ],
+    "specialVariableRule": [
+      {
+        "pattern": "(\\$)([@*#?\\-!$0-9])",
+        "styles": [1, "punctuation", 2, "variable"]
+      }
+    ],
+    "singleQuotedStringRule": [
+      {
+        "pattern": "(')([^']*)(')",
+        "styles": [1, "string", 3, "string"],
+        "subStates": [2, "singleQuotedStringContent"]
+      }
+    ],
+    "doubleQuotedStringRule": [
+      {
+        "pattern": "(\")((?:[^\"\\\\]|\\\\.)*)(\")",
+        "styles": [1, "string", 3, "string"],
+        "subStates": [2, "doubleQuotedStringContent"]
+      }
+    ],
+    "lineCommentRule": [
+      {
+        "pattern": "(#)(.*)",
+        "styles": [1, "comment", 2, "comment"],
+        "subStates": [2, "lineCommentContent"]
+      }
+    ],
+    "numberLiteralRule": [
+      {
+        "pattern": "\\b(?:[0-9]+\\.?[0-9]*)\\b",
+        "style": "number"
+      }
+    ],
+    "stringAnyCharRule": [
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "^#!${any}*",
+        "style": "comment"
+      },
+      {
+        "pattern": "\\b(function)\\b${whiteSpace}+(${identifier})${whiteSpace}*(\\()(\\))",
+        "styles": [1, "keyword", 2, "method", 3, "punctuation", 4, "punctuation"]
+      },
+      {
+        "pattern": "\\b(function)\\b${whiteSpace}+(${identifier})",
+        "styles": [1, "keyword", 2, "method"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(\\()(\\))",
+        "styles": [1, "method", 2, "punctuation", 3, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})(\\+?=)",
+        "styles": [1, "variable", 2, "punctuation"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(if|then|else|elif|fi|for|while|until|do|done|case|esac|in|function|select|time|coproc)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(break|continue|return|exit|exec|eval|source|export|unset|readonly|local|declare|typeset|shift|trap|wait|set|shopt|alias|unalias)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(true|false)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(echo|printf|read|test|cd|pwd|ls|cp|mv|rm|mkdir|rmdir|touch|cat|head|tail|grep|sed|awk|find|sort|uniq|wc|cut|tr|tee|xargs|chmod|chown|chgrp|kill|ps|jobs|bg|fg|nohup|which|whereis|type|file|stat|basename|dirname|realpath|mktemp|date|sleep|expr|bc|env|printenv|getopt|getopts|tar|gzip|gunzip|curl|wget|ssh|scp|rsync|diff|make|sudo|su|apt|yum|brew|pip|npm|git|docker|systemctl|mount|umount|df|du|free|top|lsof|ping|man|help)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "include": "bracedVariableRule"
+      },
+      {
+        "pattern": "(\\$\\(\\()([^)]*)(\\)\\))",
+        "styles": [1, "punctuation", 2, "number", 3, "punctuation"]
+      },
+      {
+        "includes": ["simpleVariableRule", "specialVariableRule"]
+      },
+      {
+        "pattern": "\\$\\(",
+        "style": "punctuation",
+        "state": "commandSubstitution"
+      },
+      {
+        "pattern": "`",
+        "style": "punctuation",
+        "state": "backtickCmd"
+      },
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "doubleQuoteString"
+      },
+      {
+        "pattern": "\\$'(?:[^'\\\\]|\\\\.)*'",
+        "style": "string"
+      },
+      {
+        "include": "singleQuotedStringRule"
+      },
+      {
+        "pattern": "'",
+        "style": "string",
+        "state": "singleQuoteString"
+      },
+      {
+        "include": "numberLiteralRule"
+      },
+      {
+        "include": "lineCommentRule"
+      },
+      {
+        "pattern": "<<-?'?(\\w+)'?",
+        "style": "string",
+        "state": "heredoc"
+      },
+      {
+        "pattern": "\\|\\||&&|;;|>>|<<|\\|&|[|&;()\\[\\]{}><!=+\\-*/%~^]",
+        "style": "punctuation"
+      }
+    ],
+    "doubleQuoteString": [
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "includes": ["bracedVariableRule", "simpleVariableRule", "specialVariableRule"]
+      },
+      {
+        "pattern": "\\$\\([^)]*\\)",
+        "style": "annotation"
+      },
+      {
+        "pattern": "`[^`]*`",
+        "style": "annotation"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "include": "stringAnyCharRule"
+      }
+    ],
+    "singleQuoteString": [
+      {
+        "pattern": "'",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "include": "stringAnyCharRule"
+      }
+    ],
+    "doubleQuotedStringContent": [
+      {
+        "includes": ["bracedVariableRule", "simpleVariableRule", "specialVariableRule"]
+      },
+      {
+        "pattern": "\\$\\([^)]*\\)",
+        "style": "annotation"
+      },
+      {
+        "pattern": "`[^`]*`",
+        "style": "annotation"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "include": "stringAnyCharRule"
+      }
+    ],
+    "singleQuotedStringContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "include": "stringAnyCharRule"
+      }
+    ],
+    "lineCommentContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "commandSubstitution": [
+      {
+        "pattern": "\\)",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "(${identifier})(\\+?=)",
+        "styles": [1, "variable", 2, "punctuation"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(if|then|else|elif|fi|for|while|until|do|done|case|esac|in)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(break|continue|return|exit|exec|eval|source|export|unset|readonly|local|declare|typeset)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(true|false)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(echo|printf|read|test|cd|pwd|ls|cp|mv|rm|mkdir|rmdir|touch|cat|head|tail|grep|sed|awk|find|sort|uniq|wc|cut|tr|tee|xargs|chmod|chown|chgrp|kill|ps|basename|dirname|date|sleep|expr|bc|env|stat|which|type|file|realpath|curl|wget|sudo)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "includes": ["bracedVariableRule", "simpleVariableRule", "specialVariableRule"]
+      },
+      {
+        "pattern": "\\$\\(",
+        "style": "punctuation",
+        "state": "commandSubstitution"
+      },
+      {
+        "include": "doubleQuotedStringRule"
+      },
+      {
+        "includes": ["singleQuotedStringRule", "numberLiteralRule"]
+      },
+      {
+        "pattern": "\\|\\||&&|[|&;\\[\\]><!=+\\-*/%]",
+        "style": "punctuation"
+      }
+    ],
+    "backtickCmd": [
+      {
+        "pattern": "`",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(if|then|else|elif|fi|for|while|until|do|done|case|esac|in)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(?<![-/.\\w])\\b(echo|printf|read|test|cd|pwd|ls|cp|mv|rm|grep|sed|awk|find|sort|uniq|wc|cut|tr|cat|head|tail|date|basename|dirname|stat|which|type|expr|bc|curl|wget|sudo)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "includes": ["bracedVariableRule", "simpleVariableRule", "specialVariableRule"]
+      },
+      {
+        "include": "doubleQuotedStringRule"
+      },
+      {
+        "includes": ["singleQuotedStringRule", "numberLiteralRule"]
+      },
+      {
+        "pattern": "[|&;><]",
+        "style": "punctuation"
+      }
+    ],
+    "heredoc": [
+      {
+        "pattern": "^\\w+$",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "includes": ["bracedVariableRule", "simpleVariableRule", "urlRule", "stringAnyCharRule"]
+      }
+    ]
+  },
+  "scopeRules": {
+    "skips": [
+      { "kind": "lineComment", "start": "#" },
+      { "kind": "string", "start": "\"", "end": "\"", "escape": "\\" },
+      { "kind": "string", "start": "'", "end": "'" },
+      { "kind": "string", "start": "`", "end": "`", "escape": "\\" }
+    ],
+    "rules": [
+      { "kind": "word", "start": "do", "end": "done" },
+      { "kind": "word", "start": "then", "end": "fi", "branches": ["elif","else"] },
+      { "kind": "word", "start": "case", "end": "esac" }
+    ]
+  },
+  "bracketRules": {
+    "pairs": [
+      { "start": "(", "end": ")" },
+      { "start": "[", "end": "]" },
+      { "start": "{", "end": "}" }
+    ]
+  }
+}

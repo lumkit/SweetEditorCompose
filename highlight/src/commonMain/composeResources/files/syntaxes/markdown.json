@@ -1,0 +1,474 @@
+{
+  "name": "markdown",
+  "fileSuffixes": [".md", ".markdown", ".mdown", ".mkd", ".genai.md"],
+  "variables": {
+    "any": "[\\S\\s]",
+    "whiteSpace": "[ \\t\\f]"
+  },
+  "fragments": {
+    "fencedCodeBlockCloseRule": [
+      {
+        "pattern": "^(```)${whiteSpace}*$",
+        "styles": [1, "punctuation"],
+        "state": "default"
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "^(#{1,6})${whiteSpace}+(.*)",
+        "styles": [1, "keyword", 2, "class"]
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(java)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockJava"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(jsx)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockJsx"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(javascript|js)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockJavaScript"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(tsx)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockTsx"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(typescript|ts)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockTypeScript"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(python|py)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockPython"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(c)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockC"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(cpp|c\\+\\+)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockCpp"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(csharp|cs|c#)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockCSharp"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(go|golang)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockGo"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(kotlin|kt)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockKotlin"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(rust|rs)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockRust"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(swift)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockSwift"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(dart)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockDart"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(lua)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockLua"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(shell|sh|bash|zsh)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockShell"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(sql)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockSql"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(html|htm)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockHtml"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(xml)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockXml"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(json)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockJson"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(yaml|yml)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockYaml"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(toml)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockToml"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(groovy)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockGroovy"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*(t|tiecode)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockTiecode"
+      },
+      {
+        "pattern": "^(```)${whiteSpace}*([a-zA-Z0-9_+-]*)${whiteSpace}*$",
+        "styles": [1, "punctuation", 2, "annotation"],
+        "state": "codeBlockPlain"
+      },
+      {
+        "pattern": "(`)([^`]+)(`)",
+        "styles": [1, "punctuation", 2, "string", 3, "punctuation"]
+      },
+      {
+        "pattern": "^(>)${whiteSpace}*(.*)",
+        "styles": [1, "keyword", 2, "comment"]
+      },
+      {
+        "pattern": "^(\\*\\*\\*|---|___)${whiteSpace}*$",
+        "style": "keyword"
+      },
+      {
+        "pattern": "^(${whiteSpace}*)([-*+])${whiteSpace}+(\\[)([ xX])(\\])",
+        "styles": [2, "punctuation", 3, "punctuation", 4, "keyword", 5, "punctuation"]
+      },
+      {
+        "pattern": "^(${whiteSpace}*)([-*+])${whiteSpace}+",
+        "styles": [2, "punctuation"]
+      },
+      {
+        "pattern": "^(${whiteSpace}*)([0-9]+)(\\.)${whiteSpace}+",
+        "styles": [2, "number", 3, "punctuation"]
+      },
+      {
+        "pattern": "<!--.*?-->",
+        "style": "comment"
+      },
+      {
+        "pattern": "<!--",
+        "style": "comment",
+        "state": "htmlComment"
+      },
+      {
+        "pattern": "(</?)([a-zA-Z][a-zA-Z0-9]*)([^>]*)(>)",
+        "styles": [1, "punctuation", 2, "annotation", 4, "punctuation"]
+      },
+      {
+        "pattern": "^(\\[)([^\\]]+)(\\]:)${whiteSpace}+(.+)",
+        "styles": [1, "punctuation", 2, "variable", 3, "punctuation", 4, "string"]
+      },
+      {
+        "pattern": "(!)?(\\[)([^\\]]*)(\\])(\\()([^)]*)(\\))",
+        "styles": [1, "keyword", 2, "punctuation", 3, "annotation", 4, "punctuation", 5, "punctuation", 6, "string", 7, "punctuation"]
+      },
+      {
+        "pattern": "(\\[\\^)([^\\]]+)(\\])",
+        "styles": [1, "punctuation", 2, "variable", 3, "punctuation"]
+      },
+      {
+        "pattern": "(\\[)([^\\]]*)(\\])(\\[)([^\\]]*)(\\])",
+        "styles": [1, "punctuation", 2, "annotation", 3, "punctuation", 4, "punctuation", 5, "variable", 6, "punctuation"]
+      },
+      {
+        "pattern": "\\\\[\\\\`*_{}\\[\\]()#+.!|~>-]",
+        "style": "string"
+      },
+      {
+        "pattern": "(\\*\\*|__)(.*?)(\\*\\*|__)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "punctuation"]
+      },
+      {
+        "pattern": "(\\*|_)(.*?)(\\*|_)",
+        "styles": [1, "punctuation", 2, "annotation", 3, "punctuation"]
+      },
+      {
+        "pattern": "(~~)(.*?)(~~)",
+        "styles": [1, "punctuation", 2, "comment", 3, "punctuation"]
+      },
+      {
+        "pattern": "https?://[^\\s<>)\\]]+",
+        "style": "string"
+      },
+      {
+        "pattern": "^\\|.*\\|${whiteSpace}*$",
+        "style": "variable",
+        "state": "table"
+      }
+    ],
+    "table": [
+      {
+        "pattern": "^(\\|[\\s:]*[-]+[\\s:]*)+\\|${whiteSpace}*$",
+        "style": "punctuation"
+      },
+      {
+        "pattern": "\\|",
+        "style": "punctuation"
+      },
+      {
+        "pattern": "(\\*\\*|__)(.*?)(\\*\\*|__)",
+        "styles": [1, "punctuation", 2, "keyword", 3, "punctuation"]
+      },
+      {
+        "pattern": "(\\*|_)(.*?)(\\*|_)",
+        "styles": [1, "punctuation", 2, "annotation", 3, "punctuation"]
+      },
+      {
+        "pattern": "(~~)(.*?)(~~)",
+        "styles": [1, "punctuation", 2, "comment", 3, "punctuation"]
+      },
+      {
+        "pattern": "(`)([^`]+)(`)",
+        "styles": [1, "punctuation", 2, "string", 3, "punctuation"]
+      },
+      {
+        "pattern": "^(?!\\|)",
+        "style": "variable",
+        "state": "default"
+      },
+      {
+        "onLineEndState": "table"
+      }
+    ],
+    "htmlComment": [
+      {
+        "pattern": "-->",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "codeBlockJava": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "java"
+      }
+    ],
+    "codeBlockJavaScript": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "javascript"
+      }
+    ],
+    "codeBlockJsx": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "jsx"
+      }
+    ],
+    "codeBlockTypeScript": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "typescript"
+      }
+    ],
+    "codeBlockTsx": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "tsx"
+      }
+    ],
+    "codeBlockPython": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "python"
+      }
+    ],
+    "codeBlockC": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "c"
+      }
+    ],
+    "codeBlockCpp": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "cpp"
+      }
+    ],
+    "codeBlockCSharp": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "csharp"
+      }
+    ],
+    "codeBlockGo": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "go"
+      }
+    ],
+    "codeBlockKotlin": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "kotlin"
+      }
+    ],
+    "codeBlockRust": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "rust"
+      }
+    ],
+    "codeBlockSwift": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "swift"
+      }
+    ],
+    "codeBlockDart": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "dart"
+      }
+    ],
+    "codeBlockLua": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "lua"
+      }
+    ],
+    "codeBlockShell": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "shell"
+      }
+    ],
+    "codeBlockSql": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "sql"
+      }
+    ],
+    "codeBlockHtml": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "html"
+      }
+    ],
+    "codeBlockXml": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "xml"
+      }
+    ],
+    "codeBlockJson": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "json"
+      }
+    ],
+    "codeBlockYaml": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "yaml"
+      }
+    ],
+    "codeBlockToml": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "toml"
+      }
+    ],
+    "codeBlockGroovy": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "groovy"
+      }
+    ],
+    "codeBlockTiecode": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "importSyntax": "tiecode"
+      }
+    ],
+    "codeBlockPlain": [
+      {
+        "include": "fencedCodeBlockCloseRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ]
+  }
+}

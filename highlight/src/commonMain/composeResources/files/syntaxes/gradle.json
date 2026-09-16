@@ -1,0 +1,270 @@
+{
+  "name": "gradle",
+  "fileNames": ["build.gradle", "settings.gradle", "init.gradle"],
+  "variables": {
+    "identifier": "[A-Za-z_$][A-Za-z0-9_$]*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "fragments": {
+    "urlRule": [
+      {
+        "pattern": "(?:(?:https?|ftp)://|www\\.)[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]*[A-Za-z0-9_~/#@%=+-]",
+        "style": "url"
+      }
+    ],
+    "lineCommentRule": [
+      {
+        "pattern": "(//)(.*)",
+        "styles": [1, "comment", 2, "comment"],
+        "subStates": [2, "lineCommentContent"]
+      }
+    ],
+    "doubleQuotedStringRule": [
+      {
+        "pattern": "(\"(?:[^\"\\\\]|\\\\.)*\")",
+        "style": "string",
+        "subStates": [1, "doubleStringContent"]
+      }
+    ],
+    "singleQuotedStringRule": [
+      {
+        "pattern": "('(?:[^'\\\\]|\\\\.)*')",
+        "style": "string",
+        "subStates": [1, "singleStringContent"]
+      }
+    ],
+    "tripleDoubleQuotedStringRule": [
+      {
+        "pattern": "\"\"\"",
+        "style": "string",
+        "state": "tripleDoubleString"
+      }
+    ],
+    "tripleSingleQuotedStringRule": [
+      {
+        "pattern": "'''",
+        "style": "string",
+        "state": "tripleSingleString"
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "\\b(plugins|repositories|dependencies|buildscript|allprojects|subprojects|tasks|sourceSets|android|publishing|configurations|pluginManagement|dependencyResolutionManagement|versionCatalogs)\\b(?=\\s*\\{)",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(def|class|interface|enum|trait)\\b${whiteSpace}+(${identifier})",
+        "styles": [1, "keyword", 2, "class"]
+      },
+      {
+        "pattern": "\\b(def)\\b${whiteSpace}+(${identifier})",
+        "styles": [1, "keyword", 2, "variable"]
+      },
+      {
+        "pattern": "\\b(true|false|null)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "\\b(project|rootProject|gradle|settings|extensions|ext|providers|logger|version|group|description|namespace|id|apply|implementation|api|compileOnly|runtimeOnly|testImplementation|testRuntimeOnly|kapt|annotationProcessor|classpath|from|into|include|exclude|rename|mavenCentral|google|gradlePluginPortal|jcenter)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "(@)(${identifier}(?:\\.${identifier})*)",
+        "styles": [1, "punctuation", 2, "annotation"]
+      },
+      {
+        "pattern": "(${identifier})(\\.)(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "variable", 2, "punctuation", 3, "method", 4, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "method", 2, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(:)",
+        "styles": [1, "property", 2, "punctuation"]
+      },
+      {
+        "pattern": "\"\"\"",
+        "style": "string",
+        "state": "tripleDoubleString"
+      },
+      {
+        "pattern": "'''",
+        "style": "string",
+        "state": "tripleSingleString"
+      },
+      {
+        "pattern": "/\\*",
+        "style": "comment",
+        "state": "longComment"
+      },
+      {
+        "pattern": "/(?![*/])(?:[^/\\\\]|\\\\.)+/",
+        "style": "string"
+      },
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "doubleString"
+      },
+      {
+        "pattern": "'",
+        "style": "string",
+        "state": "singleString"
+      },
+      {
+        "pattern": "\\b0[xX][0-9a-fA-F_]+[gGlLiIdDfF]?\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b0[bB][01_]+[gGlLiIdDfF]?\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b(?:[0-9][0-9_]*\\.?[0-9_]*(?:[eE][+-]?[0-9_]+)?[gGlLiIdDfF]?)\\b",
+        "style": "number"
+      },
+      {
+        "include": "lineCommentRule"
+      },
+      {
+        "pattern": "->|==|!=|>=|<=|\\+\\+|--|&&|\\|\\||[.()\\[\\]?!@%^&|+\\-*/<>=,{};:]",
+        "style": "punctuation"
+      }
+    ],
+    "doubleString": [
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "pattern": "\\$\\{[^}]*\\}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\$${identifier}",
+        "style": "annotation"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "singleString": [
+      {
+        "pattern": "'",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "tripleDoubleString": [
+      {
+        "pattern": "\"\"\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "pattern": "\\$\\{[^}]*\\}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\$${identifier}",
+        "style": "annotation"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "tripleSingleString": [
+      {
+        "pattern": "'''",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "lineCommentContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "longComment": [
+      {
+        "pattern": "\\*/",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ]
+  },
+  "scopeRules": {
+    "skips": [
+      { "kind": "lineComment", "start": "//" },
+      { "kind": "blockComment", "start": "/*", "end": "*/" },
+      { "kind": "string", "start": "\"", "end": "\"", "escape": "\\" },
+      { "kind": "string", "start": "'", "end": "'", "escape": "\\" },
+      { "kind": "string", "start": "`", "end": "`", "multiLine": true }
+    ],
+    "rules": [
+      { "kind": "delimiter", "start": "{", "end": "}" }
+    ]
+  },
+  "bracketRules": {
+    "pairs": [
+      { "start": "(", "end": ")" },
+      { "start": "[", "end": "]" },
+      { "start": "{", "end": "}" }
+    ]
+  }
+}

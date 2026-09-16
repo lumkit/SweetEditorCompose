@@ -27,8 +27,8 @@ val jvmNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("
 val jvmKeepRulesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmKeepRules") }
 val webNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webResources") }
 val webComposeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webComposeResources") }
-val syntaxComposeResourcesDir: Provider<Directory> = layout.buildDirectory.dir("generated/syntaxComposeResources")
 val androidJniLibsDir: Directory = layout.projectDirectory.dir("src/androidMain/jniLibs")
+val builtinSyntaxDestDir: Directory = layout.projectDirectory.dir("src/commonMain/composeResources/files/syntaxes")
 
 val builtinSyntaxFiles = listOf(
     "kotlin.json",
@@ -157,10 +157,10 @@ kotlin {
 
 val syncBuiltinSyntaxes by tasks.registering(Sync::class) {
     group = "sweetline"
-    description = "Copy the 18 built-in SweetLine syntax JSON files into composeResources."
+    description = "Copy the 18 built-in SweetLine syntax JSON files into highlight composeResources."
     val syntaxNames = builtinSyntaxFiles.toList()
     val sourceDir = File(sweetLineHome, "syntaxes")
-    into(syntaxComposeResourcesDir.map { it.dir("files/syntaxes") })
+    into(builtinSyntaxDestDir)
     from(sourceDir) {
         include(syntaxNames)
     }
@@ -598,10 +598,6 @@ publishing {
 compose {
     resources {
         packageOfResClass = "io.github.lumkit.sweeteditor.highlight.generated.resources"
-        customDirectory(
-            sourceSetName = "commonMain",
-            directoryProvider = syntaxComposeResourcesDir,
-        )
         customDirectory(
             sourceSetName = "jsMain",
             directoryProvider = webComposeResourcesDir,

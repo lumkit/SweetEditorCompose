@@ -1,0 +1,237 @@
+{
+  "name": "c",
+  "fileSuffixes": [".c", ".h"],
+  "variables": {
+    "identifier": "[a-zA-Z_]\\w*",
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "fragments": {
+    "urlRule": [
+      {
+        "pattern": "(?:(?:https?|ftp)://|www\\.)[A-Za-z0-9._~:/?#\\[\\]@!$&()*+,;=%-]*[A-Za-z0-9_~/#@%=+-]",
+        "style": "url"
+      }
+    ],
+    "doubleQuotedStringRule": [
+      {
+        "pattern": "(\")((?:[^\"\\\\]|\\\\.)*)(\")",
+        "styles": [1, "string", 3, "string"],
+        "subStates": [2, "stringContent"]
+      }
+    ],
+    "lineCommentRule": [
+      {
+        "pattern": "(//)(.*)",
+        "styles": [1, "comment", 2, "comment"],
+        "subStates": [2, "lineCommentContent"]
+      }
+    ]
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "^${whiteSpace}*(#)${whiteSpace}*(include|define|undef|ifdef|ifndef|if|elif|else|endif|pragma|error|warning|line)",
+        "styles": [1, "preprocessor", 2, "preprocessor"]
+      },
+      {
+        "pattern": "(#include)${whiteSpace}+(<)([^>]*)(>)",
+        "styles": [1, "preprocessor", 2, "string", 3, "string", 4, "string"]
+      },
+      {
+        "pattern": "(#define)${whiteSpace}+(${identifier})(\\()",
+        "styles": [1, "preprocessor", 2, "macro", 3, "punctuation"]
+      },
+      {
+        "pattern": "(#define)${whiteSpace}+(${identifier})",
+        "styles": [1, "preprocessor", 2, "macro"]
+      },
+      {
+        "pattern": "\\b[A-Z][A-Z0-9_]{2,}\\b",
+        "style": "macro"
+      },
+      {
+        "pattern": "\\b(struct|enum|union)\\b${whiteSpace}+(${identifier})${whiteSpace}*(\\{)",
+        "styles": [1, "keyword", 2, "class", 3, "punctuation"]
+      },
+      {
+        "pattern": "\\b(struct|enum|union)\\b${whiteSpace}+(${identifier})${whiteSpace}+([*]*${identifier})${whiteSpace}*([;=,)\\[\\]])",
+        "styles": [1, "keyword", 2, "class", 3, "variable", 4, "punctuation"]
+      },
+      {
+        "pattern": "\\b(struct|enum|union)\\b${whiteSpace}+(${identifier})",
+        "styles": [1, "keyword", 2, "class"]
+      },
+      {
+        "pattern": "\\b(void|char|short|int|long|float|double|signed|unsigned|bool|size_t|ssize_t|ptrdiff_t|intptr_t|uintptr_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|FILE)\\b${whiteSpace}*([*]*)${whiteSpace}*(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "keyword", 2, "punctuation", 3, "method", 4, "punctuation"],
+        "state": "methodParams"
+      },
+      {
+        "pattern": "\\b(void|char|short|int|long|float|double|signed|unsigned|bool|size_t|ssize_t|ptrdiff_t|intptr_t|uintptr_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|FILE)\\b${whiteSpace}*([*]*)${whiteSpace}*(${identifier})${whiteSpace}*([;=,)\\[\\]])",
+        "styles": [1, "keyword", 2, "punctuation", 3, "variable", 4, "punctuation"]
+      },
+      {
+        "pattern": "\\b(auto|break|case|const|continue|default|do|else|extern|for|goto|if|inline|register|restrict|return|sizeof|static|switch|typedef|volatile|while|_Alignas|_Alignof|_Atomic|_Bool|_Complex|_Generic|_Imaginary|_Noreturn|_Static_assert|_Thread_local|struct|enum|union)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(void|char|short|int|long|float|double|signed|unsigned|size_t|ssize_t|ptrdiff_t|intptr_t|uintptr_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|bool|FILE|NULL)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(true|false|NULL)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}+([*]*${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "class", 2, "method", 3, "punctuation"],
+        "state": "methodParams"
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}+([*]*${identifier})${whiteSpace}*([;=,)\\[\\]])",
+        "styles": [1, "class", 2, "variable", 3, "punctuation"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}*(\\()",
+        "styles": [1, "method", 2, "punctuation"],
+        "state": "methodParams"
+      },
+      {
+        "include": "doubleQuotedStringRule"
+      },
+      {
+        "pattern": "'(?:[^'\\\\]|\\\\.)*'",
+        "style": "string"
+      },
+      {
+        "pattern": "\\b0[xX][0-9a-fA-F]+[uUlL]*\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b0[bB][01]+[uUlL]*\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b0[0-7]+[uUlL]*\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "\\b(?:[0-9]+\\.?[0-9]*(?:[eE][+-]?[0-9]+)?[fFlLuU]*)\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "/\\*",
+        "style": "comment",
+        "state": "longComment"
+      },
+      {
+        "include": "lineCommentRule"
+      },
+      {
+        "pattern": "->|\\+\\+|--|<<|>>|<=|>=|==|!=|&&|\\|\\||[.()\\[\\]?!@%^&|+\\-*/<>=,{};:~]",
+        "style": "punctuation"
+      }
+    ],
+    "methodParams": [
+      {
+        "pattern": "\\b(void|char|short|int|long|float|double|signed|unsigned|bool|size_t|ssize_t|ptrdiff_t|intptr_t|uintptr_t|int8_t|int16_t|int32_t|int64_t|uint8_t|uint16_t|uint32_t|uint64_t|FILE)\\b${whiteSpace}*([*]*)${whiteSpace}*(${identifier})",
+        "styles": [1, "keyword", 2, "punctuation", 3, "variable"]
+      },
+      {
+        "pattern": "\\b(struct|enum|union)\\b${whiteSpace}+(${identifier})${whiteSpace}*([*]*)${whiteSpace}*(${identifier})",
+        "styles": [1, "keyword", 2, "class", 3, "punctuation", 4, "variable"]
+      },
+      {
+        "pattern": "(${identifier})${whiteSpace}+([*]*${identifier})",
+        "styles": [1, "class", 2, "variable"]
+      },
+      {
+        "pattern": "\\)",
+        "style": "punctuation",
+        "state": "default"
+      },
+      {
+        "pattern": "\\b(void|const|restrict|volatile|static|extern|inline|unsigned|signed)\\b",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(true|false|NULL)\\b",
+        "styles": [1, "builtin"]
+      },
+      {
+        "pattern": "\\b(?:[0-9]+\\.?[0-9]*(?:[eE][+-]?[0-9]+)?[fFlLuU]*)\\b",
+        "style": "number"
+      },
+      {
+        "include": "doubleQuotedStringRule"
+      },
+      {
+        "pattern": "'(?:[^'\\\\]|\\\\.)*'",
+        "style": "string"
+      },
+      {
+        "pattern": "[,\\[\\]*&]",
+        "style": "punctuation"
+      },
+      {
+        "onLineEndState": "default"
+      }
+    ],
+    "stringContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "${any}",
+        "style": "string"
+      }
+    ],
+    "lineCommentContent": [
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ],
+    "longComment": [
+      {
+        "pattern": "\\*/",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "include": "urlRule"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ]
+  },
+  "scopeRules": {
+    "skips": [
+      { "kind": "lineComment", "start": "//" },
+      { "kind": "blockComment", "start": "/*", "end": "*/" },
+      { "kind": "string", "start": "\"", "end": "\"", "escape": "\\" },
+      { "kind": "string", "start": "'", "end": "'", "escape": "\\" },
+      { "kind": "string", "start": "`", "end": "`", "multiLine": true }
+    ],
+    "rules": [
+      { "kind": "delimiter", "start": "{", "end": "}" }
+    ]
+  },
+  "bracketRules": {
+    "pairs": [
+      { "start": "(", "end": ")" },
+      { "start": "[", "end": "]" },
+      { "start": "{", "end": "}" }
+    ]
+  }
+}

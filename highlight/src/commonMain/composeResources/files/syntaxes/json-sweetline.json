@@ -1,0 +1,83 @@
+{
+  "name": "json",
+  "fileSuffixes": [".json"],
+  "variables": {
+    "whiteSpace": "[ \\t\\f]",
+    "any": "[\\S\\s]"
+  },
+  "states": {
+    "default": [
+      {
+        "pattern": "(\")([^\"]*)(\")${whiteSpace}*(:)",
+        "styles": [1, "keyword", 2, "keyword", 3, "keyword", 4, "punctuation"]
+      },
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "stringValue"
+      },
+      {
+        "pattern": "(?<![A-Za-z0-9_$])(true|false|null)(?![A-Za-z0-9_$])",
+        "styles": [1, "keyword"]
+      },
+      {
+        "pattern": "\\b(?:[0-9]*\\.?[0-9]+(?:[eE][+-]?[0-9]+)?)\\b",
+        "style": "number"
+      },
+      {
+        "pattern": "/\\*",
+        "style": "comment",
+        "state": "longComment"
+      },
+      {
+        "pattern": "//${any}*",
+        "style": "comment"
+      },
+      {
+        "pattern": "[\\[\\]{}(),:]",
+        "style": "punctuation"
+      }
+    ],
+    "stringValue": [
+      {
+        "pattern": "\\$\\{[^}]*\\}",
+        "style": "annotation"
+      },
+      {
+        "pattern": "\\\\.",
+        "style": "string"
+      },
+      {
+        "pattern": "\"",
+        "style": "string",
+        "state": "default"
+      },
+      {
+        "pattern": ".",
+        "style": "string"
+      }
+    ],
+    "longComment": [
+      {
+        "pattern": "\\*/",
+        "style": "comment",
+        "state": "default"
+      },
+      {
+        "pattern": "${any}",
+        "style": "comment"
+      }
+    ]
+  },
+  "bracketRules": {
+    "skips": [
+      { "kind": "lineComment", "start": "//" },
+      { "kind": "blockComment", "start": "/*", "end": "*/" },
+      { "kind": "string", "start": "\"", "end": "\"", "escape": "\\" }
+    ],
+    "pairs": [
+      { "start": "[", "end": "]" },
+      { "start": "{", "end": "}" }
+    ]
+  }
+}
