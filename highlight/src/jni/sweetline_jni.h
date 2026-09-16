@@ -1,2 +1,13 @@
 #pragma once
-// JNI entrypoints are added in batch 2.3.
+
+#include <jni.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* reserved);
+
+#ifdef __cplusplus
+}
+#endif

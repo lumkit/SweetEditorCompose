@@ -316,16 +316,31 @@ val configureDesktopJni by tasks.registering(Exec::class) {
     commandLine("bash", jniBuildScript.asFile.absolutePath, "configure")
 }
 
+val hostComposeJniFileName: String = when {
+    System.getProperty("os.name").orEmpty().lowercase().contains("win") -> "sweetline_compose.dll"
+    System.getProperty("os.name").orEmpty().lowercase().contains("mac") ||
+        System.getProperty("os.name").orEmpty().lowercase().contains("darwin") -> "libsweetline_compose.dylib"
+    else -> "libsweetline_compose.so"
+}
+val hostComposeJniFile = File(nativesRoot, "desktop/$hostDesktopFolder/$hostComposeJniFileName")
+
 val compileDesktopJni by tasks.registering(Exec::class) {
     group = "sweetline"
     description = "Build libsweetline_compose for the current desktop host"
     dependsOn(buildHostSweetLineCore, configureDesktopJni)
-    inputs.dir(desktopJniBuildDir)
+    inputs.files(
+        file("src/jni/CMakeLists.txt"),
+        file("src/jni/sweetline_jni.cpp"),
+        file("src/jni/sweetline_jni.h"),
+        jniBuildScript,
+    )
+    outputs.file(hostComposeJniFile)
     commandLine("bash", jniBuildScript.asFile.absolutePath, "build")
 }
 
 prepareJvmNativeResources {
     dependsOn(buildHostSweetLineCore, compileDesktopJni)
+    inputs.file(hostComposeJniFile)
     from(desktopJniBuildDir) {
         include("libsweetline_compose.dylib", "libsweetline_compose.so", "sweetline_compose.dll")
         include("Release/sweetline_compose.dll")
