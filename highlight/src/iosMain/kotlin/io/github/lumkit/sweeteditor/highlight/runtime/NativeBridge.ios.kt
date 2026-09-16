@@ -1,8 +1,5 @@
 package io.github.lumkit.sweeteditor.highlight.runtime
 
-import cnames.structs.sl_analyzer_handle
-import cnames.structs.sl_document_handle
-import cnames.structs.sl_engine_handle
 import io.github.lumkit.sweeteditor.highlight.HighlightException
 import io.github.lumkit.sweeteditor.highlight.internal.NativeLibraryLoader
 import kotlinx.cinterop.CPointed
@@ -19,6 +16,7 @@ import kotlinx.cinterop.set
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.useContents
 import sweetline.cinterop.SL_OK
+import sweetline.cinterop.sl_analyzer_handle_t
 import sweetline.cinterop.sl_create_document
 import sweetline.cinterop.sl_create_engine
 import sweetline.cinterop.sl_document_analyze_bracket_pairs_in_line_range
@@ -26,8 +24,10 @@ import sweetline.cinterop.sl_document_analyze_incremental_in_line_range
 import sweetline.cinterop.sl_document_analyze_indent_guides_in_line_range
 import sweetline.cinterop.sl_document_analyze_line_range
 import sweetline.cinterop.sl_document_get_highlight_slice
+import sweetline.cinterop.sl_document_handle_t
 import sweetline.cinterop.sl_engine_compile_file
 import sweetline.cinterop.sl_engine_compile_json
+import sweetline.cinterop.sl_engine_handle_t
 import sweetline.cinterop.sl_engine_load_document
 import sweetline.cinterop.sl_engine_register_style_name
 import sweetline.cinterop.sl_engine_remove_document
@@ -45,47 +45,44 @@ internal actual object NativeBridge {
         sl_create_engine(false, false, tabSize).toHandle()
 
     actual fun freeEngine(engine: Long) {
-        sl_free_engine(engine.toPtr())
+        sl_free_engine(engine.toEngine())
     }
 
     actual fun registerStyleName(engine: Long, name: String, styleId: Int) {
-        sl_engine_register_style_name(engine.toPtr<sl_engine_handle>(), name, styleId)
+        sl_engine_register_style_name(engine.toEngine(), name, styleId)
     }
 
     actual fun compileJson(engine: Long, json: String) {
-        throwIfFailed(sl_engine_compile_json(engine.toPtr<sl_engine_handle>(), json))
+        throwIfFailed(sl_engine_compile_json(engine.toEngine(), json))
     }
 
     actual fun compileFile(engine: Long, path: String) {
-        throwIfFailed(sl_engine_compile_file(engine.toPtr<sl_engine_handle>(), path))
+        throwIfFailed(sl_engine_compile_file(engine.toEngine(), path))
     }
 
     actual fun createDocument(uri: String, text: String): Long =
         sl_create_document(uri, text).toHandle()
 
     actual fun freeDocument(document: Long) {
-        sl_free_document(document.toPtr())
+        sl_free_document(document.toDocument())
     }
 
     actual fun loadDocument(engine: Long, document: Long): Long =
-        sl_engine_load_document(
-            engine.toPtr<sl_engine_handle>(),
-            document.toPtr<sl_document_handle>(),
-        ).toHandle()
+        sl_engine_load_document(engine.toEngine(), document.toDocument()).toHandle()
 
     actual fun removeDocument(engine: Long, uri: String) {
-        sl_engine_remove_document(engine.toPtr<sl_engine_handle>(), uri)
+        sl_engine_remove_document(engine.toEngine(), uri)
     }
 
     actual fun freeDocumentAnalyzer(analyzer: Long) {
-        sl_free_document_analyzer(analyzer.toPtr<sl_analyzer_handle>())
+        sl_free_document_analyzer(analyzer.toAnalyzer())
     }
 
     actual fun analyzeLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = memScoped {
         val range = allocArray<IntVar>(2)
         range[0] = startLine
         range[1] = lineCount
-        copyHighlightSlice(sl_document_analyze_line_range(analyzer.toPtr<sl_analyzer_handle>(), range))
+        copyHighlightSlice(sl_document_analyze_line_range(analyzer.toAnalyzer(), range))
     }
 
     actual fun analyzeIncrementalInLineRange(
@@ -108,7 +105,7 @@ internal actual object NativeBridge {
         visible[1] = visibleLineCount
         copyHighlightSlice(
             sl_document_analyze_incremental_in_line_range(
-                analyzer.toPtr<sl_analyzer_handle>(),
+                analyzer.toAnalyzer(),
                 changes,
                 newText,
                 visible,
@@ -120,7 +117,7 @@ internal actual object NativeBridge {
         val range = allocArray<IntVar>(2)
         range[0] = startLine
         range[1] = lineCount
-        copyHighlightSlice(sl_document_get_highlight_slice(analyzer.toPtr<sl_analyzer_handle>(), range))
+        copyHighlightSlice(sl_document_get_highlight_slice(analyzer.toAnalyzer(), range))
     }
 
     actual fun analyzeIndentGuidesInLineRange(analyzer: Long, startLine: Int, lineCount: Int): IntArray? = memScoped {
@@ -128,7 +125,7 @@ internal actual object NativeBridge {
         range[0] = startLine
         range[1] = lineCount
         copyIndentBuffer(
-            sl_document_analyze_indent_guides_in_line_range(analyzer.toPtr<sl_analyzer_handle>(), range),
+            sl_document_analyze_indent_guides_in_line_range(analyzer.toAnalyzer(), range),
         )
     }
 
@@ -137,7 +134,7 @@ internal actual object NativeBridge {
         range[0] = startLine
         range[1] = lineCount
         copyHighlightSlice(
-            sl_document_analyze_bracket_pairs_in_line_range(analyzer.toPtr<sl_analyzer_handle>(), range),
+            sl_document_analyze_bracket_pairs_in_line_range(analyzer.toAnalyzer(), range),
         )
     }
 }
@@ -146,10 +143,19 @@ internal actual object NativeBridge {
 private fun CPointer<*>?.toHandle(): Long = this?.rawValue?.toLong() ?: 0L
 
 @OptIn(ExperimentalForeignApi::class)
-private fun <T : CPointed> Long.toPtr(): CPointer<T>? {
+private fun Long.toOpaque(): CPointer<CPointed>? {
     if (this == 0L) return null
     return interpretCPointer(nativeNullPtr + this)
 }
+
+@OptIn(ExperimentalForeignApi::class)
+private fun Long.toEngine(): sl_engine_handle_t? = toOpaque() as sl_engine_handle_t?
+
+@OptIn(ExperimentalForeignApi::class)
+private fun Long.toDocument(): sl_document_handle_t? = toOpaque() as sl_document_handle_t?
+
+@OptIn(ExperimentalForeignApi::class)
+private fun Long.toAnalyzer(): sl_analyzer_handle_t? = toOpaque() as sl_analyzer_handle_t?
 
 @OptIn(ExperimentalForeignApi::class)
 private fun throwIfFailed(error: CValue<sl_syntax_error>) {
