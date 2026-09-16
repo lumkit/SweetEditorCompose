@@ -27,7 +27,29 @@ val jvmNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("
 val jvmKeepRulesDir: Provider<Directory> = generatedNatives.map { it.dir("jvmKeepRules") }
 val webNativeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webResources") }
 val webComposeResourcesDir: Provider<Directory> = generatedNatives.map { it.dir("webComposeResources") }
+val syntaxComposeResourcesDir: Provider<Directory> = layout.buildDirectory.dir("generated/syntaxComposeResources")
 val androidJniLibsDir: Directory = layout.projectDirectory.dir("src/androidMain/jniLibs")
+
+val builtinSyntaxFiles = listOf(
+    "kotlin.json",
+    "java.json",
+    "javascript.json",
+    "typescript.json",
+    "python.json",
+    "json-sweetline.json",
+    "xml.json",
+    "html.json",
+    "markdown.json",
+    "c.json",
+    "cpp.json",
+    "rust.json",
+    "go.json",
+    "toml.json",
+    "yaml.json",
+    "shell.json",
+    "properties.json",
+    "gradle.json",
+)
 
 kotlin {
     compilerOptions {
@@ -82,6 +104,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api(project(":editor"))
+                implementation(libs.compose.components.resources)
             }
         }
         commonTest.dependencies {
@@ -128,6 +151,24 @@ kotlin {
             dependencies {
                 implementation(libs.kotlin.test)
             }
+        }
+    }
+}
+
+val syncBuiltinSyntaxes by tasks.registering(Sync::class) {
+    group = "sweetline"
+    description = "Copy the 18 built-in SweetLine syntax JSON files into composeResources."
+    val syntaxNames = builtinSyntaxFiles.toList()
+    val sourceDir = File(sweetLineHome, "syntaxes")
+    into(syntaxComposeResourcesDir.map { it.dir("files/syntaxes") })
+    from(sourceDir) {
+        include(syntaxNames)
+    }
+    inputs.property("syntaxNames", syntaxNames)
+    doFirst {
+        val missing = syntaxNames.map { name -> File(sourceDir, name) }.filterNot { it.isFile }
+        if (missing.isNotEmpty()) {
+            error("Missing SweetLine syntax files:\n${missing.joinToString("\n")}")
         }
     }
 }
@@ -558,6 +599,10 @@ compose {
     resources {
         packageOfResClass = "io.github.lumkit.sweeteditor.highlight.generated.resources"
         customDirectory(
+            sourceSetName = "commonMain",
+            directoryProvider = syntaxComposeResourcesDir,
+        )
+        customDirectory(
             sourceSetName = "jsMain",
             directoryProvider = webComposeResourcesDir,
         )
@@ -571,6 +616,7 @@ compose {
 tasks.matching {
     val n = it.name
     n != "prepareWebComposeResources" &&
+        n != "syncBuiltinSyntaxes" &&
         (
             n.contains("ComposeResource", ignoreCase = true) ||
                 n.contains("generateResource", ignoreCase = true) ||
@@ -578,7 +624,7 @@ tasks.matching {
                 n.contains("prepareComposeResources", ignoreCase = true)
             )
 }.configureEach {
-    dependsOn(prepareWebComposeResources)
+    dependsOn(prepareWebComposeResources, syncBuiltinSyntaxes)
 }
 
 apply(from = rootProject.file("gradle/maven-publishing.gradle.kts"))
