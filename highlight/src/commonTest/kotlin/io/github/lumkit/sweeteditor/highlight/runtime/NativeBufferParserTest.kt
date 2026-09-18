@@ -60,6 +60,7 @@ class NativeBufferParserTest {
                 depth = 0,
                 isOpen = true,
                 matched = true,
+                matchState = 0,
                 partnerLine = 0,
                 partnerColumn = 5,
                 partnerLength = 1,

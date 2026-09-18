@@ -2,16 +2,29 @@ package io.github.lumkit.sweeteditor.highlight
 
 import io.github.lumkit.sweeteditor.EditorTextStyle
 import io.github.lumkit.sweeteditor.highlight.internal.HighlightStyleIds
+import io.github.lumkit.sweeteditor.highlight.internal.dimArgb
 
 data class HighlightTheme(
     val styles: Map<String, EditorTextStyle>,
     val fallback: EditorTextStyle,
     val rainbowBracketColors: List<Int>,
+    val unmatchedBracketColor: Int,
 ) {
     init {
         require(rainbowBracketColors.size == 6) { "rainbowBracketColors must contain exactly 6 colors" }
     }
     companion object {
+        // SweetLine KMP CodeView.kt BracketPalette + unmatched 0xFFFF6B6B.
+        private val OFFICIAL_RAINBOW = listOf(
+            argb(0xFF7DD3FC),
+            argb(0xFFF9A8D4),
+            argb(0xFFFDE047),
+            argb(0xFF86EFAC),
+            argb(0xFFC4B5FD),
+            argb(0xFFFDBA74),
+        )
+        private val OFFICIAL_UNMATCHED = argb(0xFFFF6B6B)
+
         fun dark(): HighlightTheme = theme(
             fallback = style(0xFFD4D4D4),
             vocab = mapOf(
@@ -32,14 +45,8 @@ data class HighlightTheme(
                 HighlightStyleIds.SELECTOR to style(0xFFD7BA7D),
                 HighlightStyleIds.URL to style(0xFF3794FF),
             ),
-            rainbow = listOf(
-                argb(0xFFE06C75),
-                argb(0xFFD19A66),
-                argb(0xFFE5C07B),
-                argb(0xFF98C379),
-                argb(0xFF61AFEF),
-                argb(0xFFC678DD),
-            ),
+            rainbow = OFFICIAL_RAINBOW,
+            unmatched = OFFICIAL_UNMATCHED,
         )
 
         fun light(): HighlightTheme = theme(
@@ -62,31 +69,31 @@ data class HighlightTheme(
                 HighlightStyleIds.SELECTOR to style(0xFF800000),
                 HighlightStyleIds.URL to style(0xFF0000EE),
             ),
-            rainbow = listOf(
-                argb(0xFFE45649),
-                argb(0xFFD19A66),
-                argb(0xFFC18401),
-                argb(0xFF50A14F),
-                argb(0xFF4078F2),
-                argb(0xFFA626A4),
-            ),
+            rainbow = OFFICIAL_RAINBOW,
+            unmatched = OFFICIAL_UNMATCHED,
         )
 
         private fun theme(
             fallback: EditorTextStyle,
             vocab: Map<String, EditorTextStyle>,
             rainbow: List<Int>,
+            unmatched: Int,
         ): HighlightTheme {
             require(rainbow.size == 6) { "rainbowBracketColors must contain exactly 6 colors" }
-            val styles = LinkedHashMap<String, EditorTextStyle>(vocab.size + rainbow.size)
+            val styles = LinkedHashMap<String, EditorTextStyle>(vocab.size + rainbow.size * 2 + 1)
             styles.putAll(vocab)
             HighlightStyleIds.RAINBOW_NAMES.forEachIndexed { index, name ->
                 styles[name] = EditorTextStyle(color = rainbow[index])
             }
+            HighlightStyleIds.RAINBOW_UNKNOWN_NAMES.forEachIndexed { index, name ->
+                styles[name] = EditorTextStyle(color = dimArgb(rainbow[index]))
+            }
+            styles[HighlightStyleIds.BRACKET_UNMATCHED_NAME] = EditorTextStyle(color = unmatched)
             return HighlightTheme(
                 styles = styles,
                 fallback = fallback,
                 rainbowBracketColors = rainbow,
+                unmatchedBracketColor = unmatched,
             )
         }
 

@@ -20,10 +20,19 @@ internal class StyleRegistry(
     }
 
     fun textStyle(styleId: Int): EditorTextStyle {
+        if (styleId == HighlightStyleIds.BRACKET_UNMATCHED) {
+            return theme.styles[HighlightStyleIds.BRACKET_UNMATCHED_NAME]
+                ?: EditorTextStyle(color = theme.unmatchedBracketColor)
+        }
         if (styleId in HighlightStyleIds.RAINBOW_0..HighlightStyleIds.RAINBOW_5) {
             val index = styleId - HighlightStyleIds.RAINBOW_0
             val name = HighlightStyleIds.RAINBOW_NAMES[index]
             return theme.styles[name] ?: EditorTextStyle(color = theme.rainbowBracketColors[index])
+        }
+        if (styleId in HighlightStyleIds.RAINBOW_UNKNOWN_0..HighlightStyleIds.RAINBOW_UNKNOWN_5) {
+            val index = styleId - HighlightStyleIds.RAINBOW_UNKNOWN_0
+            val name = HighlightStyleIds.RAINBOW_UNKNOWN_NAMES[index]
+            return theme.styles[name] ?: EditorTextStyle(color = dimArgb(theme.rainbowBracketColors[index]))
         }
         val name = HighlightStyleIds.NAME_BY_ID[styleId]
         if (name != null) {
@@ -49,4 +58,9 @@ internal class StyleRegistry(
         names.putAll(dynamicIds)
         return names
     }
+}
+
+internal fun dimArgb(color: Int, alpha: Float = 0.68f): Int {
+    val a = (alpha * 255f).toInt().coerceIn(0, 255)
+    return (a shl 24) or (color and 0x00FFFFFF)
 }

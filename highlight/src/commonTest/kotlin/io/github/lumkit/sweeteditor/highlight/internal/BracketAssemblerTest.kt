@@ -8,22 +8,19 @@ import kotlin.test.assertTrue
 
 class BracketAssemblerTest {
     @Test
-    fun nestedOpenBecomesChildOfOuterGuide() {
+    fun assembleGuidesIsEmptyLikeOfficialDemos() {
         val mirror = TextMirror()
-        mirror.setText("{ { } }")
+        mirror.setText("{\n  {\n  }\n}")
         val mapping = PositionMapping(mirror)
-        val outer = SlBracketToken(0, 0, 1, 0, isOpen = true, matched = true, 0, 6, 1)
-        val inner = SlBracketToken(0, 2, 1, 1, isOpen = true, matched = true, 0, 4, 1)
+        val outer = token(0, 0, depth = 0, partnerLine = 3)
+        val inner = token(1, 2, depth = 1, partnerLine = 2, partnerColumn = 2)
         val guides = BracketAssembler.assembleGuides(
             tokens = listOf(outer, inner),
             mapping = mapping,
             visibleStartLine = 0,
-            visibleEndLine = 0,
+            visibleEndLine = 3,
         )
-        assertEquals(2, guides.size)
-        val parent = guides.first { it.parent.column == 0 }
-        assertEquals(listOf(TextPosition(0, 2)), parent.children)
-        assertEquals(TextPosition(0, 6), parent.end)
+        assertTrue(guides.isEmpty())
     }
 
     @Test
@@ -32,7 +29,7 @@ class BracketAssemblerTest {
         mirror.setText("{    }")
         val mapping = PositionMapping(mirror)
         val host = RecordingMatchedHost()
-        val open = SlBracketToken(0, 0, 1, 0, isOpen = true, matched = true, 0, 5, 1)
+        val open = token(0, 0, depth = 0, partnerLine = 0, partnerColumn = 5)
         BracketAssembler.applyMatched(
             tokens = listOf(open),
             cursor = TextPosition(0, 0),
@@ -44,21 +41,46 @@ class BracketAssemblerTest {
     }
 
     @Test
-    fun rainbowUsesOverlayStyleIds() {
+    fun rainbowUsesOfficialDepthPaletteAndUnmatchedRed() {
         val mirror = TextMirror()
-        mirror.setText("{ }")
+        mirror.setText("{ }(")
         val mapping = PositionMapping(mirror)
         val spans = BracketAssembler.rainbowSpans(
             tokens = listOf(
-                SlBracketToken(0, 0, 1, 7, isOpen = true, matched = true, 0, 2, 1),
-                SlBracketToken(0, 2, 1, 7, isOpen = false, matched = true, 0, 0, 1),
+                token(0, 0, depth = 7, partnerLine = 0, partnerColumn = 2),
+                token(0, 2, depth = 7, isOpen = false, partnerLine = 0, partnerColumn = 0),
+                token(0, 3, depth = 0, matchState = 1, matched = false, partnerLine = -1, partnerColumn = -1),
             ),
             mapping = mapping,
         )
-        assertEquals(HighlightStyleIds.RAINBOW_0 + 1, spans[0]?.first()?.styleId)
-        assertTrue(spans[0]?.all { it.styleId == HighlightStyleIds.RAINBOW_1 } == true)
+        assertEquals(HighlightStyleIds.RAINBOW_0 + 1, spans[0]?.get(0)?.styleId)
+        assertEquals(HighlightStyleIds.RAINBOW_0 + 1, spans[0]?.get(1)?.styleId)
+        assertEquals(HighlightStyleIds.BRACKET_UNMATCHED, spans[0]?.get(2)?.styleId)
     }
 }
+
+private fun token(
+    line: Int,
+    column: Int,
+    depth: Int,
+    isOpen: Boolean = true,
+    matched: Boolean = true,
+    matchState: Int = 0,
+    partnerLine: Int,
+    partnerColumn: Int = 0,
+    partnerLength: Int = 1,
+): SlBracketToken = SlBracketToken(
+    line = line,
+    column = column,
+    length = 1,
+    depth = depth,
+    isOpen = isOpen,
+    matched = matched,
+    matchState = matchState,
+    partnerLine = partnerLine,
+    partnerColumn = partnerColumn,
+    partnerLength = partnerLength,
+)
 
 internal class RecordingMatchedHost : MatchedBracketHost {
     val setCalls = mutableListOf<List<Int>>()

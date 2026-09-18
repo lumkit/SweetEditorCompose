@@ -40,7 +40,16 @@ internal object HighlightStyleIds {
     const val RAINBOW_3 = 103
     const val RAINBOW_4 = 104
     const val RAINBOW_5 = 105
+    const val BRACKET_UNMATCHED = 106
+    const val RAINBOW_UNKNOWN_0 = 110
+    const val RAINBOW_UNKNOWN_1 = 111
+    const val RAINBOW_UNKNOWN_2 = 112
+    const val RAINBOW_UNKNOWN_3 = 113
+    const val RAINBOW_UNKNOWN_4 = 114
+    const val RAINBOW_UNKNOWN_5 = 115
     const val DYNAMIC_START = 200
+
+    const val BRACKET_UNMATCHED_NAME = "bracket_unmatched"
 
     val RAINBOW_NAMES: List<String> = listOf(
         "rainbow_0",
@@ -49,6 +58,15 @@ internal object HighlightStyleIds {
         "rainbow_3",
         "rainbow_4",
         "rainbow_5",
+    )
+
+    val RAINBOW_UNKNOWN_NAMES: List<String> = listOf(
+        "rainbow_unknown_0",
+        "rainbow_unknown_1",
+        "rainbow_unknown_2",
+        "rainbow_unknown_3",
+        "rainbow_unknown_4",
+        "rainbow_unknown_5",
     )
 
     val VOCABULARY: Map<String, Int> = linkedMapOf(
@@ -74,6 +92,13 @@ internal object HighlightStyleIds {
         RAINBOW_NAMES[3] to RAINBOW_3,
         RAINBOW_NAMES[4] to RAINBOW_4,
         RAINBOW_NAMES[5] to RAINBOW_5,
+        BRACKET_UNMATCHED_NAME to BRACKET_UNMATCHED,
+        RAINBOW_UNKNOWN_NAMES[0] to RAINBOW_UNKNOWN_0,
+        RAINBOW_UNKNOWN_NAMES[1] to RAINBOW_UNKNOWN_1,
+        RAINBOW_UNKNOWN_NAMES[2] to RAINBOW_UNKNOWN_2,
+        RAINBOW_UNKNOWN_NAMES[3] to RAINBOW_UNKNOWN_3,
+        RAINBOW_UNKNOWN_NAMES[4] to RAINBOW_UNKNOWN_4,
+        RAINBOW_UNKNOWN_NAMES[5] to RAINBOW_UNKNOWN_5,
     )
 
     val NAME_BY_ID: Map<Int, String> = VOCABULARY.entries.associate { it.value to it.key }

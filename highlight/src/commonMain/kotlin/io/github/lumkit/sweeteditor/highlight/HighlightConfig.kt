@@ -9,6 +9,8 @@ data class HighlightDocumentDescriptor(
 data class HighlightFeatureFlags(
     val syntaxHighlight: Boolean = true,
     val indentGuides: Boolean = true,
+    // Official SweetLine demos do not draw bracket *lines*; they recolor glyphs
+    // (rainbowBrackets). This flag still clears SweetEditor BracketGuide overlays.
     val bracketGuides: Boolean = true,
     val matchedBrackets: Boolean = true,
     val rainbowBrackets: Boolean = true,

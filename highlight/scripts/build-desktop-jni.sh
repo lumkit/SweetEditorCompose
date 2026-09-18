@@ -90,11 +90,16 @@ GEN_ARGS=("$CMAKE" -S "$SRC" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
 if [[ -n "${SWEETLINE_OSX_ARCH:-}" ]]; then
   GEN_ARGS+=("-DCMAKE_OSX_ARCHITECTURES=$SWEETLINE_OSX_ARCH")
 fi
+if [[ "$OS" == Darwin ]]; then
+  # shellcheck source=../../scripts/macos-cmake-sysroot.sh
+  source "$(cd "$(dirname "$0")/../.." && pwd)/scripts/macos-cmake-sysroot.sh"
+  macos_cmake_apply_sysroot "$BUILD"
+fi
 if [[ -x "${NINJA:-}" ]]; then
   GEN_ARGS+=(-G Ninja "-DCMAKE_MAKE_PROGRAM=$NINJA")
 fi
 
-if [[ "$MODE" == "configure" || "$MODE" == "all" ]]; then
+if [[ "$MODE" == "configure" || "$MODE" == "all" || ! -f "$BUILD/CMakeCache.txt" || "$OS" == Darwin ]]; then
   "${GEN_ARGS[@]}"
 fi
 if [[ "$MODE" != "configure" ]]; then

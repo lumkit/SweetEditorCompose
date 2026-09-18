@@ -104,18 +104,13 @@ private fun DemoEditor() {
     var keyMapPreset by remember { mutableStateOf(KeyMapPreset.Vscode) }
     var status by remember { mutableStateOf("loading sample…") }
     var luaSyntaxJson by remember { mutableStateOf<String?>(null) }
+    var highlightFeatures by remember { mutableStateOf(HighlightFeatureFlags()) }
     val completionProvider = remember { DemoCompletionProvider() }
     val highlight = remember {
         SweetLineHighlight(
             SweetLineHighlightConfig(
                 document = DemoSample.Kotlin.descriptor,
-                features = HighlightFeatureFlags(
-                    syntaxHighlight = true,
-                    indentGuides = false,
-                    bracketGuides = false,
-                    matchedBrackets = false,
-                    rainbowBrackets = false,
-                ),
+                features = HighlightFeatureFlags(),
             ),
         )
     }
@@ -123,6 +118,9 @@ private fun DemoEditor() {
     val theme = if (darkTheme) EditorTheme.dark() else EditorTheme.light()
     LaunchedEffect(darkTheme) {
         highlight.updateTheme(if (darkTheme) HighlightTheme.dark() else HighlightTheme.light())
+    }
+    LaunchedEffect(highlightFeatures) {
+        highlight.updateFeatures(highlightFeatures)
     }
     val settings = EditorSettings(
         wrapMode = wrapMode,
@@ -201,6 +199,44 @@ private fun DemoEditor() {
                     label = { Text(item.fileName) },
                 )
             }
+        }
+        DemoChipRow {
+            FilterChip(
+                selected = highlightFeatures.syntaxHighlight,
+                onClick = {
+                    highlightFeatures = highlightFeatures.copy(
+                        syntaxHighlight = !highlightFeatures.syntaxHighlight,
+                    )
+                },
+                label = { Text("Syntax") },
+            )
+            FilterChip(
+                selected = highlightFeatures.indentGuides,
+                onClick = {
+                    highlightFeatures = highlightFeatures.copy(
+                        indentGuides = !highlightFeatures.indentGuides,
+                    )
+                },
+                label = { Text("Indent") },
+            )
+            FilterChip(
+                selected = highlightFeatures.matchedBrackets,
+                onClick = {
+                    highlightFeatures = highlightFeatures.copy(
+                        matchedBrackets = !highlightFeatures.matchedBrackets,
+                    )
+                },
+                label = { Text("Match {}") },
+            )
+            FilterChip(
+                selected = highlightFeatures.rainbowBrackets,
+                onClick = {
+                    highlightFeatures = highlightFeatures.copy(
+                        rainbowBrackets = !highlightFeatures.rainbowBrackets,
+                    )
+                },
+                label = { Text("Rainbow") },
+            )
         }
         DemoChipRow {
             FilterChip(

@@ -131,6 +131,7 @@ internal object NativeBufferParser {
                     depth = depth,
                     isOpen = kind == 0,
                     matched = matchState == 0,
+                    matchState = matchState,
                     partnerLine = partnerLine,
                     partnerColumn = partnerColumn,
                     partnerLength = partnerLength,

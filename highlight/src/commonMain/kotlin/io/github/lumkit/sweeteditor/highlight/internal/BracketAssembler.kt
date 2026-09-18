@@ -14,33 +14,19 @@ internal interface MatchedBracketHost {
 internal object BracketAssembler {
     fun flatten(slice: SlBracketSlice): List<SlBracketToken> = slice.lines.flatten()
 
+    /**
+     * Official SweetLine KMP/Flutter/OHOS demos never draw bracket *lines*.
+     * They only recolor `()`, `[]`, `{}` glyphs (see [rainbowSpans]). SweetEditor's
+     * [BracketGuide] tree (vertical + child horizontals) is a different widget.
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun assembleGuides(
         tokens: List<SlBracketToken>,
         mapping: PositionMapping,
         visibleStartLine: Int,
         visibleEndLine: Int,
     ): List<BracketGuide> {
-        if (visibleEndLine < visibleStartLine) return emptyList()
-        val opens = tokens.filter { it.isOpen && it.matched && it.partnerLine >= 0 }
-        return opens.mapNotNull { open ->
-            val intersects =
-                open.line in visibleStartLine..visibleEndLine ||
-                    open.partnerLine in visibleStartLine..visibleEndLine
-            if (!intersects) return@mapNotNull null
-            val parent = TextPosition(open.line, mapping.toUtf16(open.line, open.column))
-            val end = TextPosition(
-                open.partnerLine,
-                mapping.toUtf16(open.partnerLine, open.partnerColumn),
-            )
-            val children = opens.mapNotNull { child ->
-                if (child === open || child.depth != open.depth + 1) return@mapNotNull null
-                if (!strictlyBetween(child.line, child.column, open.line, open.column, open.partnerLine, open.partnerColumn)) {
-                    return@mapNotNull null
-                }
-                TextPosition(child.line, mapping.toUtf16(child.line, child.column))
-            }
-            BracketGuide(parent = parent, end = end, children = children)
-        }
+        return emptyList()
     }
 
     fun rainbowSpans(
@@ -49,12 +35,12 @@ internal object BracketAssembler {
     ): Map<Int, List<StyleSpan>> {
         val byLine = LinkedHashMap<Int, MutableList<StyleSpan>>()
         tokens.forEach { token ->
-            if (!token.matched || token.length <= 0) return@forEach
+            if (token.length <= 0) return@forEach
             val start = mapping.toUtf16(token.line, token.column)
             val end = mapping.toUtf16(token.line, token.column + token.length)
             val length = end - start
             if (length <= 0) return@forEach
-            val styleId = HighlightStyleIds.RAINBOW_0 + (token.depth % 6)
+            val styleId = officialBracketStyleId(token.matchState, token.depth)
             byLine.getOrPut(token.line) { ArrayList() } += StyleSpan(start, length, styleId)
         }
         byLine.values.forEach { line -> line.sortBy { it.column } }
@@ -99,16 +85,18 @@ internal object BracketAssembler {
         host.setMatchedBrackets(openLine, openColumn, closeLine, closeColumn)
     }
 
-    private fun strictlyBetween(
-        line: Int,
-        column: Int,
-        startLine: Int,
-        startColumn: Int,
-        endLine: Int,
-        endColumn: Int,
-    ): Boolean = positionLess(startLine, startColumn, line, column) &&
-        positionLess(line, column, endLine, endColumn)
+    private fun officialBracketStyleId(matchState: Int, depth: Int): Int {
+        if (matchState == MATCH_UNMATCHED) {
+            return HighlightStyleIds.BRACKET_UNMATCHED
+        }
+        val palette = ((depth % 6) + 6) % 6
+        return if (matchState == MATCH_UNKNOWN) {
+            HighlightStyleIds.RAINBOW_UNKNOWN_0 + palette
+        } else {
+            HighlightStyleIds.RAINBOW_0 + palette
+        }
+    }
 
-    private fun positionLess(lineA: Int, columnA: Int, lineB: Int, columnB: Int): Boolean =
-        lineA < lineB || (lineA == lineB && columnA < columnB)
+    private const val MATCH_UNMATCHED = 1
+    private const val MATCH_UNKNOWN = 2
 }

@@ -32,6 +32,7 @@ internal data class SlBracketToken(
     val depth: Int,
     val isOpen: Boolean,
     val matched: Boolean,
+    val matchState: Int = 0,
     val partnerLine: Int,
     val partnerColumn: Int,
     val partnerLength: Int,
