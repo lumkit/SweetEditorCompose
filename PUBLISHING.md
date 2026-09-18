@@ -69,7 +69,7 @@ Android JNI AAR 需要 `editor/natives/android/<abi>/libsweeteditor.so` 与 `hig
 
 SNAPSHOT 走 `nmcpPublishAggregationToCentralPortalSnapshots`。
 
-GitHub Actions：`.github/workflows/publish.yml`（`workflow_dispatch` 或 tag `v*`）。仓库 Secrets：`MAVEN_CENTRAL_USERNAME`、`MAVEN_CENTRAL_PASSWORD`、`SIGNING_KEY`、`SIGNING_PASSWORD`。勾选 “Publish to Maven Central” 才会上传；否则只构建并上传 `build/maven` artifact。流水线会同时编 SweetEditor 与 SweetLine natives，并发布两组 Maven 坐标。
+GitHub Actions：`.github/workflows/publish.yml`（`workflow_dispatch` 或 tag `v*`）。仓库 Secrets：`MAVEN_CENTRAL_USERNAME`、`MAVEN_CENTRAL_PASSWORD`、`SIGNING_KEY`、`SIGNING_PASSWORD`。勾选 “Publish to Maven Central” 才会上传；否则只构建并上传 `build/maven` artifact。流水线会同时编 SweetEditor 与 SweetLine natives，并发布两组 Maven 坐标。Portal 上 **一次部署的显示名** 是 `sweeteditor-compose+sweetline-compose:<version>`（Nmcp `publicationName`），不是两条独立待发布记录；点进去看组件列表应同时有 `sweeteditor-compose*` 与 `sweetline-compose*`。
 
 ## 二进制从哪来
 

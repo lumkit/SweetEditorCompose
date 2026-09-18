@@ -24,7 +24,7 @@ nmcpAggregation {
         publishingType = providers.gradleProperty("mavenCentralPublishingType")
             .orElse(providers.environmentVariable("MAVEN_CENTRAL_PUBLISHING_TYPE"))
             .orElse("USER_MANAGED")
-        publicationName = providers.provider { "sweeteditor-compose:$version" }
+        publicationName = providers.provider { "sweeteditor-compose+sweetline-compose:$version" }
     }
 }
 
