@@ -165,7 +165,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
+        with:
+          # Google no longer publishes the legacy `tools` package that v3
+          # installed by default (`Failed to find package 'tools'`).
+          packages: platform-tools
       - name: Install CMake and Ninja
         run: brew install cmake ninja
       - name: Verify natives and publish to build/maven
