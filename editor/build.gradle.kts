@@ -523,14 +523,22 @@ private fun configureSweetEditorCinterop(target: KotlinNativeTarget) {
 }
 
 tasks.matching { it.name == "cinteropSweeteditorIosSimulatorArm64" }.configureEach {
-    dependsOn(buildIosSweetEditorStaticSimulatorArm64)
-    mustRunAfter(buildHostSweetEditorCore)
+    dependsOn(
+        buildHostSweetEditorCore,
+        buildIosSweetEditorStaticSimulatorArm64,
+        buildIosSweetEditorStaticArm64,
+    )
     inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweeteditor.a"))
+    inputs.dir(File(nativesRoot, "include/sweeteditor"))
 }
 tasks.matching { it.name == "cinteropSweeteditorIosArm64" }.configureEach {
-    dependsOn(buildIosSweetEditorStaticArm64)
-    mustRunAfter(buildHostSweetEditorCore)
+    dependsOn(
+        buildHostSweetEditorCore,
+        buildIosSweetEditorStaticSimulatorArm64,
+        buildIosSweetEditorStaticArm64,
+    )
     inputs.file(File(nativesRoot, "ios/arm64/libsweeteditor.a"))
+    inputs.dir(File(nativesRoot, "include/sweeteditor"))
 }
 
 private fun currentDesktopResourceFolder(): String {

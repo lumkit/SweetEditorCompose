@@ -576,14 +576,28 @@ private fun configureSweetLineCinterop(target: KotlinNativeTarget) {
 }
 
 tasks.matching { it.name == "cinteropSweetlineIosSimulatorArm64" }.configureEach {
-    dependsOn(buildIosSweetLineStaticSimulatorArm64, mergeIosIconvAutolinkSimulatorArm64)
-    mustRunAfter(buildHostSweetLineCore)
+    // Shared natives/include is rewritten by host + both iOS ABIs; cinterop PCH
+    // fails if a header mtime changes mid-compile.
+    dependsOn(
+        buildHostSweetLineCore,
+        buildIosSweetLineStaticSimulatorArm64,
+        buildIosSweetLineStaticArm64,
+        mergeIosIconvAutolinkSimulatorArm64,
+        mergeIosIconvAutolinkArm64,
+    )
     inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweetline.a"))
+    inputs.dir(File(nativesRoot, "include/sweetline"))
 }
 tasks.matching { it.name == "cinteropSweetlineIosArm64" }.configureEach {
-    dependsOn(buildIosSweetLineStaticArm64, mergeIosIconvAutolinkArm64)
-    mustRunAfter(buildHostSweetLineCore)
+    dependsOn(
+        buildHostSweetLineCore,
+        buildIosSweetLineStaticSimulatorArm64,
+        buildIosSweetLineStaticArm64,
+        mergeIosIconvAutolinkSimulatorArm64,
+        mergeIosIconvAutolinkArm64,
+    )
     inputs.file(File(nativesRoot, "ios/arm64/libsweetline.a"))
+    inputs.dir(File(nativesRoot, "include/sweetline"))
 }
 
 private fun currentDesktopResourceFolder(): String {
