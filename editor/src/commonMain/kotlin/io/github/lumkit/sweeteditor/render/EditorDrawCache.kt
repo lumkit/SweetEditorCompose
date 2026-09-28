@@ -17,15 +17,15 @@ import androidx.compose.ui.unit.Constraints
 internal class EditorDrawCache {
     private var baseStyle: TextStyle? = null
     private val runStyles = HashMap<StyleKey, TextStyle>(32)
-    private val lineNumbers = object : LinkedHashMap<LineKey, TextLayoutResult>(128, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<LineKey, TextLayoutResult>?) = size > 256
-    }
+    private val lineNumbers = HashMap<LineKey, TextLayoutResult>(128)
+    private val lineNumberOrder = ArrayDeque<LineKey>()
 
     fun bind(style: TextStyle) {
         if (baseStyle == style) return
         baseStyle = style
         runStyles.clear()
         lineNumbers.clear()
+        lineNumberOrder.clear()
     }
 
     fun runStyle(color: Color, fontFlags: Int): TextStyle {
@@ -43,15 +43,28 @@ internal class EditorDrawCache {
 
     fun lineNumberLayout(measurer: TextMeasurer, lineNumber: Int, color: Color): TextLayoutResult {
         val key = LineKey(lineNumber, color.value)
-        return lineNumbers.getOrPut(key) {
-            measurer.measure(
-                lineNumber.toString(),
-                runStyle(color, fontFlags = 0),
-                constraints = Constraints(),
-            )
+        lineNumbers[key]?.let { cached ->
+            lineNumberOrder.remove(key)
+            lineNumberOrder.addLast(key)
+            return cached
         }
+        val layout = measurer.measure(
+            lineNumber.toString(),
+            runStyle(color, fontFlags = 0),
+            constraints = Constraints(),
+        )
+        lineNumbers[key] = layout
+        lineNumberOrder.addLast(key)
+        while (lineNumbers.size > MaxLineNumberLayouts) {
+            lineNumbers.remove(lineNumberOrder.removeFirst())
+        }
+        return layout
     }
 
     private data class StyleKey(val color: ULong, val fontFlags: Int)
     private data class LineKey(val lineNumber: Int, val color: ULong)
+
+    private companion object {
+        const val MaxLineNumberLayouts = 256
+    }
 }
