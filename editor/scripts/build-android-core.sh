@@ -3,11 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SE="${SWEETEDITOR_HOME:-}"
-if [[ -z "$SE" ]]; then
-  echo "SWEETEDITOR_HOME is required" >&2
-  exit 1
-fi
+SE="${SWEETEDITOR_HOME:-$ROOT/native}"
 
 ABIS=("arm64-v8a" "x86_64")
 if [[ $# -gt 0 ]]; then

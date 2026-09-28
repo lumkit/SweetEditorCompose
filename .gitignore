@@ -41,6 +41,9 @@ node_modules/
 # Generated JNI staging; canonical binaries live in editor/natives/
 editor/src/androidMain/jniLibs/
 
+# In-tree SweetEditor core build output
+editor/native/build/
+
 # Python
 **/__pycache__/
 *.py[cod]

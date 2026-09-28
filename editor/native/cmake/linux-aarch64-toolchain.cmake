@@ -1,0 +1,33 @@
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+find_program(LINUX_AARCH64_GCC NAMES aarch64-linux-gnu-gcc)
+find_program(LINUX_AARCH64_GXX NAMES aarch64-linux-gnu-g++)
+find_program(LINUX_AARCH64_AR NAMES aarch64-linux-gnu-ar)
+find_program(LINUX_AARCH64_RANLIB NAMES aarch64-linux-gnu-ranlib)
+find_program(LINUX_AARCH64_STRIP NAMES aarch64-linux-gnu-strip)
+
+if(NOT LINUX_AARCH64_GCC OR NOT LINUX_AARCH64_GXX)
+    message(FATAL_ERROR "Linux aarch64 cross-compiler not found. Install gcc-aarch64-linux-gnu and g++-aarch64-linux-gnu.")
+endif()
+
+set(CMAKE_C_COMPILER "${LINUX_AARCH64_GCC}")
+set(CMAKE_CXX_COMPILER "${LINUX_AARCH64_GXX}")
+
+if(LINUX_AARCH64_AR)
+    set(CMAKE_AR "${LINUX_AARCH64_AR}")
+endif()
+
+if(LINUX_AARCH64_RANLIB)
+    set(CMAKE_RANLIB "${LINUX_AARCH64_RANLIB}")
+endif()
+
+if(LINUX_AARCH64_STRIP)
+    set(CMAKE_STRIP "${LINUX_AARCH64_STRIP}")
+endif()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

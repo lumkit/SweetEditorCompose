@@ -1,0 +1,373 @@
+//
+// Created by Scave on 2026/3/5.
+//
+#include <sweeteditor/linked_editing.h>
+#include <utf8/utf8.h>
+#include <algorithm>
+#include "internal/text_edit_utils.hpp"
+
+namespace NS_SWEETEDITOR {
+#pragma region[Class: SnippetParser]
+  /// Calculate absolute TextPosition from offset (line char offset) and insert_position
+  /// text is plain text from insert_position to the current offset
+  static TextPosition calcAbsolutePosition(const TextPosition& insert_pos, const U8String& text_before) {
+    size_t line = insert_pos.line;
+    size_t col = insert_pos.column;
+    auto it = text_before.begin();
+    while (it != text_before.end()) {
+      char ch = *it;
+      if (ch == '\n') {
+        ++line;
+        col = 0;
+        ++it;
+      } else if (ch == '\r') {
+        ++line;
+        col = 0;
+        ++it;
+        if (it != text_before.end() && *it == '\n') ++it;
+      } else {
+        uint32_t cp = utf8::next(it, text_before.end());
+        col += (cp > 0xFFFF) ? 2 : 1;
+      }
+    }
+    return {line, col};
+  }
+
+  SnippetParseResult SnippetParser::parse(const U8String& snippet_template, const TextPosition& insert_position) {
+    SnippetParseResult result;
+    U8String& plain_text = result.text;
+
+    // Temp storage: index -> (default_text, list of {offset_in_plain, length})
+    struct Occurrence {
+      size_t offset; // byte offset in plain_text
+      size_t length; // byte length of default text at that position
+    };
+    struct TabStopInfo {
+      uint32_t index;
+      U8String default_text;
+      bool has_default{false};
+      Vector<Occurrence> occurrences;
+    };
+    HashMap<uint32_t, TabStopInfo> tab_stop_map;
+
+    size_t i = 0;
+    size_t len = snippet_template.size();
+
+    while (i < len) {
+      char ch = snippet_template[i];
+
+      // Escape: \$ \\ \}
+      if (ch == '\\' && i + 1 < len) {
+        char next = snippet_template[i + 1];
+        if (next == '$' || next == '\\' || next == '}') {
+          plain_text += next;
+          i += 2;
+          continue;
+        }
+      }
+
+      // Starts with $: tab stop
+      if (ch == '$') {
+        i++; // skip $
+        if (i >= len) {
+          plain_text += '$';
+          break;
+        }
+
+        if (snippet_template[i] == '{') {
+          // ${N} or ${N:default}
+          i++; // skip {
+          // Parse number
+          U8String num_str;
+          while (i < len && snippet_template[i] >= '0' && snippet_template[i] <= '9') {
+            num_str += snippet_template[i++];
+          }
+          if (num_str.empty()) {
+            // Invalid syntax, output as-is
+            plain_text += "${";
+            continue;
+          }
+          uint32_t index = static_cast<uint32_t>(std::stoul(num_str));
+
+          U8String default_text;
+          if (i < len && snippet_template[i] == ':') {
+            // Has default text
+            i++; // skip :
+            // Read until matching } (simple handling, no nesting)
+            int brace_depth = 1;
+            while (i < len && brace_depth > 0) {
+              if (snippet_template[i] == '\\' && i + 1 < len) {
+                char esc = snippet_template[i + 1];
+                if (esc == '$' || esc == '\\' || esc == '}') {
+                  default_text += esc;
+                  i += 2;
+                  continue;
+                }
+              }
+              if (snippet_template[i] == '}') {
+                brace_depth--;
+                if (brace_depth == 0) {
+                  i++; // skip }
+                  break;
+                }
+              }
+              if (snippet_template[i] == '{') {
+                brace_depth++;
+              }
+              default_text += snippet_template[i++];
+            }
+          } else if (i < len && snippet_template[i] == '}') {
+            i++; // skip }
+          } else {
+            // Invalid syntax, output as-is
+            plain_text += "${" + num_str;
+            continue;
+          }
+
+          // Record tab stop
+          auto& info = tab_stop_map[index];
+          info.index = index;
+          // First seen default_text has priority
+          if (!info.has_default && !default_text.empty()) {
+            info.default_text = default_text;
+            info.has_default = true;
+          }
+          // Use fixed default_text (if set by earlier occurrence)
+          const U8String& text_to_insert = info.has_default ? info.default_text : default_text;
+          Occurrence occ;
+          occ.offset = plain_text.size();
+          occ.length = text_to_insert.size();
+          info.occurrences.push_back(occ);
+          plain_text += text_to_insert;
+
+        } else if (snippet_template[i] >= '0' && snippet_template[i] <= '9') {
+          // $N (short form)
+          U8String num_str;
+          while (i < len && snippet_template[i] >= '0' && snippet_template[i] <= '9') {
+            num_str += snippet_template[i++];
+          }
+          uint32_t index = static_cast<uint32_t>(std::stoul(num_str));
+
+          auto& info = tab_stop_map[index];
+          info.index = index;
+          const U8String& text_to_insert = info.has_default ? info.default_text : "";
+          Occurrence occ;
+          occ.offset = plain_text.size();
+          occ.length = text_to_insert.size();
+          info.occurrences.push_back(occ);
+          plain_text += text_to_insert;
+
+        } else {
+          // After $, if not digit and not {, output as-is
+          plain_text += '$';
+        }
+        continue;
+      }
+
+      // Normal character
+      plain_text += ch;
+      i++;
+    }
+
+    // Convert tab_stop_map to groups, sort by index (1,2,3,...,0 at end)
+    Vector<TabStopInfo*> sorted_infos;
+    for (auto& [idx, info] : tab_stop_map) {
+      sorted_infos.push_back(&info);
+    }
+    std::sort(sorted_infos.begin(), sorted_infos.end(), [](const TabStopInfo* a, const TabStopInfo* b) {
+      // Move index=0 to the end
+      if (a->index == 0 && b->index != 0) return false;
+      if (a->index != 0 && b->index == 0) return true;
+      return a->index < b->index;
+    });
+
+    for (const auto* info : sorted_infos) {
+      TabStopGroup group;
+      group.index = info->index;
+      group.default_text = info->has_default ? info->default_text : "";
+
+      for (const auto& occ : info->occurrences) {
+        // Calculate this occurrence's absolute position in document
+        U8String text_before = plain_text.substr(0, occ.offset);
+        TextPosition start = calcAbsolutePosition(insert_position, text_before);
+
+        TextPosition end;
+        if (occ.length > 0) {
+          U8String text_to_end = plain_text.substr(0, occ.offset + occ.length);
+          end = calcAbsolutePosition(insert_position, text_to_end);
+        } else {
+          end = start;
+        }
+
+        group.ranges.push_back({start, end});
+      }
+
+      result.groups.push_back(std::move(group));
+    }
+
+    return result;
+  }
+#pragma endregion
+
+#pragma region[Class: LinkedEditingSession]
+  LinkedEditingSession::LinkedEditingSession(Vector<TabStopGroup> groups)
+      : m_groups_(std::move(groups)),
+        m_current_idx_(0),
+        m_active_(true) {
+    if (m_groups_.empty()) {
+      m_active_ = false;
+    }
+  }
+
+  bool LinkedEditingSession::isActive() const {
+    return m_active_;
+  }
+
+  bool LinkedEditingSession::nextTabStop() {
+    if (!m_active_) return false;
+    if (m_current_idx_ + 1 < m_groups_.size()) {
+      m_current_idx_++;
+      return true;
+    }
+    // Reached the end ($0 or last group), session ends
+    m_active_ = false;
+    return false;
+  }
+
+  bool LinkedEditingSession::prevTabStop() {
+    if (!m_active_) return false;
+    if (m_current_idx_ > 0) {
+      m_current_idx_--;
+      return true;
+    }
+    return false;
+  }
+
+  void LinkedEditingSession::cancel() {
+    m_active_ = false;
+  }
+
+  TextPosition LinkedEditingSession::finalCursorPosition() const {
+    // $0 group is last, use its primaryRange.start as final cursor position
+    if (!m_groups_.empty()) {
+      const auto& last_group = m_groups_.back();
+      if (!last_group.ranges.empty()) {
+        return last_group.ranges[0].start;
+      }
+    }
+    return {}; // fallback
+  }
+
+  const TabStopGroup* LinkedEditingSession::currentGroup() const {
+    if (!isValidIndex()) return nullptr;
+    return &m_groups_[m_current_idx_];
+  }
+
+  const TextRange& LinkedEditingSession::primaryRange() const {
+    static const TextRange empty_range = {};
+    const TabStopGroup* group = currentGroup();
+    if (group == nullptr || group->ranges.empty()) return empty_range;
+    return group->ranges[0];
+  }
+
+  size_t LinkedEditingSession::currentGroupIndex() const {
+    return m_current_idx_;
+  }
+
+  bool LinkedEditingSession::adjustRangesForEditBatch(
+      const Vector<TextEdit>& edits, const Vector<std::optional<size_t>>& active_group_owners) {
+    if (!m_active_ || edits.size() != active_group_owners.size()) return false;
+    const TabStopGroup* current_group = currentGroup();
+    if (current_group == nullptr) return false;
+    for (const std::optional<size_t>& owner : active_group_owners) {
+      if (owner.has_value() && *owner >= current_group->ranges.size()) return false;
+    }
+
+    Vector<size_t> order;
+    order.reserve(edits.size());
+    for (size_t index = 0; index < edits.size(); ++index) {
+      if (edits[index].range.isCollapsed() && edits[index].new_text.empty()) continue;
+      order.push_back(index);
+    }
+    std::sort(order.begin(), order.end(), [&edits](size_t lhs_index, size_t rhs_index) {
+      const TextRange& lhs = edits[lhs_index].range;
+      const TextRange& rhs = edits[rhs_index].range;
+      if (lhs.start != rhs.start) return rhs.start < lhs.start;
+      return rhs.end < lhs.end;
+    });
+
+    Vector<TabStopGroup> transformed = m_groups_;
+    for (size_t group_index = 0; group_index < transformed.size(); ++group_index) {
+      TabStopGroup& group = transformed[group_index];
+      for (size_t range_index = 0; range_index < group.ranges.size(); ++range_index) {
+        TextRange range = group.ranges[range_index];
+        const bool active_group = group_index == m_current_idx_;
+        bool owner_applied = false;
+        bool has_owner = false;
+        for (size_t edit_index : order) {
+          if (active_group_owners[edit_index].has_value()
+              && *active_group_owners[edit_index] == range_index && active_group) {
+            if (has_owner) return false;
+            has_owner = true;
+          }
+        }
+
+        for (size_t edit_index : order) {
+          const TextEdit& edit = edits[edit_index];
+          const std::optional<size_t>& owner = active_group_owners[edit_index];
+          if (active_group && owner.has_value() && *owner == range_index) {
+            const TextPosition inserted_end = TextEditUtils::positionAfterText(edit.range.start, edit.new_text);
+            range = {edit.range.start, inserted_end};
+            owner_applied = true;
+            continue;
+          }
+          if (has_owner && !owner_applied) {
+            continue;
+          }
+          if (!range.isCollapsed() && range.conflictsForBatchEdit(edit.range)) {
+            return false;
+          }
+
+          const TextPosition inserted_end = TextEditUtils::positionAfterText(edit.range.start, edit.new_text);
+
+          if (range.isCollapsed()) {
+            const TextPosition point = TextEditUtils::transformPosition(
+                edit.range, inserted_end, range.start, TextEditUtils::PositionBias::AFTER);
+            range = {point, point};
+          } else {
+            range = {
+                TextEditUtils::transformPosition(
+                    edit.range, inserted_end, range.start, TextEditUtils::PositionBias::AFTER),
+                TextEditUtils::transformPosition(
+                    edit.range, inserted_end, range.end, TextEditUtils::PositionBias::BEFORE),
+            };
+          }
+          if (range.end < range.start) return false;
+        }
+        if (has_owner && !owner_applied) return false;
+        group.ranges[range_index] = range;
+      }
+    }
+
+    m_groups_ = std::move(transformed);
+    return true;
+  }
+
+  Vector<LinkedEditingHighlight> LinkedEditingSession::getAllHighlights() const {
+    Vector<LinkedEditingHighlight> highlights;
+    if (!m_active_) return highlights;
+
+    for (size_t i = 0; i < m_groups_.size(); ++i) {
+      bool is_active = (i == m_current_idx_);
+      for (const auto& range : m_groups_[i].ranges) {
+        highlights.push_back({range, is_active});
+      }
+    }
+    return highlights;
+  }
+
+  bool LinkedEditingSession::isValidIndex() const {
+    return m_active_ && m_current_idx_ < m_groups_.size();
+  }
+#pragma endregion
+}

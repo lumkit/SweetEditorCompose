@@ -486,7 +486,7 @@ private fun resolveSweetEditorHome(): File {
 
     val configured = providers.gradleProperty("sweetEditor.home").orNull
         ?: localProperties.getProperty("sweetEditor.home")
-        ?: "../SweetEditor"
+        ?: "editor/native"
     val configuredFile = File(configured)
     return if (configuredFile.isAbsolute) configuredFile else rootProject.file(configured)
 }

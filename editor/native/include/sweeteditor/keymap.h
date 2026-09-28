@@ -1,0 +1,185 @@
+#ifndef SWEETEDITOR_KEYMAP_H
+#define SWEETEDITOR_KEYMAP_H
+
+#include <cstdint>
+#include <functional>
+#include <variant>
+#include <sweeteditor/macro.h>
+
+namespace NS_SWEETEDITOR {
+
+  /// Keyboard key code definitions
+  enum class SE_PROTOCOL_CONSTS(keymap) KeyCode : uint16_t {
+    NONE = 0,
+    BACKSPACE = 8,
+    TAB = 9,
+    ENTER = 13,
+    ESCAPE = 27,
+    SPACE = 32,
+    PAGE_UP = 33,
+    PAGE_DOWN = 34,
+    END = 35,
+    HOME = 36,
+    LEFT = 37,
+    UP = 38,
+    RIGHT = 39,
+    DOWN = 40,
+    DELETE_KEY = 46,
+    A = 65,
+    C = 67,
+    D = 68,
+    K = 75,
+    V = 86,
+    X = 88,
+    Y = 89,
+    Z = 90,
+  };
+
+  /// Modifier key flags
+  enum class SE_PROTOCOL_FLAGS(keymap) KeyModifier : uint8_t {
+    NONE = 0,
+    SHIFT = 1 << 0,
+    CTRL = 1 << 1,
+    ALT = 1 << 2,
+    META = 1 << 3,
+  };
+  inline KeyModifier operator&(KeyModifier a, KeyModifier b) {
+    return static_cast<KeyModifier>(static_cast<uint8_t>(a) & static_cast<uint8_t>(b));
+  }
+  inline KeyModifier operator|(KeyModifier a, KeyModifier b) {
+    return static_cast<KeyModifier>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+  }
+  inline bool hasAnyModifier(KeyModifier value, KeyModifier mask) {
+    return static_cast<uint8_t>(value & mask) != 0;
+  }
+
+  /// A single key chord: one key press with optional modifiers
+  struct SE_PROTOCOL_VALUE(keymap) KeyChord {
+    SE_PROTOCOL_WIRE(u8)
+    KeyModifier modifiers{KeyModifier::NONE};
+    SE_PROTOCOL_WIRE(u16)
+    KeyCode key_code{KeyCode::NONE};
+
+    bool operator==(const KeyChord& other) const;
+    bool operator!=(const KeyChord& other) const;
+    bool empty() const {
+      return key_code == KeyCode::NONE;
+    }
+  };
+
+  struct KeyChordHash {
+    size_t operator()(const KeyChord& chord) const noexcept {
+      return std::hash<uint32_t>()((static_cast<uint32_t>(chord.key_code) << 8)
+                                   | static_cast<uint32_t>(chord.modifiers));
+    }
+  };
+
+  using EditorCommandId = uint32_t;
+
+  /// Built-in editor command identifiers mapped from key bindings
+  enum class SE_PROTOCOL_ENUM(keymap, NONE) EditorBuiltinCommand : EditorCommandId {
+    NONE = 0,
+    CURSOR_LEFT,
+    CURSOR_RIGHT,
+    CURSOR_UP,
+    CURSOR_DOWN,
+    CURSOR_LINE_START,
+    CURSOR_LINE_END,
+    CURSOR_PAGE_UP,
+    CURSOR_PAGE_DOWN,
+    SELECT_LEFT,
+    SELECT_RIGHT,
+    SELECT_UP,
+    SELECT_DOWN,
+    SELECT_LINE_START,
+    SELECT_LINE_END,
+    SELECT_PAGE_UP,
+    SELECT_PAGE_DOWN,
+    SELECT_ALL,
+    BACKSPACE,
+    DELETE_FORWARD,
+    INSERT_TAB,
+    INSERT_NEWLINE,
+    INSERT_LINE_ABOVE,
+    INSERT_LINE_BELOW,
+    UNDO,
+    REDO,
+    MOVE_LINE_UP,
+    MOVE_LINE_DOWN,
+    COPY_LINE_UP,
+    COPY_LINE_DOWN,
+    DELETE_LINE,
+    COPY,
+    PASTE,
+    CUT,
+    TRIGGER_COMPLETION,
+  };
+
+  inline constexpr EditorCommandId EDITOR_BUILTIN_COMMAND_MAX =
+      static_cast<EditorCommandId>(EditorBuiltinCommand::TRIGGER_COMPLETION);
+
+  /// A key binding entry: one or two chords mapped to a command
+  struct SE_PROTOCOL_VALUE(keymap) KeyBinding {
+    KeyChord first;
+    KeyChord second; // second.empty() means single-chord binding
+    SE_PROTOCOL_WIRE(u32)
+    EditorCommandId command{0};
+  };
+
+  /// Mapping entry: either a direct command or a sub-map for multi-chord bindings
+  using KeyMapEntry = std::variant<EditorCommandId, HashMap<KeyChord, EditorCommandId, KeyChordHash>>;
+
+  /// Keyboard shortcut mapping table
+  class KeyMap {
+  public:
+    /// Add a single binding to the map
+    void addBinding(const KeyBinding& binding);
+
+    /// Look up a first-chord entry. Returns nullptr if not found.
+    const KeyMapEntry* lookup(const KeyChord& chord) const;
+
+    /// Create the default key map (VS Code-like bindings)
+    static KeyMap createDefault();
+
+  private:
+    HashMap<KeyChord, KeyMapEntry, KeyChordHash> m_entries_;
+  };
+
+  /// Result of a key resolve operation
+  enum class ResolveStatus : uint8_t {
+    MATCHED,  // A command was resolved
+    PENDING,  // Waiting for the second chord
+    NO_MATCH, // No binding found
+  };
+
+  struct ResolveResult {
+    ResolveStatus status{ResolveStatus::NO_MATCH};
+    EditorCommandId command{0};
+  };
+
+  /// Stateful resolver that owns a KeyMap and handles multi-chord key sequences with timeout
+  class KeyResolver {
+  public:
+    explicit KeyResolver(int64_t pending_timeout_ms = 2000);
+
+    /// Replace the current key map
+    void setKeyMap(KeyMap key_map);
+
+    /// Resolve a key chord against the owned key map
+    ResolveResult resolve(const KeyChord& chord);
+
+    /// Whether a multi-chord sequence is pending
+    bool isPending() const {
+      return m_pending_;
+    }
+
+  private:
+    void cancelPending();
+    int64_t m_pending_timeout_ms_;
+    KeyMap m_key_map_;
+    bool m_pending_{false};
+    int64_t m_pending_time_{0};
+    const HashMap<KeyChord, EditorCommandId, KeyChordHash>* m_pending_sub_map_{nullptr};
+  };
+} // namespace NS_SWEETEDITOR
+#endif //SWEETEDITOR_KEYMAP_H

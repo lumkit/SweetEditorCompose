@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 # Build and install SweetEditor natives used by Maven artifacts into editor/natives/.
 # Usage:
-#   SWEETEDITOR_HOME=../SweetEditor editor/scripts/prepare-release-natives.sh [--all] [--host] [--macos-x86_64] [--ios] [--android] [--wasm] [--sync-prebuilt]
+#   editor/scripts/prepare-release-natives.sh [--all] [--host] [--macos-x86_64] [--ios] [--android] [--wasm] [--sync-prebuilt]
+# Source defaults to editor/native. Set SWEETEDITOR_HOME to build some other checkout.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REPO="$(cd "$ROOT/.." && pwd)"
-SE="${SWEETEDITOR_HOME:-}"
-if [[ -z "$SE" && -d "$REPO/../SweetEditor" ]]; then
-  SE="$(cd "$REPO/../SweetEditor" && pwd)"
-fi
-if [[ -z "$SE" ]]; then
-  echo "SWEETEDITOR_HOME is required (or checkout SweetEditor next to this repo)" >&2
+SE="${SWEETEDITOR_HOME:-$ROOT/native}"
+if [[ ! -f "$SE/CMakeLists.txt" ]]; then
+  echo "SweetEditor core not found at $SE" >&2
   exit 1
 fi
 export SWEETEDITOR_HOME="$SE"

@@ -30,7 +30,7 @@ Gradle 会解析 Android / JVM / iOS / JS / Wasm 变体。Android 变体 **传�
 不需要 Central 凭据：
 
 ```bash
-export SWEETEDITOR_HOME=../SweetEditor   # 默认也是这个相对路径
+# SweetEditor 核心源码在 editor/native。需要换一份检出时再设置 SWEETEDITOR_HOME。
 export SWEETLINE_HOME=../SweetLine
 ./editor/scripts/prepare-release-natives.sh --host   # 本机 Core + compose JNI
 ./highlight/scripts/prepare-release-natives.sh --host

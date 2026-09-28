@@ -20,11 +20,7 @@ case "$TARGET" in
 esac
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SE="${SWEETEDITOR_HOME:-}"
-if [[ -z "$SE" ]]; then
-  echo "SWEETEDITOR_HOME is required" >&2
-  exit 1
-fi
+SE="${SWEETEDITOR_HOME:-$ROOT/native}"
 
 DEST_DIR="$ROOT/natives/ios/$TARGET"
 INCLUDE_SRC="$SE/include/sweeteditor"

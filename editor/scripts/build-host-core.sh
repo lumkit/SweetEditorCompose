@@ -5,11 +5,7 @@ set -euo pipefail
 
 MODE="${1:-build}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SE="${SWEETEDITOR_HOME:-}"
-if [[ -z "$SE" ]]; then
-  echo "SWEETEDITOR_HOME is required" >&2
-  exit 1
-fi
+SE="${SWEETEDITOR_HOME:-$ROOT/native}"
 
 OS="$(uname -s)"
 ARCH="$(uname -m)"

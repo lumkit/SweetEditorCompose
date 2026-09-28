@@ -1,0 +1,158 @@
+schema:
+  inputs:
+    - include/sweeteditor/foundation.h
+    - include/sweeteditor/keymap.h
+    - include/sweeteditor/editor_types.h
+    - include/sweeteditor/gesture.h
+    - include/sweeteditor/ime_types.h
+    - include/sweeteditor/linked_editing.h
+    - include/sweeteditor/search.h
+    - include/sweeteditor/editor_core.h
+    - include/sweeteditor/decoration.h
+    - include/sweeteditor/diff.h
+    - include/sweeteditor/visual.h
+    - include/sweeteditor/protocol.h
+  generated: tools/se_protocol_gen/generated/schema.json
+  snapshot: tools/se_protocol_gen/schema.snapshot.json
+
+codegen:
+  preview_root: tools/se_protocol_gen/generated/preview
+
+targets:
+  cpp_core:
+    backend: cpp
+    output_root: .
+    header_file: include/sweeteditor/protocol_codec.h
+    always_write: true
+
+  android_java:
+    backend: java
+    output_root: platform/Android/sweeteditor/src/main/java/com/qiplat/sweeteditor/core
+    package: com.qiplat.sweeteditor.core
+    codec_file: CoreProtocol.java
+    layout: split_by_domain
+    java_api:
+      codec: byte_buffer
+      line_map: sparse_array
+    augment:
+      java_model_helpers: true
+    domains:
+      action: action
+      config: config
+      foundation: foundation
+      adornment: adornment
+      ime: ime
+      interaction: interaction
+      keymap: keymap
+      search: search
+      visual: visual
+
+  swing_java:
+    backend: java
+    output_root: platform/Swing/sweeteditor/src/main/java/com/qiplat/sweeteditor/core
+    package: com.qiplat.sweeteditor.core
+    codec_file: CoreProtocol.java
+    layout: split_by_domain
+    java_api:
+      codec: memory_segment
+    augment:
+      java_model_helpers: true
+    domains:
+      action: action
+      config: config
+      foundation: foundation
+      adornment: adornment
+      ime: ime
+      interaction: interaction
+      keymap: keymap
+      search: search
+      visual: visual
+
+  ohos_ets:
+    backend: ets
+    output_root: platform/OHOS/sweeteditor/src/main/ets/core
+    codec_file: CoreProtocol.ets
+    layout: domain_files
+    augment:
+      ets_model_helpers: true
+    domains:
+      action: CoreAction.ets
+      config: CoreConfig.ets
+      foundation: CoreFoundation.ets
+      adornment: CoreAdornments.ets
+      ime: CoreIme.ets
+      interaction: CoreInteraction.ets
+      keymap: CoreKeymap.ets
+      search: CoreSearch.ets
+      visual: CoreVisual.ets
+
+  apple_swift:
+    backend: swift
+    output_root: platform/Apple/SweetEditor-Shared
+    codec_file: core/CoreProtocol.swift
+    layout: split_by_domain
+    domains:
+      action: core/CoreAction.swift
+      config: core/CoreConfig.swift
+      foundation: core/CoreFoundation.swift
+      adornment: core/CoreAdornments.swift
+      ime: core/CoreIme.swift
+      interaction: core/CoreInteraction.swift
+      keymap: core/CoreKeymap.swift
+      search: core/CoreSearch.swift
+      visual: core/CoreVisual.swift
+
+  winforms_csharp:
+    backend: csharp
+    output_root: platform/WinForms/SweetEditor
+    namespace: SweetEditor
+    codec_file: CoreProtocol.cs
+    layout: split_by_domain
+    augment:
+      csharp_model_helpers: true
+    domains:
+      action: CoreAction.cs
+      config: CoreConfig.cs
+      foundation: CoreFoundation.cs
+      adornment: CoreAdornments.cs
+      ime: CoreIme.cs
+      interaction: CoreInteraction.cs
+      keymap: CoreKeymap.cs
+      search: CoreSearch.cs
+      visual: CoreVisual.cs
+
+  avalonia_csharp:
+    backend: csharp
+    output_root: platform/Avalonia/SweetEditor
+    namespace: SweetEditor
+    codec_file: CoreProtocol.cs
+    layout: split_by_domain
+    augment:
+      csharp_model_helpers: true
+    domains:
+      action: CoreAction.cs
+      config: CoreConfig.cs
+      foundation: CoreFoundation.cs
+      adornment: CoreAdornments.cs
+      ime: CoreIme.cs
+      interaction: CoreInteraction.cs
+      keymap: CoreKeymap.cs
+      search: CoreSearch.cs
+      visual: CoreVisual.cs
+
+  dart_protocol:
+    backend: dart
+    output_root: platform/Flutter/sweeteditor/lib/core
+    codec_file: core_protocol.dart
+    layout: split_by_domain
+    part_of: editor_core.dart
+    domains:
+      action: core_action.dart
+      config: core_config.dart
+      foundation: core_foundation.dart
+      adornment: core_adornments.dart
+      ime: core_ime.dart
+      interaction: core_interaction.dart
+      keymap: core_keymap.dart
+      search: core_search.dart
+      visual: core_visual.dart
