@@ -7,11 +7,11 @@
 ## 引入
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
-implementation("io.github.lumkit:sweetline-compose:0.1.4") // 可选，SweetLine 高亮
+implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
+implementation("io.github.lumkit:sweetline-compose:0.1.5") // 可选，SweetLine 高亮
 ```
 
-宿主必须使用 **Compose Multiplatform 1.12.0**、**Kotlin 2.4.20**，以及 Android **compileSdk 37**（或与之匹配的更新组合）。`targetSdk` / `minSdk` 可以更低。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
+宿主必须使用 **Compose Multiplatform 1.12.1**、**Kotlin 2.4.20**，以及 Android **compileSdk 37**（或与之匹配的更新组合）。`targetSdk` / `minSdk` 可以更低。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。
 
 Gradle 会自动解析对应平台变体：
 
@@ -102,7 +102,7 @@ DisposableEffect(controller, highlight) {
 
 **Web** —— JS / Wasm 会自动加载 C ABI（Compose 资源目录
 `/composeResources/…/files/`），宿主 `index.html` **不必**再手写
-`<script src="sweeteditor_web_abi.js">`。Compose 必须是 1.12.0，否则 Skiko 对不上。
+`<script src="sweeteditor_web_abi.js">`。Compose 必须是 1.12.1，否则 Skiko 对不上。
 
 ## 从源码构建
 

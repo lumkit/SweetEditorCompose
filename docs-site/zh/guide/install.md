@@ -3,8 +3,8 @@
 先加编辑器。需要 SweetLine 语法高亮时再加第二项。
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
-implementation("io.github.lumkit:sweetline-compose:0.1.4") // 可选
+implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
+implementation("io.github.lumkit:sweetline-compose:0.1.5") // 可选
 ```
 
 Gradle 会解析每个坐标对应的平台变体。
@@ -15,7 +15,7 @@ Gradle 会解析每个坐标对应的平台变体。
 
 | 项 | 版本 |
 |---|---|
-| Compose Multiplatform | 1.12.0 |
+| Compose Multiplatform | 1.12.1 |
 | Kotlin | 2.4.20 |
 | Android `compileSdk` | 37 |
 

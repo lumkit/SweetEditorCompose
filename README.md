@@ -7,11 +7,11 @@ Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)**.
 ## Install
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
-implementation("io.github.lumkit:sweetline-compose:0.1.4") // optional, SweetLine highlighting
+implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
+implementation("io.github.lumkit:sweetline-compose:0.1.5") // optional, SweetLine highlighting
 ```
 
-The host must use **Compose Multiplatform 1.12.0**, **Kotlin 2.4.20**, and Android **compileSdk 37** (or newer matching that set). `targetSdk` / `minSdk` can stay lower. Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
+The host must use **Compose Multiplatform 1.12.1**, **Kotlin 2.4.20**, and Android **compileSdk 37** (or newer matching that set). `targetSdk` / `minSdk` can stay lower. Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.
 
 Gradle resolves the platform variant automatically:
 
@@ -114,7 +114,7 @@ project must **not** add `-liconv` or `-lsweeteditor`.
 **Web** — JS and Wasm load the C ABI module automatically (Compose resources
 under `/composeResources/…/files/`). Host `index.html` does not need a
 manual `<script src="sweeteditor_web_abi.js">`. Use Compose Multiplatform
-1.12.0 so Skiko matches the library.
+1.12.1 so Skiko matches the library.
 
 ## Building from source
 

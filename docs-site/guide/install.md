@@ -3,8 +3,8 @@
 Add the editor. Add highlight only if you want SweetLine syntax coloring.
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.4")
-implementation("io.github.lumkit:sweetline-compose:0.1.4") // optional
+implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
+implementation("io.github.lumkit:sweetline-compose:0.1.5") // optional
 ```
 
 Gradle resolves the platform variant for each coordinate.
@@ -15,7 +15,7 @@ The host **must** match this set (or a newer compatible pair):
 
 | Piece | Version |
 |---|---|
-| Compose Multiplatform | 1.12.0 |
+| Compose Multiplatform | 1.12.1 |
 | Kotlin | 2.4.20 |
 | Android `compileSdk` | 37 |
 

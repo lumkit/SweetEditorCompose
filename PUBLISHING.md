@@ -85,7 +85,7 @@ GitHub Actions：`.github/workflows/publish.yml`（`workflow_dispatch` 或 tag `
 | `build-android-core.sh` | `natives/android/<abi>/*.so` |
 | `build-web-c-abi.sh` | `natives/web/*_c_abi.{js,wasm}` |
 
-CI 在 macOS / Linux / Linux ARM / Windows 上分别构建后汇合，再在 macOS 上跑 KMP `publish`（iOS cinterop 需要 Xcode）。CI checkout `FinalScave/SweetEditor` 与 `FinalScave/SweetLine`。
+CI 在 macOS / Linux / Linux ARM / Windows 上分别构建后汇合，再在 macOS 上跑 KMP `publish`（iOS cinterop 需要 Xcode）。Editor 核心用仓库里的 `editor/native`。CI 仍 checkout `FinalScave/SweetLine`。打 tag `v0.1.5`（与 `VERSION_NAME` 一致）会触发 `.github/workflows/publish.yml`。
 
 ## 禁止
 

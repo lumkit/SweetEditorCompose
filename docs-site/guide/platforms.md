@@ -23,7 +23,7 @@
 - The library injects `sweeteditor_web_abi.js` / `sweetline_web_abi.js` and loads `*_c_abi.{js,wasm}` from Compose resources (`files/`).
 - Host `index.html` does **not** need a manual script tag (0.1.1+).
 - `NativeBridge.isAvailable` becomes true after the C ABI module is ready. `SweetEditor` waits up to ~1800 frames, then shows a load error.
-- Keep Compose 1.12.0 so Skiko exports `nGetUnresolvedCodepointsCount`.
+- Keep Compose 1.12.1 so Skiko exports `nGetUnresolvedCodepointsCount`.
 
 ## Shared constraints
 
