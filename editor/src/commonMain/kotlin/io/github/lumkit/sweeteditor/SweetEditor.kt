@@ -56,7 +56,10 @@ import io.github.lumkit.sweeteditor.render.toComposeColor
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
 import io.github.lumkit.sweeteditor.session.RememberedEditorSession
 import androidx.compose.foundation.text.BasicText
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 @Composable
 fun SweetEditor(
@@ -201,69 +204,98 @@ fun SweetEditor(
             .pointerInput(session) {
                 var previousPressedCount = 0
                 var lastPoint = PointF(0f, 0f)
-                awaitPointerEventScope {
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull() ?: continue
-                        val modifiers = pointerModifiers(event)
-                        val isMouse = event.changes.any {
-                            it.type == PointerType.Mouse || it.type == PointerType.Stylus
+                // Several move events can arrive in one frame. Keep the latest and
+                // hand it to the core once per frame. Native scroll uses the delta
+                // from the previous delivered point, so dropped samples still move
+                // the full distance.
+                var pendingMove: ByteArray? = null
+                fun flushMove() {
+                    val payload = pendingMove ?: return
+                    pendingMove = null
+                    session.handleGesture(payload)
+                }
+                coroutineScope {
+                    val frames = launch {
+                        while (isActive) {
+                            withFrameNanos { }
+                            flushMove()
                         }
-                        val pressedPoints = event.changes
-                            .filter { it.pressed }
-                            .map { PointF(it.position.x, it.position.y) }
-                        lastPoint = PointF(change.position.x, change.position.y)
-                        session.notePointer(lastPoint, hovering = event.type != PointerEventType.Exit)
-                        if (event.type == PointerEventType.Press) {
-                            runCatching { focusRequester.requestFocus() }
+                    }
+                    try {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull() ?: continue
+                                val modifiers = pointerModifiers(event)
+                                val isMouse = event.changes.any {
+                                    it.type == PointerType.Mouse || it.type == PointerType.Stylus
+                                }
+                                val pressedPoints = event.changes
+                                    .filter { it.pressed }
+                                    .map { PointF(it.position.x, it.position.y) }
+                                lastPoint = PointF(change.position.x, change.position.y)
+                                session.notePointer(lastPoint, hovering = event.type != PointerEventType.Exit)
+                                if (event.type == PointerEventType.Press) {
+                                    flushMove()
+                                    runCatching { focusRequester.requestFocus() }
+                                }
+                                if (event.type == PointerEventType.Scroll) {
+                                    flushMove()
+                                    val point = PointF(change.position.x, change.position.y)
+                                    val (wheelX, wheelY) = coreWheelDelta(change.scrollDelta)
+                                    val wheelModifiers = wheelModifiersForCore(modifiers)
+                                    session.handleGesture(
+                                        encodeGesture(EventType.DIRECT_GESTURE_BEGIN, listOf(point), wheelModifiers),
+                                    )
+                                    session.handleGesture(
+                                        encodeGesture(
+                                            type = EventType.MOUSE_WHEEL,
+                                            points = listOf(point),
+                                            modifiers = wheelModifiers,
+                                            wheelDeltaX = wheelX,
+                                            wheelDeltaY = wheelY,
+                                        ),
+                                    )
+                                    session.handleGesture(
+                                        encodeGesture(EventType.DIRECT_GESTURE_END, listOf(point), wheelModifiers),
+                                    )
+                                    event.changes.forEach { it.consume() }
+                                    continue
+                                }
+                                if (event.type == PointerEventType.Exit && previousPressedCount > 0) {
+                                    flushMove()
+                                    val endType = if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP
+                                    session.handleGesture(encodeGesture(endType, listOf(lastPoint), modifiers))
+                                    previousPressedCount = 0
+                                    event.changes.forEach { it.consume() }
+                                    continue
+                                }
+                                val mapped = mapPointerGesture(
+                                    eventType = event.type,
+                                    isMouse = isMouse,
+                                    pressedPoints = pressedPoints,
+                                    fallbackPoint = lastPoint,
+                                    previousPressedCount = previousPressedCount,
+                                    isSecondaryButton = event.buttons.isSecondaryPressed,
+                                )
+                                previousPressedCount = pressedPoints.size
+                                if (mapped == null) continue
+                                val payload = encodeGesture(
+                                    type = mapped.type,
+                                    points = mapped.points,
+                                    modifiers = modifiers,
+                                )
+                                if (event.type == PointerEventType.Move) {
+                                    pendingMove = payload
+                                } else {
+                                    flushMove()
+                                    session.handleGesture(payload)
+                                }
+                                event.changes.forEach { it.consume() }
+                            }
                         }
-                        if (event.type == PointerEventType.Scroll) {
-                            val point = PointF(change.position.x, change.position.y)
-                            val (wheelX, wheelY) = coreWheelDelta(change.scrollDelta)
-                            val wheelModifiers = wheelModifiersForCore(modifiers)
-                            session.handleGesture(
-                                encodeGesture(EventType.DIRECT_GESTURE_BEGIN, listOf(point), wheelModifiers),
-                            )
-                            session.handleGesture(
-                                encodeGesture(
-                                    type = EventType.MOUSE_WHEEL,
-                                    points = listOf(point),
-                                    modifiers = wheelModifiers,
-                                    wheelDeltaX = wheelX,
-                                    wheelDeltaY = wheelY,
-                                ),
-                            )
-                            session.handleGesture(
-                                encodeGesture(EventType.DIRECT_GESTURE_END, listOf(point), wheelModifiers),
-                            )
-                            event.changes.forEach { it.consume() }
-                            continue
-                        }
-                        if (event.type == PointerEventType.Exit && previousPressedCount > 0) {
-                            val endType = if (isMouse) EventType.MOUSE_UP else EventType.TOUCH_UP
-                            session.handleGesture(encodeGesture(endType, listOf(lastPoint), modifiers))
-                            previousPressedCount = 0
-                            event.changes.forEach { it.consume() }
-                            continue
-                        }
-                        val mapped = mapPointerGesture(
-                            eventType = event.type,
-                            isMouse = isMouse,
-                            pressedPoints = pressedPoints,
-                            fallbackPoint = lastPoint,
-                            previousPressedCount = previousPressedCount,
-                            isSecondaryButton = event.buttons.isSecondaryPressed,
-                        )
-                        previousPressedCount = pressedPoints.size
-                        if (mapped == null) continue
-                        session.handleGesture(
-                            encodeGesture(
-                                type = mapped.type,
-                                points = mapped.points,
-                                modifiers = modifiers,
-                            ),
-                        )
-                        event.changes.forEach { it.consume() }
+                    } finally {
+                        frames.cancel()
                     }
                 }
             },
