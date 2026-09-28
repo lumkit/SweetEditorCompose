@@ -15,9 +15,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -52,8 +49,10 @@ internal fun DrawScope.drawEditor(
     fontAscent: Float,
     fontDescent: Float,
     theme: EditorTheme,
+    drawCache: EditorDrawCache,
     iconProvider: EditorIconProvider? = null,
 ) {
+    drawCache.bind(baseStyle)
     drawRect(theme.backgroundColor.toComposeColor())
 
     val lineHeight = model.cursor.height.takeIf { it > 0f } ?: (fontAscent * 1.4f)
@@ -71,11 +70,11 @@ internal fun DrawScope.drawEditor(
                     VisualRunType.FOLD_PLACEHOLDER,
                     VisualRunType.CODELENS,
                     VisualRunType.LINK,
-                    -> drawTextRun(run, textMeasurer, baseStyle, fontAscent)
+                    -> drawTextRun(run, textMeasurer, drawCache, fontAscent)
                     VisualRunType.WHITESPACE,
                     VisualRunType.TAB,
                     VisualRunType.NEWLINE,
-                    -> drawInvisibleCharacterRun(run, textMeasurer, baseStyle, fontAscent, fontDescent, theme)
+                    -> drawInvisibleCharacterRun(run, textMeasurer, drawCache, baseStyle, fontAscent, fontDescent, theme)
                 }
             }
         }
@@ -98,7 +97,7 @@ internal fun DrawScope.drawEditor(
     }
 
     drawGutterOverlay(model, theme, lineHeight, fontAscent, fontDescent)
-    drawLineNumbers(model, textMeasurer, baseStyle, fontAscent, theme)
+    drawLineNumbers(model, textMeasurer, drawCache, fontAscent, theme)
     drawGutterIcons(model, theme, iconProvider)
     drawFoldMarkers(model, theme)
     drawSelectionHandles(model, theme)
@@ -108,18 +107,13 @@ internal fun DrawScope.drawEditor(
 private fun DrawScope.drawTextRun(
     run: VisualRun,
     textMeasurer: TextMeasurer,
-    baseStyle: TextStyle,
+    drawCache: EditorDrawCache,
     fontAscent: Float,
 ) {
     drawRunBackground(run, fontAscent)
     if (run.text.isEmpty()) return
     val color = run.style.color.toComposeColor().takeUnless { it == Color.Unspecified } ?: Color(0xFFD4D4D4)
-    val style = baseStyle.copy(
-        color = color,
-        fontWeight = if ((run.style.fontStyle and 1) != 0) FontWeight.Bold else FontWeight.Normal,
-        fontStyle = if ((run.style.fontStyle and 2) != 0) FontStyle.Italic else FontStyle.Normal,
-        fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
-    )
+    val style = drawCache.runStyle(color, run.style.fontStyle)
     val layout = textMeasurer.measure(run.text, style, constraints = Constraints())
     drawText(
         textLayoutResult = layout,
@@ -138,6 +132,7 @@ private fun DrawScope.drawTextRun(
 private fun DrawScope.drawInvisibleCharacterRun(
     run: VisualRun,
     textMeasurer: TextMeasurer,
+    drawCache: EditorDrawCache,
     baseStyle: TextStyle,
     fontAscent: Float,
     fontDescent: Float,
@@ -148,7 +143,7 @@ private fun DrawScope.drawInvisibleCharacterRun(
     when (run.type) {
         VisualRunType.WHITESPACE -> drawWhitespaceMarkerRun(run, fontAscent, fontDescent, color, baseStyle)
         VisualRunType.TAB -> drawTabMarkerRun(run, fontAscent, fontDescent, color, baseStyle)
-        VisualRunType.NEWLINE -> drawLineBreakMarkerRun(run, textMeasurer, baseStyle, fontAscent, color)
+        VisualRunType.NEWLINE -> drawLineBreakMarkerRun(run, textMeasurer, drawCache, fontAscent, color)
         else -> Unit
     }
 }
@@ -204,15 +199,12 @@ private fun DrawScope.drawTabMarkerRun(
 private fun DrawScope.drawLineBreakMarkerRun(
     run: VisualRun,
     textMeasurer: TextMeasurer,
-    baseStyle: TextStyle,
+    drawCache: EditorDrawCache,
     fontAscent: Float,
     color: Color,
 ) {
     if (run.text.isEmpty()) return
-    val style = baseStyle.copy(
-        color = color,
-        fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
-    )
+    val style = drawCache.runStyle(color, fontFlags = 0)
     val layout = textMeasurer.measure(run.text, style, constraints = Constraints())
     drawText(
         textLayoutResult = layout,
@@ -297,7 +289,7 @@ private fun DrawScope.drawGutterOverlay(
 private fun DrawScope.drawLineNumbers(
     model: EditorRenderModel,
     textMeasurer: TextMeasurer,
-    baseStyle: TextStyle,
+    drawCache: EditorDrawCache,
     fontAscent: Float,
     theme: EditorTheme,
 ) {
@@ -306,16 +298,8 @@ private fun DrawScope.drawLineNumbers(
     for (line in model.lines) {
         if (line.lineNumber < 0) continue
         val isCurrent = line.ownsGutterSemantics && line.logicalLine == activeLogicalLine
-        val color = if (isCurrent) theme.currentLineNumberColor else theme.lineNumberColor
-        val style = baseStyle.copy(
-            color = color.toComposeColor(),
-            fontFamily = baseStyle.fontFamily ?: FontFamily.Monospace,
-        )
-        val layout = textMeasurer.measure(
-            line.lineNumber.toString(),
-            style,
-            constraints = Constraints(),
-        )
+        val color = (if (isCurrent) theme.currentLineNumberColor else theme.lineNumberColor).toComposeColor()
+        val layout = drawCache.lineNumberLayout(textMeasurer, line.lineNumber, color)
         drawText(
             textLayoutResult = layout,
             topLeft = Offset(line.lineNumberPosition.x, line.lineNumberPosition.y - fontAscent),

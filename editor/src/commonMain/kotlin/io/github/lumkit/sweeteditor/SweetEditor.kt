@@ -50,6 +50,7 @@ import io.github.lumkit.sweeteditor.input.mapKeyEvent
 import io.github.lumkit.sweeteditor.input.mapPointerGesture
 import io.github.lumkit.sweeteditor.input.pointerModifiers
 import io.github.lumkit.sweeteditor.input.wheelModifiersForCore
+import io.github.lumkit.sweeteditor.render.EditorDrawCache
 import io.github.lumkit.sweeteditor.render.drawEditor
 import io.github.lumkit.sweeteditor.render.toComposeColor
 import io.github.lumkit.sweeteditor.internal.jni.NativeBridge
@@ -75,6 +76,8 @@ fun SweetEditor(
             defaultFontFamilyResolver = fontFamilyResolver,
             defaultDensity = Density(densityValue, fontScale),
             defaultLayoutDirection = layoutDirection,
+            // Default cache holds 8 layouts. A code viewport is dozens of lines.
+            cacheSize = 512,
         )
     }
     val hostMeasurer = remember(controller) {
@@ -90,6 +93,7 @@ fun SweetEditor(
     val session = remember(controller) {
         RememberedEditorSession(controller, controller.initialText, hostMeasurer)
     }
+    val drawCache = remember(textMeasurer) { EditorDrawCache() }
     val textStyle = remember(theme, settings.fontSizeSp, session.visualScale, densityValue, fontScale) {
         TextStyle(
             color = theme.textColor.toComposeColor(),
@@ -266,7 +270,16 @@ fun SweetEditor(
     ) {
         val model = session.renderModel
         if (model != null) {
-            drawEditor(model, textMeasurer, textStyle, fontAscent, fontDescent, theme, session.iconProvider)
+            drawEditor(
+                model,
+                textMeasurer,
+                textStyle,
+                fontAscent,
+                fontDescent,
+                theme,
+                drawCache,
+                session.iconProvider,
+            )
         }
     }
     EditorCompletionPopup(
