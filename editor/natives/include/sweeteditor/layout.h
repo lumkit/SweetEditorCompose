@@ -245,6 +245,11 @@ namespace NS_SWEETEDITOR {
     // content metrics cache
     ContentMetrics m_content_metrics_cache_;
     bool m_content_metrics_dirty_{true};
+    // Scroll clamping reads this instead of scanning every laid-out line.
+    ContentMetrics m_scroll_bounds_cache_{};
+    bool m_scroll_bounds_cache_valid_{false};
+    // High-water mark of laid-out line widths. A stale value can only be too large.
+    float m_known_max_line_width_{0};
 
     struct FoldTailProjection {
       size_t owner_line{0};
@@ -265,6 +270,8 @@ namespace NS_SWEETEDITOR {
     void invalidatePrefixFrom(size_t from_line);
 
     float measureWidth(const U16String& text, int32_t font_style = FONT_STYLE_NORMAL);
+    void invalidateScrollBoundsCache(bool reset_known_width);
+    void noteLaidOutLineWidth(const LogicalLine& logical_line);
     ContentMetrics computeContentMetrics_();
     /// O(1) fast content size estimation: height via prefix index, max line width from laid-out lines cache.
     /// Used in clampScroll hot path to avoid full O(N) layoutLine traversal.

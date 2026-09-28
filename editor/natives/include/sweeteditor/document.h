@@ -185,6 +185,10 @@ namespace NS_SWEETEDITOR {
     void buildFromU8String(const U8String& text);
     void rebuildLogicalLines();
     void rebuildStartBytes(size_t from_line);
+    void ensureStartUtf16(size_t line);
+    size_t lineUtf16Units(size_t line) const;
+    /// First line whose start_utf16 may be stale.
+    size_t m_utf16_prefix_dirty_from_{0};
     size_t getByteOffsetOfLine(size_t line) const;
     size_t getColumnByteOffset(size_t line, size_t column) const;
   };
