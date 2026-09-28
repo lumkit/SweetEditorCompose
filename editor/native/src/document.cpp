@@ -910,41 +910,44 @@ namespace NS_SWEETEDITOR {
     if (char_index == 0) {
       return TextPosition{0, 0};
     }
-    size_t accumulated_chars = 0;
-    for (size_t i = 0; i < m_lines_.size(); ++i) {
-      size_t line_chars = StrUtil::utf16Length(m_lines_[i]);
-      if (accumulated_chars + line_chars >= char_index) {
-        return TextPosition{i, char_index - accumulated_chars};
+    const size_t last = m_lines_.size() - 1;
+    ensureStartUtf16(last);
+    size_t low = 0;
+    size_t high = m_logical_lines_.size();
+    while (low < high) {
+      const size_t mid = low + (high - low) / 2;
+      if (m_logical_lines_[mid].start_utf16 <= char_index) {
+        low = mid + 1;
+      } else {
+        high = mid;
       }
-      size_t eol_chars = (m_logical_lines_[i].line_ending != LineEnding::NONE) ? 1 : 0;
-      accumulated_chars += line_chars + eol_chars;
     }
-    size_t last = m_lines_.size() - 1;
-    size_t last_chars = StrUtil::utf16Length(m_lines_[last]);
-    return TextPosition{last, last_chars};
+    const size_t line = low > 0 ? low - 1 : 0;
+    const size_t column = char_index - m_logical_lines_[line].start_utf16;
+    const uint32_t line_chars = getLineColumns(line);
+    if (column > line_chars) {
+      return TextPosition{line, line_chars};
+    }
+    return TextPosition{line, column};
   }
 
   size_t LineArrayDocument::getCharIndexFromPosition(const TextPosition& position) {
     size_t line = position.line;
     size_t column = position.column;
 
+    if (m_logical_lines_.empty()) {
+      return 0;
+    }
     if (line >= m_logical_lines_.size()) {
       line = m_logical_lines_.size() - 1;
     }
 
-    size_t accumulated_chars = 0;
-    for (size_t i = 0; i < line; ++i) {
-      accumulated_chars += StrUtil::utf16Length(m_lines_[i]);
-      if (m_logical_lines_[i].line_ending != LineEnding::NONE) {
-        accumulated_chars += 1;
-      }
-    }
-
+    ensureStartUtf16(line);
     uint32_t line_chars = getLineColumns(line);
     if (column > line_chars) {
       column = line_chars;
     }
-    return accumulated_chars + column;
+    return m_logical_lines_[line].start_utf16 + column;
   }
 
   void LineArrayDocument::insertU8Text(const TextPosition& position, const U8String& text) {
@@ -1151,19 +1154,38 @@ namespace NS_SWEETEDITOR {
   }
 
   void LineArrayDocument::updateDirtyLine(size_t line, LogicalLine& logical_line) {
-    if (logical_line.is_u16_dirty) {
-      StrUtil::convertUTF8ToUTF16(m_lines_[line], logical_line.cached_u16_text);
-
-      size_t char_offset = 0;
-      for (size_t i = 0; i < line; ++i) {
-        char_offset += StrUtil::utf16Length(m_lines_[i]);
-        if (m_logical_lines_[i].line_ending != LineEnding::NONE) {
-          char_offset += 1;
-        }
-      }
-      logical_line.start_utf16 = char_offset;
-      logical_line.is_u16_dirty = false;
+    if (!logical_line.is_u16_dirty) return;
+    StrUtil::convertUTF8ToUTF16(m_lines_[line], logical_line.cached_u16_text);
+    logical_line.is_u16_dirty = false;
+    // This line's UTF-16 length may have changed; later line starts are stale.
+    if (m_utf16_prefix_dirty_from_ > line + 1) {
+      m_utf16_prefix_dirty_from_ = line + 1;
     }
+  }
+
+  size_t LineArrayDocument::lineUtf16Units(size_t line) const {
+    const LogicalLine& logical_line = m_logical_lines_[line];
+    const size_t chars = logical_line.is_u16_dirty ? StrUtil::utf16Length(m_lines_[line])
+                                                   : logical_line.cached_u16_text.size();
+    return chars + (logical_line.line_ending != LineEnding::NONE ? 1 : 0);
+  }
+
+  void LineArrayDocument::ensureStartUtf16(size_t line) {
+    if (m_lines_.empty()) return;
+    if (line >= m_lines_.size()) {
+      line = m_lines_.size() - 1;
+    }
+    if (m_utf16_prefix_dirty_from_ > line) return;
+
+    size_t start = m_utf16_prefix_dirty_from_;
+    if (start == 0) {
+      m_logical_lines_[0].start_utf16 = 0;
+      start = 1;
+    }
+    for (size_t i = start; i <= line; ++i) {
+      m_logical_lines_[i].start_utf16 = m_logical_lines_[i - 1].start_utf16 + lineUtf16Units(i - 1);
+    }
+    m_utf16_prefix_dirty_from_ = line + 1;
   }
 
   void LineArrayDocument::buildFromU8String(const U8String& text) {
@@ -1202,6 +1224,7 @@ namespace NS_SWEETEDITOR {
     last_ll.is_layout_dirty = true;
     last_ll.line_ending = LineEnding::NONE;
     m_logical_lines_.push_back(last_ll);
+    m_utf16_prefix_dirty_from_ = 0;
     rebuildLogicalLines();
   }
 
@@ -1226,6 +1249,9 @@ namespace NS_SWEETEDITOR {
     // Mark from_line itself as dirty too
     if (from_line > 0) {
       m_logical_lines_[from_line - 1].is_u16_dirty = true;
+    }
+    if (m_utf16_prefix_dirty_from_ > from_line) {
+      m_utf16_prefix_dirty_from_ = from_line;
     }
   }
 
