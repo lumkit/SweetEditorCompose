@@ -3,8 +3,8 @@
 先加编辑器。需要 SweetLine 语法高亮时再加第二项。
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
-implementation("io.github.lumkit:sweetline-compose:0.1.5") // 可选
+implementation("io.github.lumkit:sweeteditor-compose:0.1.6")
+implementation("io.github.lumkit:sweetline-compose:0.1.6") // 可选
 ```
 
 Gradle 会解析每个坐标对应的平台变体。

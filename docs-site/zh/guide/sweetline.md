@@ -5,8 +5,8 @@
 每个 `SweetLineHighlight` 实例只能 `bind` **一次**。编辑器离开组合时调用 `close()`（或放在 `DisposableEffect` 里）。
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
-implementation("io.github.lumkit:sweetline-compose:0.1.5")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.6")
+implementation("io.github.lumkit:sweetline-compose:0.1.6")
 ```
 
 ```kotlin

@@ -7,8 +7,8 @@ Targets **Android**, **iOS**, **Desktop (JVM)**, **Web (JS + Wasm)**.
 ## Install
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.5")
-implementation("io.github.lumkit:sweetline-compose:0.1.5") // optional, SweetLine highlighting
+implementation("io.github.lumkit:sweeteditor-compose:0.1.6")
+implementation("io.github.lumkit:sweetline-compose:0.1.6") // optional, SweetLine highlighting
 ```
 
 The host must use **Compose Multiplatform 1.12.1**, **Kotlin 2.4.20**, and Android **compileSdk 37** (or newer matching that set). `targetSdk` / `minSdk` can stay lower. Older Compose Gradle plugins ship an older Skiko that is missing `Paragraph.nGetUnresolvedCodepointsCount`, which crashes JS and Wasm at runtime.

@@ -97,6 +97,39 @@
     }
   }
 
+  function toI64(value) {
+    if (typeof value === "bigint") return value;
+    if (typeof value === "number") return BigInt(Math.trunc(value));
+    return BigInt(value);
+  }
+
+  // Mark a C int64/uint64 argument. WASM_BIGINT exports take one BigInt.
+  // Builds without it legalize each i64 into a (low, high) i32 pair, and passing
+  // a BigInt into that i32 slot throws "Cannot convert a BigInt value to a number".
+  function i64(value) {
+    return { __seI64: value };
+  }
+
+  function callMixed(fn, args) {
+    const direct = [];
+    const split = [];
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (arg && typeof arg === "object" && Object.prototype.hasOwnProperty.call(arg, "__seI64")) {
+        const bits = toI64(arg.__seI64);
+        direct.push(bits);
+        split.push(Number(bits & 0xffffffffn), Number((bits >> 32n) & 0xffffffffn));
+      } else {
+        direct.push(arg);
+        split.push(arg);
+      }
+    }
+    if (fn.length === split.length && split.length !== direct.length) {
+      return fn.apply(undefined, split);
+    }
+    return fn.apply(undefined, direct);
+  }
+
   function withBytes(mod, bytes, fn) {
     const alloc = allocBytes(mod, bytes);
     try {
@@ -307,20 +340,20 @@
     abi.editorImeBeginSession = (editor, mutationModel) =>
       callBinary(mod, (sz) => mod._editor_ime_begin_session(editor, mutationModel, sz));
     abi.editorImeEndSession = (editor, sessionId) =>
-      callBinary(mod, (sz) => mod._editor_ime_end_session(editor, BigInt(sessionId), sz));
+      callBinary(mod, (sz) => callMixed(mod._editor_ime_end_session, [editor, i64(sessionId), sz]));
     abi.editorImeApplyCommands = binBytes(mod._editor_ime_apply_commands);
     abi.editorImeGetState = (editor, sessionId) =>
-      callBinary(mod, (sz) => mod._editor_ime_get_state(editor, BigInt(sessionId), sz));
+      callBinary(mod, (sz) => callMixed(mod._editor_ime_get_state, [editor, i64(sessionId), sz]));
     abi.editorImeGetContext = (editor, sessionId, source, startUtf16, lengthUtf16) =>
       callBinary(mod, (sz) =>
-        mod._editor_ime_get_context(
+        callMixed(mod._editor_ime_get_context, [
           editor,
-          BigInt(sessionId),
+          i64(sessionId),
           source,
-          BigInt(startUtf16),
-          BigInt(lengthUtf16),
+          i64(startUtf16),
+          i64(lengthUtf16),
           sz,
-        ),
+        ]),
       );
 
     abi.editorGetCursorRect = (editor) => {
