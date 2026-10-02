@@ -1,8 +1,7 @@
-import org.gradle.api.file.DuplicatesStrategy
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -322,9 +321,15 @@ val buildHostSweetLineCore by tasks.registering(Exec::class) {
     commandLine("bash", hostCoreBuildScript.asFile.absolutePath, "all")
 }
 
+private val isMacOs = System.getProperty("os.name")
+    .orEmpty()
+    .lowercase()
+    .let { "mac" in it || "darwin" in it }
+
 private fun registerIosStaticCoreTask(taskName: String, abi: String) = tasks.register<Exec>(taskName) {
     group = "sweetline"
     description = "CMake-build SweetLine static archive for iOS $abi into highlight/natives/"
+    onlyIf { isMacOs }
     environment("SWEETLINE_HOME", sweetLineHome.absolutePath)
     inputs.dir(File(sweetLineHome, "src"))
     inputs.dir(File(sweetLineHome, "include"))
@@ -354,7 +359,7 @@ private fun registerIosIconvAutolinkTask(taskName: String, abi: String, coreTask
         val script = layout.projectDirectory.file("scripts/merge-ios-iconv-autolink.sh")
         val src = layout.projectDirectory.file("src/nativeInterop/iconv_autolink.c")
         dependsOn(coreTask)
-        onlyIf { archive.isFile }
+        onlyIf { isMacOs && archive.isFile }
         inputs.file(archive)
         inputs.file(script)
         inputs.file(src)
@@ -388,7 +393,8 @@ val configureDesktopJni by tasks.registering(Exec::class) {
 val hostComposeJniFileName: String = when {
     System.getProperty("os.name").orEmpty().lowercase().contains("win") -> "sweetline_compose.dll"
     System.getProperty("os.name").orEmpty().lowercase().contains("mac") ||
-        System.getProperty("os.name").orEmpty().lowercase().contains("darwin") -> "libsweetline_compose.dylib"
+            System.getProperty("os.name").orEmpty().lowercase().contains("darwin") -> "libsweetline_compose.dylib"
+
     else -> "libsweetline_compose.so"
 }
 val hostComposeJniFile = File(nativesRoot, "desktop/$hostDesktopFolder/$hostComposeJniFileName")
@@ -493,6 +499,7 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
                     tmp.deleteRecursively()
                 }
             }
+
             val device = platformOf(File(natives, "ios/arm64/libsweetline.a"))
             val simulator = platformOf(File(natives, "ios/simulator-arm64/libsweetline.a"))
             if (device != null && device != "IOS") {
@@ -538,7 +545,7 @@ private fun resolveSweetLineHome(): File {
 
     val configured = providers.gradleProperty("sweetLine.home").orNull
         ?: localProperties.getProperty("sweetLine.home")
-        ?: "../SweetLine"
+        ?: "highlight/SweetLine"
     val configuredFile = File(configured)
     return if (configuredFile.isAbsolute) configuredFile else rootProject.file(configured)
 }
@@ -655,13 +662,13 @@ compose {
 tasks.matching {
     val n = it.name
     n != "prepareWebComposeResources" &&
-        n != "syncBuiltinSyntaxes" &&
-        (
-            n.contains("ComposeResource", ignoreCase = true) ||
-                n.contains("generateResource", ignoreCase = true) ||
-                n.contains("NonXmlValueResources", ignoreCase = true) ||
-                n.contains("prepareComposeResources", ignoreCase = true)
-            )
+            n != "syncBuiltinSyntaxes" &&
+            (
+                    n.contains("ComposeResource", ignoreCase = true) ||
+                            n.contains("generateResource", ignoreCase = true) ||
+                            n.contains("NonXmlValueResources", ignoreCase = true) ||
+                            n.contains("prepareComposeResources", ignoreCase = true)
+                    )
 }.configureEach {
     dependsOn(prepareWebComposeResources, syncBuiltinSyntaxes)
 }

@@ -1,8 +1,7 @@
-import org.gradle.api.file.DuplicatesStrategy
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -310,9 +309,15 @@ val buildHostSweetEditorCore by tasks.registering(Exec::class) {
     commandLine("bash", hostCoreBuildScript.asFile.absolutePath, "all")
 }
 
+private val isMacOs = System.getProperty("os.name")
+    .orEmpty()
+    .lowercase()
+    .let { "mac" in it || "darwin" in it }
+
 private fun registerIosStaticCoreTask(taskName: String, abi: String) = tasks.register<Exec>(taskName) {
     group = "sweeteditor"
     description = "CMake-build SweetEditor static archive for iOS $abi into editor/natives/"
+    onlyIf { isMacOs }
     environment("SWEETEDITOR_HOME", sweetEditorHome.absolutePath)
     inputs.dir(File(sweetEditorHome, "src"))
     inputs.dir(File(sweetEditorHome, "include"))
@@ -411,10 +416,7 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
             logger.warn(message)
         }
 
-        val isMac = System.getProperty("os.name").orEmpty().lowercase().let {
-            it.contains("mac") || it.contains("darwin")
-        }
-        if (isMac && File("/usr/bin/xcrun").isFile) {
+        if (isMacOs && File("/usr/bin/xcrun").isFile) {
             fun platformOf(archive: File): String? {
                 if (!archive.isFile) return null
                 val tmp = File.createTempFile("se-ios-ar-", "").also { scratch ->
@@ -441,6 +443,7 @@ val verifyReleaseNatives = tasks.register("verifyReleaseNatives") {
                     tmp.deleteRecursively()
                 }
             }
+
             val device = platformOf(File(natives, "ios/arm64/libsweeteditor.a"))
             val simulator = platformOf(File(natives, "ios/simulator-arm64/libsweeteditor.a"))
             if (device != null && device != "IOS") {
@@ -523,22 +526,26 @@ private fun configureSweetEditorCinterop(target: KotlinNativeTarget) {
 }
 
 tasks.matching { it.name == "cinteropSweeteditorIosSimulatorArm64" }.configureEach {
-    dependsOn(
-        buildHostSweetEditorCore,
-        buildIosSweetEditorStaticSimulatorArm64,
-        buildIosSweetEditorStaticArm64,
-    )
-    inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweeteditor.a"))
-    inputs.dir(File(nativesRoot, "include/sweeteditor"))
+    if (isMacOs) {
+        dependsOn(
+            buildHostSweetEditorCore,
+            buildIosSweetEditorStaticSimulatorArm64,
+            buildIosSweetEditorStaticArm64,
+        )
+        inputs.file(File(nativesRoot, "ios/simulator-arm64/libsweeteditor.a"))
+        inputs.dir(File(nativesRoot, "include/sweeteditor"))
+    }
 }
 tasks.matching { it.name == "cinteropSweeteditorIosArm64" }.configureEach {
-    dependsOn(
-        buildHostSweetEditorCore,
-        buildIosSweetEditorStaticSimulatorArm64,
-        buildIosSweetEditorStaticArm64,
-    )
-    inputs.file(File(nativesRoot, "ios/arm64/libsweeteditor.a"))
-    inputs.dir(File(nativesRoot, "include/sweeteditor"))
+    if (isMacOs) {
+        dependsOn(
+            buildHostSweetEditorCore,
+            buildIosSweetEditorStaticSimulatorArm64,
+            buildIosSweetEditorStaticArm64,
+        )
+        inputs.file(File(nativesRoot, "ios/arm64/libsweeteditor.a"))
+        inputs.dir(File(nativesRoot, "include/sweeteditor"))
+    }
 }
 
 private fun currentDesktopResourceFolder(): String {
@@ -596,12 +603,12 @@ compose {
 tasks.matching {
     val n = it.name
     n != "prepareWebComposeResources" &&
-        (
-            n.contains("ComposeResource", ignoreCase = true) ||
-                n.contains("generateResource", ignoreCase = true) ||
-                n.contains("NonXmlValueResources", ignoreCase = true) ||
-                n.contains("prepareComposeResources", ignoreCase = true)
-            )
+            (
+                    n.contains("ComposeResource", ignoreCase = true) ||
+                            n.contains("generateResource", ignoreCase = true) ||
+                            n.contains("NonXmlValueResources", ignoreCase = true) ||
+                            n.contains("prepareComposeResources", ignoreCase = true)
+                    )
 }.configureEach {
     dependsOn(prepareWebComposeResources)
 }

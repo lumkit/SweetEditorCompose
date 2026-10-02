@@ -1,0 +1,3 @@
+[submodule "highlight/SweetLine"]
+	path = highlight/SweetLine
+	url = https://github.com/FinalScave/SweetLine
