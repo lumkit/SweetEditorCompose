@@ -5,8 +5,8 @@
 `SweetLineHighlight.bind` may run **once** per instance. Call `close()` (or unbind in `DisposableEffect`) when the editor leaves composition.
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.6")
-implementation("io.github.lumkit:sweetline-compose:0.1.6")
+implementation("io.github.lumkit:sweeteditor-compose:0.1.7")
+implementation("io.github.lumkit:sweetline-compose:0.1.7")
 ```
 
 ```kotlin

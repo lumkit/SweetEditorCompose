@@ -15,6 +15,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -43,6 +44,8 @@ import io.github.lumkit.sweeteditor.core.protocol.PointF
 import io.github.lumkit.sweeteditor.core.protocol.PointerCursorType
 import io.github.lumkit.sweeteditor.input.coreWheelDelta
 import io.github.lumkit.sweeteditor.input.editorHostScale
+import io.github.lumkit.sweeteditor.input.rememberScreenDensity
+import io.github.lumkit.sweeteditor.render.remapScrollbarPointer
 import io.github.lumkit.sweeteditor.input.editorIme
 import io.github.lumkit.sweeteditor.input.rememberEditorClipboard
 import io.github.lumkit.sweeteditor.input.encodeGesture
@@ -70,7 +73,7 @@ fun SweetEditor(
     keyMap: EditorKeyMap? = null,
 ) {
     val density = LocalDensity.current
-    val densityValue = density.density
+    val densityValue = rememberScreenDensity(density.density)
     val fontScale = density.fontScale
     val layoutDirection = LocalLayoutDirection.current
     val fontFamilyResolver = LocalFontFamilyResolver.current
@@ -107,6 +110,7 @@ fun SweetEditor(
     val clipboard = rememberEditorClipboard()
     val resolvedKeyMap = keyMap ?: remember { EditorKeyMap.defaultKeyMap() }
     val fontMetricsChanged = hostMeasurer.bind(textMeasurer, textStyle, densityValue, fontScale)
+    val pointerDensity = rememberUpdatedState(densityValue)
     SideEffect {
         session.bindClipboard(clipboard)
         session.applyKeyMap(resolvedKeyMap)
@@ -230,10 +234,15 @@ fun SweetEditor(
                                 val isMouse = event.changes.any {
                                     it.type == PointerType.Mouse || it.type == PointerType.Stylus
                                 }
+                                fun place(x: Float, y: Float) = remapScrollbarPointer(
+                                    PointF(x, y),
+                                    session.renderModel,
+                                    pointerDensity.value,
+                                )
                                 val pressedPoints = event.changes
                                     .filter { it.pressed }
-                                    .map { PointF(it.position.x, it.position.y) }
-                                lastPoint = PointF(change.position.x, change.position.y)
+                                    .map { place(it.position.x, it.position.y) }
+                                lastPoint = place(change.position.x, change.position.y)
                                 session.notePointer(lastPoint, hovering = event.type != PointerEventType.Exit)
                                 if (event.type == PointerEventType.Press) {
                                     flushMove()
@@ -241,7 +250,7 @@ fun SweetEditor(
                                 }
                                 if (event.type == PointerEventType.Scroll) {
                                     flushMove()
-                                    val point = PointF(change.position.x, change.position.y)
+                                    val point = place(change.position.x, change.position.y)
                                     val (wheelX, wheelY) = coreWheelDelta(change.scrollDelta)
                                     val wheelModifiers = wheelModifiersForCore(modifiers)
                                     session.handleGesture(
@@ -311,6 +320,7 @@ fun SweetEditor(
                 theme,
                 drawCache,
                 session.iconProvider,
+                pointerDensity.value,
             )
         }
     }

@@ -30,6 +30,7 @@ import io.github.lumkit.sweeteditor.core.protocol.GuideType
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectKind
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectRenderItem
 import io.github.lumkit.sweeteditor.core.protocol.RangeEffectUnderlineStyle
+import io.github.lumkit.sweeteditor.core.protocol.PointF
 import io.github.lumkit.sweeteditor.core.protocol.Rect
 import io.github.lumkit.sweeteditor.core.protocol.ScrollbarModel
 import io.github.lumkit.sweeteditor.core.protocol.SelectionHandle
@@ -51,6 +52,7 @@ internal fun DrawScope.drawEditor(
     theme: EditorTheme,
     drawCache: EditorDrawCache,
     iconProvider: EditorIconProvider? = null,
+    scrollbarScale: Float = density,
 ) {
     drawCache.bind(baseStyle)
     drawRect(theme.backgroundColor.toComposeColor())
@@ -101,7 +103,7 @@ internal fun DrawScope.drawEditor(
     drawGutterIcons(model, theme, iconProvider)
     drawFoldMarkers(model, theme)
     drawSelectionHandles(model, theme)
-    drawScrollbars(model, theme)
+    drawScrollbars(model, theme, scrollbarScale)
 }
 
 private fun DrawScope.drawTextRun(
@@ -307,18 +309,20 @@ private fun DrawScope.drawLineNumbers(
     }
 }
 
-private fun DrawScope.drawScrollbars(model: EditorRenderModel, theme: EditorTheme) {
+private fun DrawScope.drawScrollbars(model: EditorRenderModel, theme: EditorTheme, scrollbarScale: Float) {
     val vertical = model.verticalScrollbar
     val horizontal = model.horizontalScrollbar
     val hasVertical = vertical.isDrawable()
     val hasHorizontal = horizontal.isDrawable()
-    if (hasVertical) drawScrollbar(vertical, theme)
-    if (hasHorizontal) drawScrollbar(horizontal, theme)
+    if (hasVertical) drawScrollbar(vertical, theme, scrollbarScale)
+    if (hasHorizontal) drawScrollbar(horizontal, theme, scrollbarScale)
     if (hasVertical && hasHorizontal) {
+        val verticalTrack = vertical.track.grownToDensity(scrollbarScale)
+        val horizontalTrack = horizontal.track.grownToDensity(scrollbarScale)
         drawRect(
             color = theme.scrollbarTrackColor.toComposeColor().withScrollbarAlpha(vertical.alpha),
-            topLeft = Offset(vertical.track.origin.x, horizontal.track.origin.y),
-            size = Size(vertical.track.width, horizontal.track.height),
+            topLeft = Offset(verticalTrack.origin.x, horizontalTrack.origin.y),
+            size = Size(verticalTrack.width, horizontalTrack.height),
         )
     }
 }
@@ -326,19 +330,55 @@ private fun DrawScope.drawScrollbars(model: EditorRenderModel, theme: EditorThem
 private fun ScrollbarModel.isDrawable(): Boolean =
     visible && alpha > 0f && track.width > 0f && track.height > 0f && thumb.width > 0f && thumb.height > 0f
 
-private fun DrawScope.drawScrollbar(bar: ScrollbarModel, theme: EditorTheme) {
+private fun DrawScope.drawScrollbar(bar: ScrollbarModel, theme: EditorTheme, scrollbarScale: Float) {
+    val scale = scrollbarScale.coerceAtLeast(1f)
+    val track = bar.track.grownToDensity(scale)
+    val thumb = bar.thumb.grownToDensity(scale)
     drawRect(
         color = theme.scrollbarTrackColor.toComposeColor().withScrollbarAlpha(bar.alpha),
-        topLeft = bar.track.toOffset(),
-        size = bar.track.toSize(),
+        topLeft = track.toOffset(),
+        size = track.toSize(),
     )
     val thumbColor = if (bar.thumbActive) theme.scrollbarThumbActiveColor else theme.scrollbarThumbColor
     drawRoundRect(
         color = thumbColor.toComposeColor().withScrollbarAlpha(bar.alpha),
-        topLeft = bar.thumb.toOffset(),
-        size = bar.thumb.toSize(),
-        cornerRadius = CornerRadius(3f, 3f),
+        topLeft = thumb.toOffset(),
+        size = thumb.toSize(),
+        cornerRadius = CornerRadius(3f * scale, 3f * scale),
     )
+}
+
+internal fun remapScrollbarPointer(point: PointF, model: EditorRenderModel?, density: Float): PointF {
+    if (model == null || density <= 1.05f) return point
+    val vertical = model.verticalScrollbar
+    if (vertical.visible) {
+        val track = vertical.track.grownToDensity(density)
+        if (point.x >= track.origin.x && point.x <= track.origin.x + track.width) {
+            val midX = vertical.track.origin.x + vertical.track.width / 2f
+            return PointF(midX, point.y)
+        }
+    }
+    val horizontal = model.horizontalScrollbar
+    if (horizontal.visible) {
+        val track = horizontal.track.grownToDensity(density)
+        if (point.y >= track.origin.y && point.y <= track.origin.y + track.height) {
+            val midY = horizontal.track.origin.y + horizontal.track.height / 2f
+            return PointF(point.x, midY)
+        }
+    }
+    return point
+}
+
+private fun Rect.grownToDensity(scale: Float): Rect {
+    if (scale <= 1.05f) return this
+    val verticalBar = height >= width
+    return if (verticalBar) {
+        val grown = width * scale
+        Rect(PointF(origin.x - (grown - width), origin.y), grown, height)
+    } else {
+        val grown = height * scale
+        Rect(PointF(origin.x, origin.y - (grown - height)), width, grown)
+    }
 }
 
 private fun DrawScope.drawRangeEffectBackgrounds(model: EditorRenderModel, theme: EditorTheme) {

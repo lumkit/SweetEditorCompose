@@ -105,7 +105,7 @@ internal class HighlightBindingImpl(
         controller.whenReady {
             if (closed || started) return@whenReady
             started = true
-            scope.launch {
+            scope.launch(Dispatchers.Default) {
                 startReady()
             }
         }

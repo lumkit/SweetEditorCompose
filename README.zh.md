@@ -7,8 +7,8 @@
 ## 引入
 
 ```kotlin
-implementation("io.github.lumkit:sweeteditor-compose:0.1.6")
-implementation("io.github.lumkit:sweetline-compose:0.1.6") // 可选，SweetLine 高亮
+implementation("io.github.lumkit:sweeteditor-compose:0.1.7")
+implementation("io.github.lumkit:sweetline-compose:0.1.7") // 可选，SweetLine 高亮
 ```
 
 宿主必须使用 **Compose Multiplatform 1.12.1**、**Kotlin 2.4.20**，以及 Android **compileSdk 37**（或与之匹配的更新组合）。`targetSdk` / `minSdk` 可以更低。更旧的 Compose Gradle 插件会带上旧版 Skiko，缺少 `Paragraph.nGetUnresolvedCodepointsCount`，JS / Wasm 运行时会直接崩溃。

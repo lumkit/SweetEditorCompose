@@ -303,10 +303,9 @@ namespace NS_SWEETEDITOR {
            m_view_state_.scroll_x, m_view_state_.scroll_y);
     } else if (old_line_height > 0 && new_line_height > 0 && old_line_height != new_line_height) {
       float old_scroll_y = m_view_state_.scroll_y;
-      float ratio = new_line_height / old_line_height;
       float new_anchor_y = m_text_layout_->getLineStartY(anchor_line);
       m_view_state_.scroll_y = std::round(new_anchor_y + anchor_fraction * new_line_height);
-      m_view_state_.scroll_x = std::round(old_scroll_x * ratio);
+      m_view_state_.scroll_x = std::round(old_scroll_x);
       LOGD("onFontMetricsChanged: old_h=%.4f new_h=%.4f anchor=%zu frac=%.4f old_scroll=%.1f new_scroll=%.1f",
            old_line_height, new_line_height, anchor_line, anchor_fraction, old_scroll_y, m_view_state_.scroll_y);
     }
@@ -3514,12 +3513,30 @@ namespace NS_SWEETEDITOR {
         m_search_state_ = *published_state;
       }
     }
-    if (m_search_state_.status == SearchStatus::INACTIVE) {
+    if (m_search_state_.status == SearchStatus::INACTIVE || m_search_state_.pattern.empty()) {
       m_search_state_.generation = generation;
       publishSearchState(m_search_state_);
       return;
     }
-    markSearchStaleForDocumentChange();
+    if (m_search_state_.status == SearchStatus::FAILED) {
+      m_search_state_.generation = generation;
+      m_search_state_.match_count = 0;
+      m_search_state_.current_index = -1;
+      m_search_state_.has_current_match = false;
+      m_search_state_.current_range = {};
+      publishSearchState(m_search_state_);
+      return;
+    }
+    SearchRequest request;
+    request.pattern = m_search_state_.pattern;
+    request.options = m_search_state_.options;
+    SearchSnapshot snapshot = buildSearchSnapshot(request, generation);
+    SearchResult result = getSearchEngine().search(snapshot);
+    if (result.state.generation != m_search_generation_->load()) {
+      return;
+    }
+    chooseCurrentSearchMatch(result, m_caret_.active);
+    installSearchResult(std::move(result));
   }
 
   void EditorCore::chooseCurrentSearchMatch(SearchResult& result) const {
