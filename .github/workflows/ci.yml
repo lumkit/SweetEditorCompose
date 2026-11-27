@@ -35,13 +35,13 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build
+          sudo apt-get install -y cmake ninja-build xvfb
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run Tests
-        run: ./gradlew :editor:jvmTest :highlight:jvmTest :shared:jvmTest --stacktrace
+        run: xvfb-run --auto-servernum ./gradlew :editor:jvmTest :highlight:jvmTest :shared:jvmTest --stacktrace
 
   docs-check:
     name: Docs Check

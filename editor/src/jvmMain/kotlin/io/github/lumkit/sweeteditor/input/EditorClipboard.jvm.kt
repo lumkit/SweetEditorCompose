@@ -10,12 +10,18 @@ import java.awt.datatransfer.StringSelection
 internal actual fun rememberEditorClipboard(): EditorClipboard = remember { JvmEditorClipboard }
 
 internal object JvmEditorClipboard : EditorClipboard {
+    @Volatile
+    private var fallbackText: String? = null
+
     override fun getText(): String? = runCatching {
         Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as? String
-    }.getOrNull()
+    }.getOrElse { fallbackText }
 
-    override fun setText(text: String): Boolean = runCatching {
-        Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
-        true
-    }.getOrDefault(false)
+    override fun setText(text: String): Boolean {
+        fallbackText = text
+        return runCatching {
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null)
+            true
+        }.getOrDefault(true)
+    }
 }
